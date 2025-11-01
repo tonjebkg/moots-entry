@@ -1,55 +1,28 @@
 // app/page.tsx
-import Link from "next/link";
-import { Inter } from "next/font/google";
+import Link from 'next/link';
+import { Inter } from 'next/font/google';
+import { createEvent, listEvents } from './actions/events';
 
-const inter = Inter({ subsets: ["latin"] });
+const inter = Inter({ subsets: ['latin'] });
 
 export const metadata = {
-  title: "Moots Entry — Event Check-in & Scanning",
-  description:
-    "Ultra-fast guest check-in, badge/QR scanning, and a simple dashboard for hosts.",
+  title: 'Moots Entry — MVP',
+  description: 'Create an event, check in guests, scan badges, see live dashboard.',
 };
 
-type Action = {
-  title: string;
-  href: string;
-  kbd?: string;
-  desc: string;
-};
+function Card({ children, className = '' }: { children: React.ReactNode; className?: string }) {
+  return (
+    <div className={`rounded-2xl border border-white/10 bg-white/[0.02] p-5 ${className}`}>
+      {children}
+    </div>
+  );
+}
 
-const EVENT_ID = "moots-ai-test"; // change to your real event id
+export default async function Home() {
+  const events = await listEvents();
 
-const actions: Action[] = [
-  {
-    title: "Open Check-in",
-    href: `/checkin/${EVENT_ID}`,
-    kbd: "C",
-    desc: "Search guests, mark as arrived, print badges.",
-  },
-  {
-    title: "Scan Badges / QR",
-    href: `/checkin/${EVENT_ID}/scan`,
-    kbd: "S",
-    desc: "Use camera to scan attendee QR codes.",
-  },
-  {
-    title: "Entry Desk",
-    href: "/entry",
-    kbd: "E",
-    desc: "Fast manual entry for walk-ins & VIPs.",
-  },
-  {
-    title: "Event Dashboard",
-    href: `/dashboard/${EVENT_ID}`,
-    kbd: "D",
-    desc: "Live totals, capacity, arrivals timeline.",
-  },
-];
-
-export default function Home() {
   return (
     <main className={`${inter.className} min-h-screen bg-black text-white`}>
-      {/* Top Bar */}
       <header className="border-b border-white/10">
         <div className="mx-auto max-w-6xl px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -58,90 +31,126 @@ export default function Home() {
               Moots <span className="text-white/60">Entry</span>
             </span>
           </div>
-          <Link
-            href="https://moots.ai"
-            className="text-sm text-white/60 hover:text-white transition"
-          >
-            Need help?
+          <Link href="https://moots.ai" className="text-sm text-white/60 hover:text-white transition">
+            Help
           </Link>
         </div>
       </header>
 
-      {/* Hero */}
-      <section className="mx-auto max-w-6xl px-4">
-        <div className="py-16 md:py-20">
-          <h1 className="text-3xl md:text-5xl font-semibold tracking-tight">
-            Check-in that feels instant.<br className="hidden md:block" />
-            Scanning that never slows the line.
-          </h1>
-          <p className="mt-4 text-white/70 max-w-2xl">
-            Bring guests in fast, capture who arrived, and keep the room moving.
-            Your team sees live counts, capacity, and scans in one place.
-          </p>
+      <section className="mx-auto max-w-6xl px-4 py-10 md:py-14">
+        <h1 className="text-3xl md:text-5xl font-semibold tracking-tight">
+          Create an event. Start check-in. See results.
+        </h1>
+        <p className="mt-4 text-white/70 max-w-2xl">
+          No login for this MVP. Create an event below — it will appear on this page and link
+          directly to its dashboard.
+        </p>
 
-          <div className="mt-8 flex flex-wrap gap-3">
-            <Link
-              href={`/checkin/${EVENT_ID}`}
-              className="rounded-xl bg-white text-black px-5 py-3 text-sm font-medium hover:bg-white/90 transition"
-            >
-              Start Check-in
-            </Link>
-            <Link
-              href={`/dashboard/${EVENT_ID}`}
-              className="rounded-xl border border-white/20 px-5 py-3 text-sm font-medium hover:bg-white/5 transition"
-            >
-              View Dashboard
-            </Link>
-          </div>
+        {/* Create Event */}
+        <Card className="mt-8">
+          <h2 className="text-lg font-semibold">Create a new event</h2>
+          <form action={createEvent} className="mt-4 grid gap-4 sm:grid-cols-2">
+            <div className="sm:col-span-2">
+              <label className="block text-sm text-white/70">Event name *</label>
+              <input
+                name="name"
+                required
+                placeholder="YC Health & Longevity Lunch"
+                className="mt-1 w-full rounded-xl bg-white/5 border border-white/10 px-3 py-2 outline-none focus:border-white/20"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm text-white/70">City</label>
+              <input
+                name="city"
+                placeholder="San Francisco"
+                className="mt-1 w-full rounded-xl bg-white/5 border border-white/10 px-3 py-2 outline-none focus:border-white/20"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm text-white/70">Starts at</label>
+              <input
+                type="datetime-local"
+                name="starts_at"
+                className="mt-1 w-full rounded-xl bg-white/5 border border-white/10 px-3 py-2 outline-none focus:border-white/20"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm text-white/70">Capacity</label>
+              <input
+                type="number"
+                name="capacity"
+                min={0}
+                placeholder="130"
+                className="mt-1 w-full rounded-xl bg-white/5 border border-white/10 px-3 py-2 outline-none focus:border-white/20"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm text-white/70">Timezone</label>
+              <input
+                name="timezone"
+                placeholder="America/Los_Angeles"
+                defaultValue="America/Los_Angeles"
+                className="mt-1 w-full rounded-xl bg-white/5 border border-white/10 px-3 py-2 outline-none focus:border-white/20"
+              />
+            </div>
+
+            <div className="sm:col-span-2">
+              <button
+                type="submit"
+                className="w-full sm:w-auto rounded-xl bg-white text-black px-5 py-3 text-sm font-medium hover:bg-white/90 transition"
+              >
+                Create event
+              </button>
+            </div>
+          </form>
+        </Card>
+
+        {/* Quick Actions */}
+        <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <Link href="/entry" className="rounded-2xl border border-white/10 bg-white/[0.02] p-4 hover:border-white/20 hover:bg-white/[0.04] transition">
+            <div className="text-base font-semibold">Entry Desk</div>
+            <p className="mt-1 text-sm text-white/60">Walk-ins & VIPs.</p>
+          </Link>
+          <Link href="/test" className="rounded-2xl border border-white/10 bg-white/[0.02] p-4 hover:border-white/20 hover:bg-white/[0.04] transition">
+            <div className="text-base font-semibold">Test Page</div>
+            <p className="mt-1 text-sm text-white/60">Internal sandbox.</p>
+          </Link>
         </div>
+
+        {/* Latest Events */}
+        <h2 className="mt-10 text-lg font-semibold">Recent events</h2>
+        {events.length === 0 ? (
+          <p className="mt-3 text-white/60">No events yet. Create your first one above.</p>
+        ) : (
+          <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {events.map((e) => (
+              <Link
+                key={e.id}
+                href={`/dashboard/${e.id}`}
+                className="rounded-2xl border border-white/10 bg-white/[0.02] p-4 hover:border-white/20 hover:bg-white/[0.04] transition"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="text-base font-semibold">{e.name}</div>
+                  <div className="text-xs text-white/50">Open dashboard →</div>
+                </div>
+                <div className="mt-2 text-sm text-white/60">
+                  {e.city ? `${e.city} • ` : ''}{e.timezone || '—'}
+                </div>
+                <div className="mt-1 text-sm text-white/60">
+                  {e.starts_at ? new Date(e.starts_at).toLocaleString() : 'Date TBA'}
+                  {typeof e.capacity === 'number' ? ` • Cap ${e.capacity}` : ''}
+                </div>
+              </Link>
+            ))}
+          </div>
+        )}
       </section>
 
-      {/* Action Grid */}
-      <section className="mx-auto max-w-6xl px-4 pb-20">
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {actions.map((a) => (
-            <Link
-              key={a.title}
-              href={a.href}
-              className="group rounded-2xl border border-white/10 bg-white/[0.02] p-4 hover:border-white/20 hover:bg-white/[0.04] transition"
-            >
-              <div className="flex items-center justify-between">
-                <h3 className="text-base font-semibold">{a.title}</h3>
-                {a.kbd ? (
-                  <kbd className="rounded-md border border-white/10 px-1.5 py-0.5 text-xs text-white/60 group-hover:border-white/20">
-                    {a.kbd}
-                  </kbd>
-                ) : null}
-              </div>
-              <p className="mt-2 text-sm text-white/60">{a.desc}</p>
-            </Link>
-          ))}
-        </div>
-
-        {/* Event summary (static example; wire to your data later) */}
-        <div className="mt-8 rounded-2xl border border-white/10 bg-white/[0.02] p-5">
-          <div className="flex flex-wrap items-center gap-6">
-            <div>
-              <div className="text-sm text-white/60">Event</div>
-              <div className="font-medium">Moots AI Test</div>
-            </div>
-            <div>
-              <div className="text-sm text-white/60">City</div>
-              <div className="font-medium">New York</div>
-            </div>
-            <div>
-              <div className="text-sm text-white/60">Capacity</div>
-              <div className="font-medium">130</div>
-            </div>
-            <div>
-              <div className="text-sm text-white/60">Timezone</div>
-              <div className="font-medium">America/Los_Angeles</div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Footer */}
       <footer className="border-t border-white/10">
         <div className="mx-auto max-w-6xl px-4 py-6 text-xs text-white/50">
           © {new Date().getFullYear()} Moots. All rights reserved.
