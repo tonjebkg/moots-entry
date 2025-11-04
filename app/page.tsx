@@ -1,7 +1,7 @@
 // app/page.tsx
 import Link from 'next/link';
 import { Inter } from 'next/font/google';
-import { createEvent, listEvents } from './actions/events';
+import { createEvent, listEvents } from '@/app/actions/events';
 
 const inter = Inter({ subsets: ['latin'] });
 
