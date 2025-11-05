@@ -310,36 +310,43 @@ export default function DashboardPage() {
 
   return (
     <main className="p-6 max-w-6xl mx-auto space-y-6">
-      {/* Header */}
-      <header className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold">{event.name}</h1>
-          <p className="text-sm text-slate-400">
-            {event.city ?? '—'} • {new Date(event.starts_at).toLocaleString()} • {event.timezone ?? '—'}
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
-          <label className="px-4 py-2 rounded border cursor-pointer hover:bg-slate-900">
-            Re-upload CSV
-            <input
-              type="file"
-              accept=".csv,.txt"
-              className="hidden"
-              onChange={e => {
-                const f = e.target.files?.[0]
-                if (f) handleCsvReupload(f).catch(err => setMessage(String(err?.message ?? err)))
-                e.currentTarget.value = ''
-              }}
-            />
-          </label>
-          <Link
-            href={`/checkin/${event.id}`}
-            className="px-4 py-2 rounded border hover:bg-slate-900"
-          >
-            Open Check-in
-          </Link>
-        </div>
-      </header>
+    <header className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+  {/* Title block */}
+  <div className="flex-1 min-w-0">
+    <h1 className="text-2xl font-semibold leading-tight truncate" title={event.name}>
+      {event.name}
+    </h1>
+    <p className="text-sm text-slate-400 truncate">
+      {(event.city || '—')}{' · '}
+      {event.starts_at ? new Date(event.starts_at).toLocaleString() : 'Date TBA'}{' · '}
+      {event.timezone || '—'}
+    </p>
+  </div>
+
+  {/* Actions */}
+  <div className="flex items-center gap-3 shrink-0">
+    <label className="px-4 py-2 rounded border cursor-pointer hover:bg-slate-900 whitespace-nowrap">
+      Re-upload CSV
+      <input
+        type="file"
+        accept=".csv,.txt"
+        className="hidden"
+        onChange={(e) => {
+          const f = e.target.files?.[0]
+          if (f) handleCsvReupload(f).catch(err => setMessage(String(err?.message ?? err)))
+          e.currentTarget.value = ''
+        }}
+      />
+    </label>
+
+    <Link
+      href={`/checkin/${event.id}`}
+      className="px-4 py-2 rounded border hover:bg-slate-900 whitespace-nowrap"
+    >
+      Open Check-in
+    </Link>
+  </div>
+</header>
 
       {/* Capacity / Headcounts */}
       <section className="space-y-2">

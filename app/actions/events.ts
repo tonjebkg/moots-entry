@@ -1,29 +1,42 @@
-'use server';
+'use server'
 
-import { revalidatePath } from 'next/cache'; // <- not from 'next/navigation'
-import { supabase } from '@/lib/supabase';
-
-export async function createEvent(formData: FormData) {
-  // ...
-  revalidatePath('/');  // refresh homepage list
-}
+import { supabase } from '@/lib/supabase'
+import { revalidatePath } from 'next/cache'
+import { redirect } from 'next/navigation'
 
 export async function listEvents() {
   const { data, error } = await supabase
     .from('events')
-     .select('id, name, city, timezone, capacity, starts_at') 
+    .select('id, name, city, timezone, starts_at, capacity') // <-- add timezone here
     .order('created_at', { ascending: false })
-    .limit(10);
+    .limit(20)
 
-  if (error) throw error;
-  return data ?? [];
+  if (error) throw error
+  return data ?? []
 }
 
-export type Event = {
-  id: string;
-  name: string;
-  city: string | null;
-  timezone: string | null;
-  capacity: number | null;
-  starts_at: string | null;
-};
+export async function createEvent(formData: FormData) {
+  const payload = {
+    name: String(formData.get('name') || '').trim(),
+    city: String(formData.get('city') || '').trim() || null,
+    timezone: String(formData.get('timezone') || 'America/Los_Angeles'),
+    capacity: Number(formData.get('capacity') || 0) || null,
+    starts_at: formData.get('starts_at')
+      ? new Date(String(formData.get('starts_at'))).toISOString()
+      : null,
+    host_name: String(formData.get('host_name') || 'Moots AI'), // if NOT NULL in DB
+  }
+
+  if (!payload.name) throw new Error('Event name is required')
+
+  const { data, error } = await supabase
+    .from('events')
+    .insert(payload)
+    .select('id')
+    .single()
+
+  if (error) throw error
+
+  revalidatePath('/')
+  redirect(`/dashboard/${data.id}`)
+}
