@@ -1,30 +1,30 @@
-'use client';
+'use client'
 
-import { useEffect, useMemo, useState } from 'react';
-import { useParams } from 'next/navigation';
-import Link from 'next/link';
-import { supabase } from '@/lib/supabase';
-import Papa from 'papaparse';
+import { useEffect, useMemo, useState } from 'react'
+import Link from 'next/link'
+import { useParams } from 'next/navigation'
+import { supabase } from '@/lib/supabase'
+import Papa from 'papaparse'
 
-type Status = 'invited' | 'confirmed' | 'waitlist' | 'cancelled' | 'checked_in';
+type Status = 'invited' | 'confirmed' | 'waitlist' | 'cancelled' | 'checked_in'
 
 type Guest = {
-  id: string;
-  event_id: string;
-  full_name: string;
-  email: string;
-  status: Status;
-  plus_ones: number | null;
-};
+  id: string
+  event_id: string
+  full_name: string
+  email: string
+  status: Status
+  plus_ones: number | null
+}
 
 type EventRow = {
-  id: string;
-  name: string;
-  city: string | null;
-  starts_at: string;
-  timezone: string | null;
-  capacity: number | null;
-};
+  id: string
+  name: string
+  city: string | null
+  starts_at: string
+  timezone: string | null
+  capacity: number | null
+}
 
 const STATUS_LABEL: Record<Status, string> = {
   invited: 'Invited',
@@ -32,7 +32,7 @@ const STATUS_LABEL: Record<Status, string> = {
   waitlist: 'Waitlist',
   cancelled: 'Cancelled',
   checked_in: 'Checked-in',
-};
+}
 
 const STATUS_BG: Record<Status, string> = {
   invited: 'bg-slate-700 text-slate-100',
@@ -40,107 +40,92 @@ const STATUS_BG: Record<Status, string> = {
   waitlist: 'bg-amber-700 text-white',
   cancelled: 'bg-red-700 text-white',
   checked_in: 'bg-green-700 text-white',
-};
+}
 
 export default function DashboardPage() {
-  const { eventId } = useParams<{ eventId: string }>();
-  const [event, setEvent] = useState<EventRow | null>(null);
-  const [guests, setGuests] = useState<Guest[]>([]);
-  const [message, setMessage] = useState<string | null>(null);
-  const [sortKey, setSortKey] = useState<'name' | 'status' | 'plus_ones'>('name');
+  const { eventId } = useParams<{ eventId: string }>()
+  const [event, setEvent] = useState<EventRow | null>(null)
+  const [guests, setGuests] = useState<Guest[]>([])
+  const [q, setQ] = useState('')
+  const [sortKey, setSortKey] = useState<'name' | 'status' | 'plus_ones'>('name')
+
+  const [message, setMessage] = useState<string | null>(null)
 
   useEffect(() => {
-    if (!eventId) return;
-    (async () => {
+    if (!eventId) return
+    ;(async () => {
       const { data: ev } = await supabase
         .from('events')
         .select('id,name,city,starts_at,timezone,capacity')
         .eq('id', eventId)
-        .single();
-      setEvent(ev);
+        .single()
+      setEvent(ev)
 
       const { data: gs } = await supabase
         .from('guests')
         .select('id,event_id,full_name,email,status,plus_ones')
-        .eq('event_id', eventId);
-      setGuests(gs ?? []);
-    })();
-  }, [eventId]);
+        .eq('event_id', eventId)
+        .order('full_name', { ascending: true })
+      setGuests(gs ?? [])
+    })()
+  }, [eventId])
 
-  // ---- Derived totals (including plus ones)
+  // ---- Derived totals including plus-ones ----
   const totals = useMemo(() => {
-    const base = {
-      invited: 0,
-      confirmed: 0,
-      waitlist: 0,
-      cancelled: 0,
-      checked_in: 0,
-    };
-
+    const base = { invited: 0, confirmed: 0, waitlist: 0, cancelled: 0, checked_in: 0 }
     for (const g of guests) {
-      const plus = typeof g.plus_ones === 'number' ? Math.max(0, g.plus_ones) : 0;
-      base[g.status] += 1 + plus;
+      const plus = typeof g.plus_ones === 'number' ? g.plus_ones : 0
+      base[g.status] += 1 + Math.max(0, plus)
     }
+    const confirmedHeadcount = base.confirmed
+    const checkedInHeadcount = base.checked_in
+    return { ...base, all: guests.length, confirmedHeadcount, checkedInHeadcount }
+  }, [guests])
 
-    const confirmedHeadcount = base.confirmed;
-    const checkedInHeadcount = base.checked_in;
+  // ---- Filtering + Sorting ----
+  const filtered = useMemo(() => {
+    const term = q.trim().toLowerCase()
+    let list = term
+      ? guests.filter(
+          g =>
+            g.full_name.toLowerCase().includes(term) ||
+            g.email.toLowerCase().includes(term)
+        )
+      : [...guests]
 
-    return {
-      ...base,
-      all: guests.length,
-      confirmedHeadcount,
-      checkedInHeadcount,
-    };
-  }, [guests]);
-
-  // ---- Sorting logic
-  const sortedGuests = useMemo(() => {
-    const copy = [...guests];
     switch (sortKey) {
       case 'status':
-        return copy.sort((a, b) =>
-          STATUS_LABEL[a.status].localeCompare(STATUS_LABEL[b.status])
-        );
+        list.sort((a, b) => STATUS_LABEL[a.status].localeCompare(STATUS_LABEL[b.status]))
+        break
       case 'plus_ones':
-        return copy.sort(
-          (a, b) => (b.plus_ones ?? 0) - (a.plus_ones ?? 0)
-        );
+        list.sort((a, b) => (b.plus_ones ?? 0) - (a.plus_ones ?? 0))
+        break
       default:
-        return copy.sort((a, b) =>
-          a.full_name.localeCompare(b.full_name)
-        );
+        list.sort((a, b) => a.full_name.localeCompare(b.full_name))
     }
-  }, [guests, sortKey]);
+    return list
+  }, [guests, q, sortKey])
 
+  // ---- Mutations ----
   async function handleStatusChange(g: Guest, next: Status) {
-    const { error } = await supabase
-      .from('guests')
-      .update({ status: next })
-      .eq('id', g.id);
-    if (error) setMessage('Failed to update status');
-    else
-      setGuests((prev) =>
-        prev.map((x) => (x.id === g.id ? { ...x, status: next } : x))
-      );
+    await supabase.from('guests').update({ status: next }).eq('id', g.id)
+    setGuests(prev => prev.map(x => (x.id === g.id ? { ...x, status: next } : x)))
   }
 
   async function handlePlusOnes(g: Guest, delta: 1 | -1) {
-    const next = Math.max(0, (g.plus_ones ?? 0) + delta);
-    const { error } = await supabase
-      .from('guests')
-      .update({ plus_ones: next })
-      .eq('id', g.id);
-    if (error) setMessage('Failed to update plus-ones');
-    else
-      setGuests((prev) =>
-        prev.map((x) => (x.id === g.id ? { ...x, plus_ones: next } : x))
-      );
+    const next = Math.max(0, (g.plus_ones ?? 0) + delta)
+    await supabase.from('guests').update({ plus_ones: next }).eq('id', g.id)
+    setGuests(prev => prev.map(x => (x.id === g.id ? { ...x, plus_ones: next } : x)))
   }
 
-  if (!event) return <main className="p-6 text-white">Loading...</main>;
+  if (!event) return <main className="p-6 text-white">Loading...</main>
+
+  const capacity = event.capacity ?? 0
+  const confirmedPct = capacity ? Math.min(100, (totals.confirmedHeadcount / capacity) * 100) : 0
+  const checkedPct = capacity ? Math.min(100, (totals.checkedInHeadcount / capacity) * 100) : 0
 
   return (
-    <main className="p-6 text-white max-w-6xl mx-auto space-y-6">
+    <main className="p-6 max-w-6xl mx-auto space-y-6 text-white">
       {/* HEADER */}
       <header className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div className="flex-1 min-w-0">
@@ -148,69 +133,59 @@ export default function DashboardPage() {
             {event.name}
           </h1>
           <p className="text-sm text-slate-400 truncate">
-            {event.city ?? '—'} ·{' '}
-            {new Date(event.starts_at).toLocaleString()} ·{' '}
-            {event.timezone ?? '—'}
+            {event.city ?? '—'} · {new Date(event.starts_at).toLocaleString()} · {event.timezone ?? '—'}
           </p>
         </div>
 
         <div className="flex items-center gap-3 shrink-0">
-          <Link
-            href="/"
-            className="whitespace-nowrap px-4 py-2 rounded border hover:bg-slate-900"
-          >
+          <Link href="/" className="whitespace-nowrap px-4 py-2 rounded border hover:bg-slate-900">
             New Event
           </Link>
           <label className="whitespace-nowrap px-4 py-2 rounded border cursor-pointer hover:bg-slate-900">
             Re-upload CSV
             <input type="file" accept=".csv,.txt" className="hidden" />
           </label>
-          <Link
-            href={`/checkin/${event.id}`}
-            className="whitespace-nowrap px-4 py-2 rounded border hover:bg-slate-900"
-          >
+          <Link href={`/checkin/${event.id}`} className="whitespace-nowrap px-4 py-2 rounded border hover:bg-slate-900">
             Check-in
           </Link>
         </div>
       </header>
 
-      {/* SUMMARY */}
-      <section>
+      {/* CAPACITY BAR */}
+      <section className="space-y-2">
         <div className="flex items-center gap-6 text-sm">
-          <div>Capacity: <span className="font-medium">{event.capacity ?? 0}</span></div>
+          <div>Capacity: <span className="font-medium">{capacity}</span></div>
           <div>Confirmed headcount: <span className="font-medium">{totals.confirmedHeadcount}</span></div>
           <div>Checked-in headcount: <span className="font-medium">{totals.checkedInHeadcount}</span></div>
         </div>
 
-        <div className="flex items-center gap-3 text-sm mt-3">
+        <div className="h-2 w-full bg-slate-800 rounded overflow-hidden">
+          <div className="h-full bg-blue-600" style={{ width: `${confirmedPct}%` }} title="Confirmed" />
+          <div className="h-full bg-green-600 -mt-2" style={{ width: `${checkedPct}%` }} title="Checked-in" />
+        </div>
+
+        <div className="flex items-center gap-3 text-sm mt-2">
           <span className="text-slate-400">Totals —</span>
-          {(Object.keys(STATUS_LABEL) as Status[]).map((s) => (
+          {(['invited','confirmed','waitlist','cancelled','checked_in'] as Status[]).map(s => (
             <span key={s} className={`px-2 py-1 rounded ${STATUS_BG[s]}`}>
               {STATUS_LABEL[s]} <b className="ml-1">{totals[s]}</b>
             </span>
           ))}
-          <span className="px-2 py-1 rounded bg-slate-700 text-slate-100">
-            all: <b className="ml-1">{totals.all}</b>
-          </span>
+          <span className="px-2 py-1 rounded bg-slate-700 text-slate-100">all: <b className="ml-1">{totals.all}</b></span>
         </div>
       </section>
 
-      {/* TABLE CONTROLS */}
+      {/* CONTROLS */}
       <section className="flex gap-3 items-center">
         <input
-          placeholder="Full name"
-          className="w-64 p-2 rounded border bg-transparent"
+          value={q}
+          onChange={e => setQ(e.target.value)}
+          placeholder="Search name or email…"
+          className="flex-1 p-2 rounded border bg-transparent"
         />
-        <input
-          placeholder="Email"
-          className="w-72 p-2 rounded border bg-transparent"
-        />
-        <button className="px-3 py-2 rounded bg-white/10 hover:bg-white/20 border">
-          Add guest
-        </button>
         <select
           value={sortKey}
-          onChange={(e) => setSortKey(e.target.value as any)}
+          onChange={e => setSortKey(e.target.value as any)}
           className="p-2 rounded border bg-transparent"
         >
           <option value="name">Sort: name</option>
@@ -219,7 +194,7 @@ export default function DashboardPage() {
         </select>
       </section>
 
-      {/* GUESTS TABLE */}
+      {/* TABLE */}
       <section className="border rounded overflow-hidden">
         <table className="w-full text-sm">
           <thead className="bg-slate-900 text-slate-200">
@@ -231,20 +206,23 @@ export default function DashboardPage() {
             </tr>
           </thead>
           <tbody>
-            {sortedGuests.map((g) => (
+            {filtered.length === 0 && (
+              <tr>
+                <td colSpan={4} className="p-4 text-center text-slate-400">No guests found.</td>
+              </tr>
+            )}
+            {filtered.map(g => (
               <tr key={g.id} className="border-t border-slate-800">
                 <td className="p-2">{g.full_name}</td>
                 <td className="p-2">{g.email}</td>
                 <td className="p-2">
                   <select
                     value={g.status}
-                    onChange={(e) => handleStatusChange(g, e.target.value as Status)}
+                    onChange={e => handleStatusChange(g, e.target.value as Status)}
                     className={`px-2 py-1 rounded border bg-transparent ${STATUS_BG[g.status]}`}
                   >
-                    {(Object.keys(STATUS_LABEL) as Status[]).map((s) => (
-                      <option key={s} value={s}>
-                        {STATUS_LABEL[s]}
-                      </option>
+                    {(Object.keys(STATUS_LABEL) as Status[]).map(s => (
+                      <option key={s} value={s}>{STATUS_LABEL[s]}</option>
                     ))}
                   </select>
                 </td>
@@ -253,16 +231,12 @@ export default function DashboardPage() {
                     <button
                       className="px-2 py-1 rounded border hover:bg-slate-900"
                       onClick={() => handlePlusOnes(g, -1)}
-                    >
-                      −
-                    </button>
+                    >−</button>
                     <span>{g.plus_ones ?? 0}</span>
                     <button
                       className="px-2 py-1 rounded border hover:bg-slate-900"
                       onClick={() => handlePlusOnes(g, +1)}
-                    >
-                      ＋
-                    </button>
+                    >＋</button>
                   </div>
                 </td>
               </tr>
@@ -271,10 +245,7 @@ export default function DashboardPage() {
         </table>
       </section>
 
-      {message && (
-        <p className="text-center text-sm text-amber-300">{message}</p>
-      )}
+      {message && <p className="text-center text-sm text-amber-300">{message}</p>}
     </main>
-  );
+  )
 }
-
