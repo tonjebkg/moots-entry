@@ -4,6 +4,15 @@ import { useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import Papa from 'papaparse'
 
+type NewGuest = {
+  full_name: string
+  email: string
+  status: 'invite_sent' | 'confirmed' | 'waitlist' | 'cancelled' | 'checked_in'
+  plus_ones: number
+  priority: 'normal' | 'vip' | 'vvip'
+  comments: string | null
+}
+
 export default function CreateEventForm() {
   const [name, setName] = useState('')
   const [city, setCity] = useState('')
@@ -13,14 +22,16 @@ export default function CreateEventForm() {
   const [eventUrl, setEventUrl] = useState('')
   const [hosts, setHosts] = useState<{ name: string; link?: string }[]>([{ name: '', link: '' }])
   const [imageFile, setImageFile] = useState<File | null>(null)
-  const [guests, setGuests] = useState<any[]>([])
+
+  // Staged guests parsed from CSV (no event required yet)
+  const [stagedGuests, setStagedGuests] = useState<NewGuest[]>([])
   const [parsing, setParsing] = useState(false)
+
   const [error, setError] = useState<string | null>(null)
   const [toast, setToast] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
-  const [currentEventId, setCurrentEventId] = useState<string | null>(null)
 
-  // ---------- HELPERS ----------
+  // ---------- Normalizers ----------
   function normalizeStatus(
     s?: string
   ): 'invite_sent' | 'confirmed' | 'waitlist' | 'cancelled' | 'checked_in' {
@@ -42,13 +53,66 @@ export default function CreateEventForm() {
     return 'normal'
   }
 
-  // ---------- EVENT CREATION ----------
+  // ---------- CSV handler (stages guests; no event required) ----------
+  async function handleGuestFile(file?: File) {
+    if (!file) return
+    setParsing(true)
+    setError(null)
+    setToast(null)
+
+    Papa.parse(file, {
+      header: true,
+      skipEmptyLines: true,
+      complete: async (results) => {
+        try {
+          const rows = (results.data as any[]).filter(Boolean)
+          const guests: NewGuest[] = rows.map((r) => {
+            const fullName =
+              r.full_name || r.name || r['Full Name'] || r['Full name'] || r['Name'] || ''
+            const email = (r.email || r['Email'] || '').toLowerCase().trim()
+            const status = normalizeStatus(r.status || r['Status'])
+            const plusOnesRaw =
+              r.plus_ones ?? r['plus-ones'] ?? r['Plus Ones'] ?? r['plus ones'] ?? 0
+            const priority = normalizePriority(r.priority || r['Priority'])
+            const comments = r.comments || r['Comments'] || r['Notes'] || r['Note'] || null
+            const plus_ones = Number.isFinite(+plusOnesRaw) ? Math.max(0, +plusOnesRaw) : 0
+
+            return {
+              full_name: String(fullName).trim(),
+              email,
+              status,
+              plus_ones,
+              priority,
+              comments,
+            }
+          })
+
+          const clean = guests.filter((g) => g.full_name || g.email)
+          setStagedGuests(clean)
+          setToast(`Guest list staged: ${clean.length} row(s) will be imported on create.`)
+        } catch (err: any) {
+          console.error(err)
+          setError(err?.message || 'Failed to parse CSV')
+        } finally {
+          setParsing(false)
+        }
+      },
+      error: (err) => {
+        console.error(err)
+        setError(err?.message || 'Failed to parse CSV')
+        setParsing(false)
+      },
+    })
+  }
+
+  // ---------- Create Event (then attach staged guests) ----------
   async function handleCreateEvent() {
     try {
       setError(null)
       setToast(null)
       setLoading(true)
 
+      // 1) Upload image if present
       let image_url: string | null = null
       if (imageFile) {
         const { data: upload, error: uploadErr } = await supabase.storage
@@ -62,7 +126,8 @@ export default function CreateEventForm() {
         image_url = publicUrl.publicUrl
       }
 
-      const { data, error: insertErr } = await supabase
+      // 2) Create event
+      const { data: created, error: insertErr } = await supabase
         .from('events')
         .insert([
           {
@@ -78,10 +143,25 @@ export default function CreateEventForm() {
         ])
         .select('id')
         .single()
-
       if (insertErr) throw insertErr
-      setCurrentEventId(data.id)
-      setToast('Event created successfully!')
+      const eventId = created.id as string
+
+      // 3) If guests were staged, attach event_id and batch-insert
+      if (stagedGuests.length > 0) {
+        const rows = stagedGuests.map((g) => ({ ...g, event_id: eventId }))
+        const chunkSize = 500
+        for (let i = 0; i < rows.length; i += chunkSize) {
+          const slice = rows.slice(i, i + chunkSize)
+          const { error } = await supabase.from('guests').insert(slice)
+          if (error) throw error
+        }
+      }
+
+      setToast(
+        `Event created${stagedGuests.length ? ` + ${stagedGuests.length} guest(s) imported` : ''}.`
+      )
+      // Optional: clear staged guests after successful import
+      setStagedGuests([])
     } catch (e: any) {
       console.error(e)
       setError(e?.message || 'Failed to create event')
@@ -90,73 +170,8 @@ export default function CreateEventForm() {
     }
   }
 
-  // ---------- CSV HANDLER ----------
-  async function handleGuestFile(file?: File) {
-    if (!file) return
-    if (!currentEventId) {
-      setError('Create the event first, then upload the guest list.')
-      return
-    }
-
-    setParsing(true)
-    Papa.parse(file, {
-      header: true,
-      skipEmptyLines: true,
-      complete: async (results) => {
-        try {
-          const rows = (results.data as any[]).filter(Boolean)
-          const guests = rows.map((r) => {
-            const fullName =
-              r.full_name || r.name || r['Full Name'] || r['Full name'] || r['Name'] || ''
-            const email = (r.email || r['Email'] || '').toLowerCase().trim()
-            const status = normalizeStatus(r.status || r['Status'])
-            const plusOnesRaw =
-              r.plus_ones ?? r['plus-ones'] ?? r['Plus Ones'] ?? r['plus ones'] ?? 0
-            const priority = normalizePriority(r.priority || r['Priority'])
-            const comments = r.comments || r['Comments'] || r['Notes'] || r['Note'] || null
-            const plus_ones = Number.isFinite(+plusOnesRaw) ? Math.max(0, +plusOnesRaw) : 0
-
-            return {
-              event_id: currentEventId,
-              full_name: String(fullName).trim(),
-              email,
-              status,
-              plus_ones,
-              priority,
-              comments,
-            }
-          })
-
-          const clean = guests.filter((g) => g.full_name || g.email)
-          setGuests(clean)
-
-          const chunkSize = 500
-          for (let i = 0; i < clean.length; i += chunkSize) {
-            const slice = clean.slice(i, i + chunkSize)
-            const { error } = await supabase.from('guests').insert(slice)
-            if (error) throw error
-          }
-
-          setToast(`Imported ${clean.length} guests`)
-        } catch (err: any) {
-          console.error(err)
-          setError(err?.message || 'Failed to import CSV')
-        } finally {
-          setParsing(false)
-        }
-      },
-      error: (err) => {
-        console.error(err)
-        setError(err?.message || 'Failed to parse CSV')
-        setParsing(false)
-      },
-    })
-  }
-
-  // ---------- RENDER ----------
   return (
     <div className="max-w-2xl mx-auto">
-      {/* FORM CARD — no duplicated heading here */}
       <div className="space-y-4 border border-slate-800 rounded-xl p-6 bg-slate-900/40 text-slate-100">
         <div className="grid grid-cols-2 gap-4">
           <div>
@@ -217,7 +232,7 @@ export default function CreateEventForm() {
           </div>
         </div>
 
-        {/* HOSTS */}
+        {/* Hosts */}
         <div>
           <label className="block text-sm text-slate-400">Hosts</label>
           {hosts.map((h, i) => (
@@ -226,9 +241,9 @@ export default function CreateEventForm() {
                 placeholder="Host name"
                 value={h.name}
                 onChange={(e) => {
-                  const newHosts = [...hosts]
-                  newHosts[i].name = e.target.value
-                  setHosts(newHosts)
+                  const next = [...hosts]
+                  next[i].name = e.target.value
+                  setHosts(next)
                 }}
                 className="flex-1 p-2 rounded bg-slate-800 border border-slate-700"
               />
@@ -236,9 +251,9 @@ export default function CreateEventForm() {
                 placeholder="Host website / link"
                 value={h.link}
                 onChange={(e) => {
-                  const newHosts = [...hosts]
-                  newHosts[i].link = e.target.value
-                  setHosts(newHosts)
+                  const next = [...hosts]
+                  next[i].link = e.target.value
+                  setHosts(next)
                 }}
                 className="flex-1 p-2 rounded bg-slate-800 border border-slate-700"
               />
@@ -246,6 +261,7 @@ export default function CreateEventForm() {
                 <button
                   onClick={() => setHosts(hosts.filter((_, idx) => idx !== i))}
                   className="px-2 text-red-400"
+                  aria-label="Remove host"
                 >
                   ✕
                 </button>
@@ -260,7 +276,7 @@ export default function CreateEventForm() {
           </button>
         </div>
 
-        {/* EVENT IMAGE */}
+        {/* Image */}
         <div>
           <label className="block text-sm text-slate-400">Event image (optional)</label>
           <input
@@ -271,12 +287,12 @@ export default function CreateEventForm() {
           />
         </div>
 
-        {/* GUEST LIST */}
+        {/* CSV */}
         <div className="space-y-2">
           <div className="flex items-center justify-between">
             <span className="text-sm text-slate-300">Guest list (.csv or .txt)</span>
-            {guests.length > 0 && (
-              <span className="text-xs text-slate-400">{guests.length} guests detected</span>
+            {stagedGuests.length > 0 && (
+              <span className="text-xs text-slate-400">{stagedGuests.length} staged</span>
             )}
           </div>
           <input
@@ -292,7 +308,7 @@ export default function CreateEventForm() {
           {parsing && <p className="text-xs text-slate-400">Parsing…</p>}
         </div>
 
-        {/* ACTIONS */}
+        {/* Actions */}
         <div className="pt-2 flex justify-end">
           <button
             onClick={handleCreateEvent}
