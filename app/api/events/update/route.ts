@@ -2,11 +2,18 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
-const supabaseAdmin = createClient(
-  process.env.SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!, // service role bypasses RLS
-  { auth: { persistSession: false } }
-)
+// Ensure this runs on the Node runtime and is always dynamic (not prerendered)
+export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
+
+function getAdminClient() {
+  const url = process.env.SUPABASE_URL
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+  if (!url || !serviceKey) {
+    throw new Error('Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY')
+  }
+  return createClient(url, serviceKey, { auth: { persistSession: false } })
+}
 
 export async function POST(req: Request) {
   try {
@@ -16,7 +23,9 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'missing fields' }, { status: 400 })
     }
 
-    // Verify token belongs to the event
+    const supabaseAdmin = getAdminClient()
+
+    // Verify token belongs to this event
     const { data: ev, error: evErr } = await supabaseAdmin
       .from('events')
       .select('id, edit_token')
@@ -30,7 +39,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'invalid token' }, { status: 403 })
     }
 
-    // Only update allowed fields
+    // Whitelist fields
     const allowed = {
       name: patch.name ?? null,
       city: patch.city ?? null,
@@ -58,4 +67,3 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: e?.message || 'server error' }, { status: 500 })
   }
 }
-
