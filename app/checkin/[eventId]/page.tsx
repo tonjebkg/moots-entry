@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 
-type Status = 'invited' | 'confirmed' | 'waitlist' | 'cancelled' | 'checked_in'
+type Status = 'invite_sent' | 'confirmed' | 'waitlist' | 'cancelled' | 'checked_in'
 
 type Guest = {
   id: string
@@ -34,7 +34,6 @@ export default function CheckinPage() {
   const [message, setMessage] = useState<string | null>(null)
   const searchRef = useRef<HTMLInputElement>(null)
 
-  // Focus search on "/" like the UI hint
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if (e.key === '/' && document.activeElement !== searchRef.current) {
@@ -65,86 +64,58 @@ export default function CheckinPage() {
     })()
   }, [eventId])
 
-  // ---------- Metrics (headcounts always include plus-ones) ----------
   const metrics = useMemo(() => {
     const hc = (g: Guest) => 1 + Math.max(0, g.plus_ones ?? 0)
-
-    let checkedInHeadcount = 0
-    let confirmedHeadcount = 0
-
+    let checkedIn = 0
+    let confirmed = 0
     for (const g of guests) {
-      if (g.status === 'checked_in') checkedInHeadcount += hc(g)
-      if (g.status === 'confirmed') confirmedHeadcount += hc(g)
+      if (g.status === 'checked_in') checkedIn += hc(g)
+      if (g.status === 'confirmed') confirmed += hc(g)
     }
-
-    const notYetCheckedInHeadcount = Math.max(0, confirmedHeadcount - checkedInHeadcount)
-
     return {
-      checkedInHeadcount,
-      confirmedHeadcount,
-      notYetCheckedInHeadcount,
+      checkedInHeadcount: checkedIn,
+      confirmedHeadcount: confirmed,
+      notYetCheckedInHeadcount: Math.max(0, confirmed - checkedIn),
     }
   }, [guests])
 
   const capacity = event?.capacity ?? 0
-  const capacityPct = capacity
-    ? Math.min(100, (metrics.checkedInHeadcount / capacity) * 100)
-    : 0
+  const capacityPct = capacity ? Math.min(100, (metrics.checkedInHeadcount / capacity) * 100) : 0
 
-  // ---------- Filtering & Sorting ----------
   const filtered = useMemo(() => {
     const term = q.trim().toLowerCase()
     let list = term
-      ? guests.filter(
-          g =>
-            g.full_name.toLowerCase().includes(term) ||
-            g.email.toLowerCase().includes(term)
-        )
+      ? guests.filter(g => g.full_name.toLowerCase().includes(term) || g.email.toLowerCase().includes(term))
       : [...guests]
-
     if (sortKey === 'status') {
-      const order: Record<Status, number> = {
-        checked_in: 0,
-        confirmed: 1,
-        invited: 2,
-        waitlist: 3,
-        cancelled: 4,
-      }
-      list.sort((a, b) => order[a.status] - order[b.status] || a.full_name.localeCompare(b.full_name))
+      const order: Record<Status, number> = { checked_in:0, confirmed:1, invite_sent:2, waitlist:3, cancelled:4 }
+      list.sort((a,b)=> order[a.status]-order[b.status] || a.full_name.localeCompare(b.full_name))
     } else {
-      list.sort((a, b) => a.full_name.localeCompare(b.full_name))
+      list.sort((a,b)=> a.full_name.localeCompare(b.full_name))
     }
     return list
   }, [guests, q, sortKey])
 
-  // ---------- Mutations ----------
   async function setStatus(g: Guest, status: Status) {
     await supabase.from('guests').update({ status }).eq('id', g.id)
-    setGuests(prev => prev.map(x => (x.id === g.id ? { ...x, status } : x)))
+    setGuests(prev => prev.map(x => x.id===g.id ? { ...x, status } : x))
   }
-
   async function handleCheckIn(g: Guest) {
-    if (g.status === 'checked_in') return
-    await setStatus(g, 'checked_in')
+    if (g.status !== 'checked_in') await setStatus(g, 'checked_in')
   }
-
   async function handleUndo(g: Guest) {
-    if (g.status !== 'checked_in') return
-    // defaulting back to invited keeps the prior behavior
-    await setStatus(g, 'invited')
+    if (g.status === 'checked_in') await setStatus(g, 'invite_sent')
   }
-
   async function handlePlusOnes(g: Guest, delta: 1 | -1) {
     const next = Math.max(0, (g.plus_ones ?? 0) + delta)
     await supabase.from('guests').update({ plus_ones: next }).eq('id', g.id)
-    setGuests(prev => prev.map(x => (x.id === g.id ? { ...x, plus_ones: next } : x)))
+    setGuests(prev => prev.map(x => x.id===g.id ? { ...x, plus_ones: next } : x))
   }
 
   if (!event) return <main className="p-6 text-white">Loading…</main>
 
   return (
     <main className="p-6 max-w-6xl mx-auto space-y-6 text-white">
-      {/* HEADER */}
       <header className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-semibold leading-tight">{event.name}</h1>
@@ -153,70 +124,44 @@ export default function CheckinPage() {
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <Link href={`/checkin/${event.id}/scan`} className="px-4 py-2 rounded border hover:bg-slate-900">
-            Scan QR
-          </Link>
-          <Link href={`/dashboard/${event.id}`} className="px-4 py-2 rounded border hover:bg-slate-900">
-            Back to dashboard
-          </Link>
+          <Link href={`/checkin/${event.id}/scan`} className="px-4 py-2 rounded border hover:bg-slate-900">Scan QR</Link>
+          <Link href={`/dashboard/${event.id}`} className="px-4 py-2 rounded border hover:bg-slate-900">Back to dashboard</Link>
         </div>
       </header>
 
-      {/* METRICS (simplified per your spec) */}
       <section className="grid grid-cols-1 md:grid-cols-4 gap-3">
-        {/* Checked-in headcount */}
         <div className="border rounded p-4">
           <div className="text-slate-400 text-sm">Checked-in headcount</div>
           <div className="text-2xl font-semibold mt-1">{metrics.checkedInHeadcount}</div>
           <div className="text-xs text-slate-400 mt-1">(guests + plus-ones)</div>
         </div>
-
-        {/* Not yet checked-in = confirmed - checked-in */}
         <div className="border rounded p-4">
           <div className="text-slate-400 text-sm">Not yet checked-in</div>
           <div className="text-2xl font-semibold mt-1">{metrics.notYetCheckedInHeadcount}</div>
           <div className="text-xs text-slate-400 mt-1">(guests + plus-ones)</div>
         </div>
-
-        {/* Confirmed guests (total headcount expected) */}
         <div className="border rounded p-4">
           <div className="text-slate-400 text-sm">Confirmed guests</div>
           <div className="text-2xl font-semibold mt-1">{metrics.confirmedHeadcount}</div>
           <div className="text-xs text-slate-400 mt-1">(guests + plus-ones)</div>
         </div>
-
-        {/* Event capacity with inline number and progress bar */}
         <div className="border rounded p-4">
-          <div className="text-slate-400 text-sm">
-            Event capacity {capacity ? `${capacity} guests` : ''}
-          </div>
-          <div className="mt-2 h-2 w-full bg-slate-800 rounded overflow-hidden" title="Checked-in vs capacity">
+          <div className="text-slate-400 text-sm">Event capacity {capacity ? `${capacity} guests` : ''}</div>
+          <div className="mt-2 h-2 w-full bg-slate-800 rounded overflow-hidden">
             <div className="h-full bg-green-600" style={{ width: `${capacityPct}%` }} />
           </div>
           <div className="text-xs text-slate-400 mt-1">{Math.round(capacityPct)}%</div>
         </div>
       </section>
 
-      {/* CONTROLS */}
       <section className="flex gap-3 items-center">
-        <input
-          ref={searchRef}
-          value={q}
-          onChange={e => setQ(e.target.value)}
-          placeholder="Search name or email…  (/ to focus)"
-          className="flex-1 p-2 rounded border bg-transparent"
-        />
-        <select
-          value={sortKey}
-          onChange={e => setSortKey(e.target.value as any)}
-          className="p-2 rounded border bg-transparent"
-        >
+        <input ref={searchRef} value={q} onChange={e=>setQ(e.target.value)} placeholder="Search name or email…  (/ to focus)" className="flex-1 p-2 rounded border bg-transparent" />
+        <select value={sortKey} onChange={e=>setSortKey(e.target.value as any)} className="p-2 rounded border bg-transparent">
           <option value="status">status</option>
           <option value="name">name</option>
         </select>
       </section>
 
-      {/* TABLE */}
       <section className="border rounded overflow-hidden">
         <table className="w-full text-sm">
           <thead className="bg-slate-900 text-slate-200">
@@ -228,12 +173,10 @@ export default function CheckinPage() {
             </tr>
           </thead>
           <tbody>
-            {filtered.length === 0 && (
-              <tr>
-                <td colSpan={4} className="p-4 text-center text-slate-400">No guests found.</td>
-              </tr>
+            {filtered.length===0 && (
+              <tr><td colSpan={4} className="p-4 text-center text-slate-400">No guests found.</td></tr>
             )}
-            {filtered.map(g => (
+            {filtered.map(g=>(
               <tr key={g.id} className="border-t border-slate-800">
                 <td className="p-2">{g.full_name}</td>
                 <td className="p-2">{g.email}</td>
@@ -241,33 +184,17 @@ export default function CheckinPage() {
                   {g.status === 'checked_in' ? (
                     <div className="flex items-center gap-2">
                       <span className="inline-block px-3 py-1 rounded bg-green-700 text-white">Checked-in</span>
-                      <button
-                        className="px-3 py-1 rounded border hover:bg-slate-900"
-                        onClick={() => handleUndo(g)}
-                      >
-                        Undo
-                      </button>
+                      <button className="px-3 py-1 rounded border hover:bg-slate-900" onClick={()=>handleUndo(g)}>Undo</button>
                     </div>
                   ) : (
-                    <button
-                      className="px-3 py-1 rounded border hover:bg-slate-900"
-                      onClick={() => handleCheckIn(g)}
-                    >
-                      Check in
-                    </button>
+                    <button className="px-3 py-1 rounded border hover:bg-slate-900" onClick={()=>handleCheckIn(g)}>Check in</button>
                   )}
                 </td>
                 <td className="p-2">
                   <div className="inline-flex items-center gap-2">
-                    <button
-                      className="px-2 py-1 rounded border hover:bg-slate-900"
-                      onClick={() => handlePlusOnes(g, -1)}
-                    >−</button>
+                    <button className="px-2 py-1 rounded border hover:bg-slate-900" onClick={()=>handlePlusOnes(g,-1)}>−</button>
                     <span>{g.plus_ones ?? 0}</span>
-                    <button
-                      className="px-2 py-1 rounded border hover:bg-slate-900"
-                      onClick={() => handlePlusOnes(g, +1)}
-                    >＋</button>
+                    <button className="px-2 py-1 rounded border hover:bg-slate-900" onClick={()=>handlePlusOnes(g,+1)}>＋</button>
                   </div>
                 </td>
               </tr>
