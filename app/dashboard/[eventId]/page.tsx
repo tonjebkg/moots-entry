@@ -31,6 +31,7 @@ type EventRow = {
   image_url?: string | null
   event_url?: string | null
   hosts?: Host[] | null
+  edit_token?: string // used by /api/events/update
 }
 
 const STATUS_LABEL: Record<Status, string> = {
@@ -40,7 +41,6 @@ const STATUS_LABEL: Record<Status, string> = {
   cancelled: 'Cancelled',
   checked_in: 'Checked-in',
 }
-
 const STATUS_BG: Record<Status, string> = {
   invite_sent: 'bg-slate-700 text-slate-100',
   confirmed: 'bg-blue-700 text-white',
@@ -48,33 +48,25 @@ const STATUS_BG: Record<Status, string> = {
   cancelled: 'bg-red-700 text-white',
   checked_in: 'bg-green-700 text-white',
 }
-
 const PRIORITY_LABEL: Record<Priority, string> = {
   normal: 'Normal',
   vip: 'VIP',
   vvip: 'VVIP',
 }
 
-/** Format ISO string to "DD/MM/YYYY, HH:mm" in local time */
 function formatLocalDDMMYYYYHHMM(iso: string) {
   const d = new Date(iso)
   if (isNaN(d.getTime())) return ''
   const pad = (n: number) => (n < 10 ? `0${n}` : `${n}`)
   return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()}, ${pad(d.getHours())}:${pad(d.getMinutes())}`
 }
-
-/** Parse several date formats and return ISO string or null */
 function parseFlexibleToISO(input: string): string | null {
   if (!input) return null
   const s = input.trim()
-
-  // 1) datetime-local: 2025-11-23T13:00
   if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(s)) {
     const d = new Date(s)
     return isNaN(d.getTime()) ? null : d.toISOString()
   }
-
-  // 2) DD/MM/YYYY[, ]HH:mm
   const m = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})(?:[,\s]+(\d{1,2}):(\d{2}))?$/)
   if (m) {
     const dd = Number(m[1])
@@ -82,11 +74,9 @@ function parseFlexibleToISO(input: string): string | null {
     const yyyy = Number(m[3])
     const hh = m[4] ? Number(m[4]) : 0
     const min = m[5] ? Number(m[5]) : 0
-    const d = new Date(yyyy, mm, dd, hh, min, 0, 0) // local time
+    const d = new Date(yyyy, mm, dd, hh, min, 0, 0)
     return isNaN(d.getTime()) ? null : d.toISOString()
   }
-
-  // 3) As a last resort, let JS try
   const d = new Date(s)
   return isNaN(d.getTime()) ? null : d.toISOString()
 }
@@ -105,7 +95,7 @@ export default function DashboardPage() {
   const [evName, setEvName] = useState('')
   const [evCity, setEvCity] = useState('')
   const [evTimezone, setEvTimezone] = useState('')
-  const [evStartsAtInput, setEvStartsAtInput] = useState('') // free text like create form
+  const [evStartsAtInput, setEvStartsAtInput] = useState('')
   const [evCapacity, setEvCapacity] = useState<number>(0)
   const [evEventUrl, setEvEventUrl] = useState('')
   const [evImageUrl, setEvImageUrl] = useState<string>('')
@@ -132,7 +122,7 @@ export default function DashboardPage() {
     ;(async () => {
       const { data: ev } = await supabase
         .from('events')
-        .select('id,name,city,starts_at,timezone,capacity,image_url,event_url,hosts')
+        .select('id,name,city,starts_at,timezone,capacity,image_url,event_url,hosts,edit_token')
         .eq('id', eventId)
         .single()
       setEvent(ev as EventRow)
@@ -195,7 +185,6 @@ export default function DashboardPage() {
     return list
   }, [guests, q, sortKey])
 
-  // guest mutations
   async function handleStatusChange(g: Guest, next: Status) {
     await supabase.from('guests').update({ status: next }).eq('id', g.id)
     setGuests(prev => prev.map(x => x.id === g.id ? { ...x, status: next } : x))
@@ -245,14 +234,14 @@ export default function DashboardPage() {
     setMessage('Guest added.')
   }
 
-  // edit event helpers
+  // EDIT EVENT (image stays client-side upload; row update goes through API with token)
   function openEditEvent() {
     if (!event) return
     setModalError(null)
     setEvName(event.name ?? '')
     setEvCity(event.city ?? '')
     setEvTimezone(event.timezone ?? '')
-    setEvStartsAtInput(formatLocalDDMMYYYYHHMM(event.starts_at)) // <<< create-form style
+    setEvStartsAtInput(formatLocalDDMMYYYYHHMM(event.starts_at))
     setEvCapacity(event.capacity ?? 0)
     setEvEventUrl(event.event_url ?? '')
     setEvImageUrl(event.image_url ?? '')
@@ -260,18 +249,12 @@ export default function DashboardPage() {
     setHosts(Array.isArray(event.hosts) ? [...event.hosts] : [])
     setIsEditingEvent(true)
   }
-  function closeEditEvent() {
-    setIsEditingEvent(false)
-  }
+  function closeEditEvent() { setIsEditingEvent(false) }
   function updateHost(idx: number, patch: Partial<Host>) {
     setHosts(prev => prev.map((h,i)=> i===idx ? { ...h, ...patch } : h))
   }
-  function addHost() {
-    setHosts(prev => [...prev, { name: '', url: '' }])
-  }
-  function removeHost(idx: number) {
-    setHosts(prev => prev.filter((_,i)=> i!==idx))
-  }
+  function addHost() { setHosts(prev => [...prev, { name: '', url: '' }]) }
+  function removeHost(idx: number) { setHosts(prev => prev.filter((_,i)=> i!==idx)) }
 
   async function uploadEventImageIfNeeded(evId: string): Promise<string | null> {
     if (!newImageFile) return null
@@ -312,15 +295,20 @@ export default function DashboardPage() {
           .filter(h => h.name.length > 0),
       }
 
-      const { data, error } = await supabase
-        .from('events')
-        .update(patch)
-        .eq('id', event.id)
-        .select('id,name,city,starts_at,timezone,capacity,image_url,event_url,hosts')
-        .single()
-      if (error) throw error
+      // >>> CALL our API with the edit token (no auth session required)
+      const res = await fetch('/api/events/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          eventId: event.id,
+          editToken: event.edit_token, // included in initial select
+          patch
+        })
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error || 'Failed to update event')
 
-      setEvent(data as EventRow)
+      setEvent(json.event as EventRow)
       setMessage('Event updated.')
       closeEditEvent()
     } catch (err: any) {
@@ -506,8 +494,7 @@ export default function DashboardPage() {
             </div>
             <textarea value={commentDraft} onChange={(e) => setCommentDraft(e.target.value)} rows={10} className="w-full p-3 rounded border bg-transparent resize-y" placeholder="Type your note…" />
             <div className="mt-4 flex items-center justify-end gap-2">
-              <button className="px-3 py-2 rounded border hover:bg-slate-800" onClick={closeCommentModal}>Cancel</button>
-              <button className="px-3 py-2 rounded border bg-blue-700 hover:bg-blue-600" onClick={saveCommentModal} title="Save (⌘/Ctrl + Enter)">Save</button>
+              <button className="px-3 py-2 rounded border hover:bg-slate-800" onClick={saveCommentModal}>Save</button>
             </div>
           </div>
         </div>
@@ -591,8 +578,7 @@ export default function DashboardPage() {
             </div>
 
             <div className="flex items-center justify-end gap-2">
-              <button className="px-3 py-2 rounded border hover:bg-slate-800" onClick={closeEditEvent} disabled={saving}>Cancel</button>
-              <button className="px-3 py-2 rounded border bg-blue-700 hover:bg-blue-600 disabled:opacity-50" onClick={saveEvent} disabled={saving}>
+              <button className="px-3 py-2 rounded border hover:bg-slate-800" onClick={saveEvent} disabled={saving}>
                 {saving ? 'Saving…' : 'Save changes'}
               </button>
             </div>
