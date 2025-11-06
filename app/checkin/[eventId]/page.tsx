@@ -65,28 +65,24 @@ export default function CheckinPage() {
     })()
   }, [eventId])
 
-  // ---- Derived numbers (all headcounts include plus-ones) ----
+  // ---------- Metrics (headcounts always include plus-ones) ----------
   const metrics = useMemo(() => {
+    const hc = (g: Guest) => 1 + Math.max(0, g.plus_ones ?? 0)
+
     let checkedInHeadcount = 0
-    let notCheckedGuests = 0
-    let notCheckedHeadcount = 0
+    let confirmedHeadcount = 0
 
     for (const g of guests) {
-      const plus = Math.max(0, g.plus_ones ?? 0)
-      const headcount = 1 + plus
-
-      if (g.status === 'checked_in') {
-        checkedInHeadcount += headcount
-      } else {
-        notCheckedGuests += 1
-        notCheckedHeadcount += headcount
-      }
+      if (g.status === 'checked_in') checkedInHeadcount += hc(g)
+      if (g.status === 'confirmed') confirmedHeadcount += hc(g)
     }
+
+    const notYetCheckedInHeadcount = Math.max(0, confirmedHeadcount - checkedInHeadcount)
 
     return {
       checkedInHeadcount,
-      notCheckedGuests,      // number of people rows not checked-in (guests only)
-      notCheckedHeadcount,   // guests + plus-ones not checked-in (what you want in “total”)
+      confirmedHeadcount,
+      notYetCheckedInHeadcount,
     }
   }, [guests])
 
@@ -95,7 +91,7 @@ export default function CheckinPage() {
     ? Math.min(100, (metrics.checkedInHeadcount / capacity) * 100)
     : 0
 
-  // ---- Filtering & Sorting ----
+  // ---------- Filtering & Sorting ----------
   const filtered = useMemo(() => {
     const term = q.trim().toLowerCase()
     let list = term
@@ -108,9 +104,9 @@ export default function CheckinPage() {
 
     if (sortKey === 'status') {
       const order: Record<Status, number> = {
-        checked_in: 0, // show checked-in first (fast undo)
-        invited: 1,
-        confirmed: 2,
+        checked_in: 0,
+        confirmed: 1,
+        invited: 2,
         waitlist: 3,
         cancelled: 4,
       }
@@ -121,7 +117,7 @@ export default function CheckinPage() {
     return list
   }, [guests, q, sortKey])
 
-  // ---- Mutations ----
+  // ---------- Mutations ----------
   async function setStatus(g: Guest, status: Status) {
     await supabase.from('guests').update({ status }).eq('id', g.id)
     setGuests(prev => prev.map(x => (x.id === g.id ? { ...x, status } : x)))
@@ -133,8 +129,8 @@ export default function CheckinPage() {
   }
 
   async function handleUndo(g: Guest) {
-    // revert to "invited" by default (keeps UI simple and consistent with previous flow)
     if (g.status !== 'checked_in') return
+    // defaulting back to invited keeps the prior behavior
     await setStatus(g, 'invited')
   }
 
@@ -166,29 +162,34 @@ export default function CheckinPage() {
         </div>
       </header>
 
-      {/* METRICS */}
+      {/* METRICS (simplified per your spec) */}
       <section className="grid grid-cols-1 md:grid-cols-4 gap-3">
+        {/* Checked-in headcount */}
         <div className="border rounded p-4">
           <div className="text-slate-400 text-sm">Checked-in headcount</div>
           <div className="text-2xl font-semibold mt-1">{metrics.checkedInHeadcount}</div>
           <div className="text-xs text-slate-400 mt-1">(guests + plus-ones)</div>
         </div>
 
+        {/* Not yet checked-in = confirmed - checked-in */}
         <div className="border rounded p-4">
           <div className="text-slate-400 text-sm">Not yet checked-in</div>
-          <div className="text-2xl font-semibold mt-1">{metrics.notCheckedGuests}</div>
-          <div className="text-xs text-slate-400 mt-1">
-            {metrics.notCheckedHeadcount} total
+          <div className="text-2xl font-semibold mt-1">{metrics.notYetCheckedInHeadcount}</div>
+          <div className="text-xs text-slate-400 mt-1">(guests + plus-ones)</div>
+        </div>
+
+        {/* Confirmed guests (total headcount expected) */}
+        <div className="border rounded p-4">
+          <div className="text-slate-400 text-sm">Confirmed guests</div>
+          <div className="text-2xl font-semibold mt-1">{metrics.confirmedHeadcount}</div>
+          <div className="text-xs text-slate-400 mt-1">(guests + plus-ones)</div>
+        </div>
+
+        {/* Event capacity with inline number and progress bar */}
+        <div className="border rounded p-4">
+          <div className="text-slate-400 text-sm">
+            Event capacity {capacity ? `${capacity} guests` : ''}
           </div>
-        </div>
-
-        <div className="border rounded p-4">
-          <div className="text-slate-400 text-sm">Event capacity</div>
-          <div className="text-2xl font-semibold mt-1">{capacity}</div>
-        </div>
-
-        <div className="border rounded p-4">
-          <div className="text-slate-400 text-sm">Event capacity</div>
           <div className="mt-2 h-2 w-full bg-slate-800 rounded overflow-hidden" title="Checked-in vs capacity">
             <div className="h-full bg-green-600" style={{ width: `${capacityPct}%` }} />
           </div>
