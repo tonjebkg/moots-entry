@@ -59,6 +59,10 @@ export default function DashboardPage() {
   const [isAdding, setIsAdding] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
 
+  // Modal state for comments
+  const [commentGuest, setCommentGuest] = useState<Guest | null>(null)
+  const [commentDraft, setCommentDraft] = useState('')
+
   const [newGuest, setNewGuest] = useState<{
     full_name: string
     email: string
@@ -145,15 +149,45 @@ export default function DashboardPage() {
     await supabase.from('guests').update({ priority: next }).eq('id', g.id)
     setGuests(prev => prev.map(x => x.id===g.id ? { ...x, priority: next } : x))
   }
-  async function handleCommentsChange(g: Guest, text: string) {
-    await supabase.from('guests').update({ comments: text }).eq('id', g.id)
-    setGuests(prev => prev.map(x => x.id===g.id ? { ...x, comments: text } : x))
-  }
   async function handlePlusOnes(g: Guest, delta: 1 | -1) {
     const next = Math.max(0, (g.plus_ones ?? 0) + delta)
     await supabase.from('guests').update({ plus_ones: next }).eq('id', g.id)
     setGuests(prev => prev.map(x => x.id===g.id ? { ...x, plus_ones: next } : x))
   }
+
+  // --- Comments modal handlers ---
+  function openCommentModal(g: Guest) {
+    setCommentGuest(g)
+    setCommentDraft(g.comments ?? '')
+  }
+  function closeCommentModal() {
+    setCommentGuest(null)
+    setCommentDraft('')
+  }
+  async function saveCommentModal() {
+    if (!commentGuest) return
+    const text = commentDraft
+    await supabase.from('guests').update({ comments: text }).eq('id', commentGuest.id)
+    setGuests(prev => prev.map(x => (x.id === commentGuest.id ? { ...x, comments: text } : x)))
+    closeCommentModal()
+  }
+
+  // keyboard shortcuts inside modal: Esc to close, Cmd/Ctrl+Enter to save
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (!commentGuest) return
+      if (e.key === 'Escape') {
+        e.preventDefault()
+        closeCommentModal()
+      }
+      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+        e.preventDefault()
+        saveCommentModal()
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [commentGuest, commentDraft])
 
   async function handleCreateGuest(e: React.FormEvent) {
     e.preventDefault()
@@ -203,13 +237,13 @@ export default function DashboardPage() {
       {/* CAPACITY BAR */}
       <section className="space-y-2">
         <div className="flex items-center gap-6 text-sm">
-          <div>Capacity: <span className="font-medium">{event.capacity ?? 0}</span></div>
+          <div>Capacity: <span className="font-medium">{capacity}</span></div>
           <div>Confirmed headcount: <span className="font-medium">{totals.confirmedHeadcount}</span></div>
           <div>Checked-in headcount: <span className="font-medium">{totals.checkedInHeadcount}</span></div>
         </div>
         <div className="h-2 w-full bg-slate-800 rounded overflow-hidden">
-          <div className="h-full bg-blue-600" style={{ width: `${(event.capacity ?? 0) ? Math.min(100,(totals.confirmedHeadcount/(event.capacity ?? 1))*100) : 0}%` }} title="Confirmed" />
-          <div className="h-full bg-green-600 -mt-2" style={{ width: `${(event.capacity ?? 0) ? Math.min(100,(totals.checkedInHeadcount/(event.capacity ?? 1))*100) : 0}%` }} title="Checked-in" />
+          <div className="h-full bg-blue-600" style={{ width: `${confirmedPct}%` }} title="Confirmed" />
+          <div className="h-full bg-green-600 -mt-2" style={{ width: `${checkedPct}%` }} title="Checked-in" />
         </div>
         <div className="flex items-center gap-3 text-sm mt-2">
           <span className="text-slate-400">Totals —</span>
@@ -302,13 +336,60 @@ export default function DashboardPage() {
                   </div>
                 </td>
                 <td className="p-2">
-                  <input value={g.comments ?? ''} onChange={e=>handleCommentsChange(g, e.target.value)} placeholder="Add a note…" className="w-full p-1 rounded border bg-transparent" />
+                  {/* Input kept for quick glance, but readOnly; clicking opens modal */}
+                  <input
+                    value={g.comments ?? ''}
+                    readOnly
+                    onClick={() => openCommentModal(g)}
+                    placeholder="Add a note…"
+                    className="w-full p-1 rounded border bg-transparent cursor-pointer"
+                    title={g.comments ?? ''}
+                  />
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
       </section>
+
+      {/* Comments Modal */}
+      {commentGuest && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/60" onClick={closeCommentModal} />
+          <div className="relative z-10 w-[min(800px,92vw)] max-h-[88vh] bg-slate-900 border border-slate-700 rounded-xl p-4 shadow-xl">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-lg font-semibold">
+                Edit note — {commentGuest.full_name}
+              </h2>
+              <button
+                className="px-3 py-1 rounded border hover:bg-slate-800"
+                onClick={closeCommentModal}
+              >
+                Close (Esc)
+              </button>
+            </div>
+            <textarea
+              value={commentDraft}
+              onChange={(e) => setCommentDraft(e.target.value)}
+              rows={10}
+              className="w-full p-3 rounded border bg-transparent resize-y"
+              placeholder="Type your note…"
+            />
+            <div className="mt-4 flex items-center justify-end gap-2">
+              <button className="px-3 py-2 rounded border hover:bg-slate-800" onClick={closeCommentModal}>
+                Cancel
+              </button>
+              <button
+                className="px-3 py-2 rounded border bg-blue-700 hover:bg-blue-600"
+                onClick={saveCommentModal}
+                title="Save (⌘/Ctrl + Enter)"
+              >
+                Save
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {message && <p className="text-center text-sm text-amber-300">{message}</p>}
     </main>
