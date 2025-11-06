@@ -55,6 +55,42 @@ const PRIORITY_LABEL: Record<Priority, string> = {
   vvip: 'VVIP',
 }
 
+/** Format ISO string to "DD/MM/YYYY, HH:mm" in local time */
+function formatLocalDDMMYYYYHHMM(iso: string) {
+  const d = new Date(iso)
+  if (isNaN(d.getTime())) return ''
+  const pad = (n: number) => (n < 10 ? `0${n}` : `${n}`)
+  return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()}, ${pad(d.getHours())}:${pad(d.getMinutes())}`
+}
+
+/** Parse several date formats and return ISO string or null */
+function parseFlexibleToISO(input: string): string | null {
+  if (!input) return null
+  const s = input.trim()
+
+  // 1) datetime-local: 2025-11-23T13:00
+  if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(s)) {
+    const d = new Date(s)
+    return isNaN(d.getTime()) ? null : d.toISOString()
+  }
+
+  // 2) DD/MM/YYYY[, ]HH:mm
+  const m = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})(?:[,\s]+(\d{1,2}):(\d{2}))?$/)
+  if (m) {
+    const dd = Number(m[1])
+    const mm = Number(m[2]) - 1
+    const yyyy = Number(m[3])
+    const hh = m[4] ? Number(m[4]) : 0
+    const min = m[5] ? Number(m[5]) : 0
+    const d = new Date(yyyy, mm, dd, hh, min, 0, 0) // local time
+    return isNaN(d.getTime()) ? null : d.toISOString()
+  }
+
+  // 3) As a last resort, let JS try
+  const d = new Date(s)
+  return isNaN(d.getTime()) ? null : d.toISOString()
+}
+
 export default function DashboardPage() {
   const { eventId } = useParams<{ eventId: string }>()
   const [event, setEvent] = useState<EventRow | null>(null)
@@ -69,12 +105,14 @@ export default function DashboardPage() {
   const [evName, setEvName] = useState('')
   const [evCity, setEvCity] = useState('')
   const [evTimezone, setEvTimezone] = useState('')
-  const [evStartsAtLocal, setEvStartsAtLocal] = useState('') // datetime-local value
+  const [evStartsAtInput, setEvStartsAtInput] = useState('') // free text like create form
   const [evCapacity, setEvCapacity] = useState<number>(0)
   const [evEventUrl, setEvEventUrl] = useState('')
-  const [evImageUrl, setEvImageUrl] = useState<string>('') // preview existing
+  const [evImageUrl, setEvImageUrl] = useState<string>('')
   const [newImageFile, setNewImageFile] = useState<File | null>(null)
   const [hosts, setHosts] = useState<Host[]>([])
+  const [saving, setSaving] = useState(false)
+  const [modalError, setModalError] = useState<string | null>(null)
 
   // Comments modal
   const [commentGuest, setCommentGuest] = useState<Guest | null>(null)
@@ -114,7 +152,6 @@ export default function DashboardPage() {
     })()
   }, [eventId])
 
-  // ---- totals (headcounts include plus-ones) ----
   const totals = useMemo(() => {
     const base = { invite_sent: 0, confirmed: 0, waitlist: 0, cancelled: 0, checked_in: 0 }
     let invitedMetric = 0
@@ -158,7 +195,7 @@ export default function DashboardPage() {
     return list
   }, [guests, q, sortKey])
 
-  // ---- guest mutations ----
+  // guest mutations
   async function handleStatusChange(g: Guest, next: Status) {
     await supabase.from('guests').update({ status: next }).eq('id', g.id)
     setGuests(prev => prev.map(x => x.id === g.id ? { ...x, status: next } : x))
@@ -173,7 +210,7 @@ export default function DashboardPage() {
     setGuests(prev => prev.map(x => x.id===g.id ? { ...x, plus_ones: next } : x))
   }
 
-  // ---- comments modal ----
+  // comments modal
   function openCommentModal(g: Guest) { setCommentGuest(g); setCommentDraft(g.comments ?? '') }
   function closeCommentModal() { setCommentGuest(null); setCommentDraft('') }
   async function saveCommentModal() {
@@ -183,7 +220,7 @@ export default function DashboardPage() {
     closeCommentModal()
   }
 
-  // ---- add guest ----
+  // add guest
   async function handleCreateGuest(e: React.FormEvent) {
     e.preventDefault()
     if (!event) return
@@ -208,13 +245,14 @@ export default function DashboardPage() {
     setMessage('Guest added.')
   }
 
-  // ---- edit event modal helpers ----
+  // edit event helpers
   function openEditEvent() {
     if (!event) return
+    setModalError(null)
     setEvName(event.name ?? '')
     setEvCity(event.city ?? '')
     setEvTimezone(event.timezone ?? '')
-    setEvStartsAtLocal(new Date(event.starts_at).toISOString().slice(0,16)) // YYYY-MM-DDTHH:mm
+    setEvStartsAtInput(formatLocalDDMMYYYYHHMM(event.starts_at)) // <<< create-form style
     setEvCapacity(event.capacity ?? 0)
     setEvEventUrl(event.event_url ?? '')
     setEvImageUrl(event.image_url ?? '')
@@ -235,7 +273,6 @@ export default function DashboardPage() {
     setHosts(prev => prev.filter((_,i)=> i!==idx))
   }
 
-  // Upload selected image to Supabase Storage and return public URL
   async function uploadEventImageIfNeeded(evId: string): Promise<string | null> {
     if (!newImageFile) return null
     const ext = newImageFile.name.split('.').pop() || 'jpg'
@@ -248,7 +285,16 @@ export default function DashboardPage() {
 
   async function saveEvent() {
     if (!event) return
+    setSaving(true)
+    setModalError(null)
     try {
+      const iso = parseFlexibleToISO(evStartsAtInput)
+      if (!iso) {
+        setModalError('Invalid date/time. Use "DD/MM/YYYY, HH:mm" or pick a valid value.')
+        setSaving(false)
+        return
+      }
+
       let nextImageUrl = evImageUrl
       const uploaded = await uploadEventImageIfNeeded(event.id)
       if (uploaded) nextImageUrl = uploaded
@@ -257,7 +303,7 @@ export default function DashboardPage() {
         name: evName.trim(),
         city: evCity.trim() || null,
         timezone: evTimezone.trim() || null,
-        starts_at: new Date(evStartsAtLocal).toISOString(),
+        starts_at: iso,
         capacity: Number.isFinite(evCapacity) ? evCapacity : null,
         image_url: nextImageUrl || null,
         event_url: evEventUrl.trim() || null,
@@ -278,7 +324,9 @@ export default function DashboardPage() {
       setMessage('Event updated.')
       closeEditEvent()
     } catch (err: any) {
-      setMessage(err.message ?? 'Failed to update event')
+      setModalError(err?.message ?? 'Failed to update event')
+    } finally {
+      setSaving(false)
     }
   }
 
@@ -289,69 +337,43 @@ export default function DashboardPage() {
       {/* HEADER */}
       <header className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div className="flex items-start gap-3 min-w-0 flex-1">
-          {/* Event image */}
           {event.image_url ? (
-            <img
-              src={event.image_url}
-              alt="Event"
-              className="w-14 h-14 rounded-lg object-cover border border-slate-700 shrink-0"
-            />
+            <img src={event.image_url} alt="Event" className="w-14 h-14 rounded-lg object-cover border border-slate-700 shrink-0" />
           ) : (
-            <div className="w-14 h-14 rounded-lg border border-dashed border-slate-700 shrink-0 flex items-center justify-center text-slate-500 text-xs">
-              No image
-            </div>
+            <div className="w-14 h-14 rounded-lg border border-dashed border-slate-700 shrink-0 flex items-center justify-center text-slate-500 text-xs">No image</div>
           )}
-
           <div className="min-w-0">
-            <h1 className="text-2xl font-semibold leading-tight truncate" title={event.name}>
-              {event.name}
-            </h1>
+            <h1 className="text-2xl font-semibold leading-tight truncate" title={event.name}>{event.name}</h1>
             <p className="text-sm text-slate-400 truncate">
               {event.city ?? '—'} · {new Date(event.starts_at).toLocaleString()} · {event.timezone ?? '—'}
             </p>
-
-            {/* Hosts + event link */}
             <div className="text-xs text-slate-300 mt-1 flex flex-wrap gap-2">
               {Array.isArray(event.hosts) && event.hosts.length > 0 && (
                 <span className="truncate">
                   <span className="text-slate-400">Hosts:</span>{' '}
                   {event.hosts.map((h, i) => (
                     <span key={`${h.name}-${i}`}>
-                      {h.url ? (
-                        <a href={h.url} target="_blank" rel="noreferrer" className="underline hover:text-slate-100">
-                          {h.name}
-                        </a>
-                      ) : (
-                        <span>{h.name}</span>
-                      )}
+                      {h.url ? (<a href={h.url} target="_blank" rel="noreferrer" className="underline hover:text-slate-100">{h.name}</a>) : (<span>{h.name}</span>)}
                       {i < event.hosts!.length - 1 ? ', ' : ''}
                     </span>
                   ))}
                 </span>
               )}
               {event.event_url && (
-                <a href={event.event_url} target="_blank" rel="noreferrer" className="underline hover:text-slate-100">
-                  Event link
-                </a>
+                <a href={event.event_url} target="_blank" rel="noreferrer" className="underline hover:text-slate-100">Event link</a>
               )}
             </div>
           </div>
         </div>
 
         <div className="flex items-center gap-3 shrink-0">
-          <button onClick={openEditEvent} className="whitespace-nowrap px-4 py-2 rounded border hover:bg-slate-900">
-            Edit event
-          </button>
-          <Link href="/" className="whitespace-nowrap px-4 py-2 rounded border hover:bg-slate-900">
-            New Event
-          </Link>
+          <button onClick={openEditEvent} className="whitespace-nowrap px-4 py-2 rounded border hover:bg-slate-900">Edit event</button>
+          <Link href="/" className="whitespace-nowrap px-4 py-2 rounded border hover:bg-slate-900">New Event</Link>
           <label className="whitespace-nowrap px-4 py-2 rounded border cursor-pointer hover:bg-slate-900">
             Re-upload CSV
             <input type="file" accept=".csv,.txt" className="hidden" />
           </label>
-          <Link href={`/checkin/${event.id}`} className="whitespace-nowrap px-4 py-2 rounded border hover:bg-slate-900">
-            Check-in
-          </Link>
+          <Link href={`/checkin/${event.id}`} className="whitespace-nowrap px-4 py-2 rounded border hover:bg-slate-900">Check-in</Link>
         </div>
       </header>
 
@@ -362,12 +384,10 @@ export default function DashboardPage() {
           <div>Confirmed headcount: <span className="font-medium">{totals.confirmedHeadcount}</span></div>
           <div>Checked-in headcount: <span className="font-medium">{totals.checkedInHeadcount}</span></div>
         </div>
-
         <div className="h-2 w-full bg-slate-800 rounded overflow-hidden">
           <div className="h-full bg-blue-600" style={{ width: `${confirmedPct}%` }} title="Confirmed" />
           <div className="h-full bg-green-600 -mt-2" style={{ width: `${checkedPct}%` }} title="Checked-in" />
         </div>
-
         <div className="flex items-center gap-3 text-sm mt-2">
           <span className="text-slate-400">Totals —</span>
           <span className="px-2 py-1 rounded bg-slate-700 text-slate-100">Invited <b className="ml-1">{totals.invitedMetric}</b></span>
@@ -481,37 +501,19 @@ export default function DashboardPage() {
           <div className="absolute inset-0 bg-black/60" onClick={closeCommentModal} />
           <div className="relative z-10 w-[min(800px,92vw)] max-h-[88vh] bg-slate-900 border border-slate-700 rounded-xl p-4 shadow-xl">
             <div className="flex items-center justify-between mb-3">
-              <h2 className="text-lg font-semibold">
-                Edit note — {commentGuest.full_name}
-              </h2>
-              <button className="px-3 py-1 rounded border hover:bg-slate-800" onClick={closeCommentModal}>
-                Close (Esc)
-              </button>
+              <h2 className="text-lg font-semibold">Edit note — {commentGuest.full_name}</h2>
+              <button className="px-3 py-1 rounded border hover:bg-slate-800" onClick={closeCommentModal}>Close (Esc)</button>
             </div>
-            <textarea
-              value={commentDraft}
-              onChange={(e) => setCommentDraft(e.target.value)}
-              rows={10}
-              className="w-full p-3 rounded border bg-transparent resize-y"
-              placeholder="Type your note…"
-            />
+            <textarea value={commentDraft} onChange={(e) => setCommentDraft(e.target.value)} rows={10} className="w-full p-3 rounded border bg-transparent resize-y" placeholder="Type your note…" />
             <div className="mt-4 flex items-center justify-end gap-2">
-              <button className="px-3 py-2 rounded border hover:bg-slate-800" onClick={closeCommentModal}>
-                Cancel
-              </button>
-              <button
-                className="px-3 py-2 rounded border bg-blue-700 hover:bg-blue-600"
-                onClick={saveCommentModal}
-                title="Save (⌘/Ctrl + Enter)"
-              >
-                Save
-              </button>
+              <button className="px-3 py-2 rounded border hover:bg-slate-800" onClick={closeCommentModal}>Cancel</button>
+              <button className="px-3 py-2 rounded border bg-blue-700 hover:bg-blue-600" onClick={saveCommentModal} title="Save (⌘/Ctrl + Enter)">Save</button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Edit Event Modal — create-form style */}
+      {/* Edit Event Modal */}
       {isEditingEvent && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
           <div className="absolute inset-0 bg-black/60" onClick={closeEditEvent} />
@@ -521,6 +523,8 @@ export default function DashboardPage() {
               <button className="px-3 py-1 rounded border hover:bg-slate-800" onClick={closeEditEvent}>Close</button>
             </div>
 
+            {modalError && <div className="text-sm text-red-300 border border-red-500/40 bg-red-900/20 rounded p-2">{modalError}</div>}
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <label className="text-sm">Event name
                 <input value={evName} onChange={e=>setEvName(e.target.value)} className="mt-1 w-full p-2 rounded border bg-transparent" />
@@ -529,7 +533,7 @@ export default function DashboardPage() {
                 <input value={evCity} onChange={e=>setEvCity(e.target.value)} className="mt-1 w-full p-2 rounded border bg-transparent" />
               </label>
               <label className="text-sm">Starts at
-                <input type="datetime-local" value={evStartsAtLocal} onChange={e=>setEvStartsAtLocal(e.target.value)} className="mt-1 w-full p-2 rounded border bg-transparent" />
+                <input value={evStartsAtInput} onChange={e=>setEvStartsAtInput(e.target.value)} className="mt-1 w-full p-2 rounded border bg-transparent" placeholder="dd/mm/yyyy, hh:mm" />
               </label>
               <label className="text-sm">Timezone
                 <input value={evTimezone} onChange={e=>setEvTimezone(e.target.value)} className="mt-1 w-full p-2 rounded border bg-transparent" />
@@ -541,16 +545,13 @@ export default function DashboardPage() {
                 <input value={evEventUrl} onChange={e=>setEvEventUrl(e.target.value)} className="mt-1 w-full p-2 rounded border bg-transparent" placeholder="https://…" />
               </label>
 
-              {/* Image upload (no URL typing) */}
+              {/* Image upload */}
               <div className="md:col-span-2">
                 <div className="text-sm mb-1">Event image (optional)</div>
                 <div className="flex items-center gap-4">
                   <div className="w-24 h-24 rounded-lg border border-slate-700 overflow-hidden bg-slate-800 flex items-center justify-center">
                     {newImageFile ? (
-                      <img
-                        src={URL.createObjectURL(newImageFile)}
-                        className="w-full h-full object-cover"
-                      />
+                      <img src={URL.createObjectURL(newImageFile)} className="w-full h-full object-cover" />
                     ) : evImageUrl ? (
                       <img src={evImageUrl} className="w-full h-full object-cover" />
                     ) : (
@@ -560,19 +561,10 @@ export default function DashboardPage() {
                   <div className="flex items-center gap-2">
                     <label className="px-3 py-2 rounded border cursor-pointer hover:bg-slate-800">
                       Choose file
-                      <input
-                        type="file"
-                        accept="image/*"
-                        className="hidden"
-                        onChange={(e)=> setNewImageFile(e.target.files?.[0] ?? null)}
-                      />
+                      <input type="file" accept="image/*" className="hidden" onChange={(e)=> setNewImageFile(e.target.files?.[0] ?? null)} />
                     </label>
                     {newImageFile || evImageUrl ? (
-                      <button
-                        className="px-3 py-2 rounded border hover:bg-slate-800"
-                        onClick={() => { setNewImageFile(null); setEvImageUrl('') }}
-                        type="button"
-                      >
+                      <button className="px-3 py-2 rounded border hover:bg-slate-800" onClick={() => { setNewImageFile(null); setEvImageUrl('') }} type="button">
                         Remove
                       </button>
                     ) : null}
@@ -580,24 +572,14 @@ export default function DashboardPage() {
                 </div>
               </div>
 
-              {/* Hosts — name + link rows */}
+              {/* Hosts */}
               <div className="md:col-span-2">
                 <div className="text-sm mb-2">Hosts</div>
                 <div className="space-y-2">
                   {hosts.map((h, idx) => (
                     <div key={idx} className="grid grid-cols-1 md:grid-cols-5 gap-2">
-                      <input
-                        value={h.name ?? ''}
-                        onChange={e=>updateHost(idx,{name:e.target.value})}
-                        placeholder="Host name"
-                        className="p-2 rounded border bg-transparent md:col-span-2"
-                      />
-                      <input
-                        value={h.url ?? ''}
-                        onChange={e=>updateHost(idx,{url:e.target.value})}
-                        placeholder="Host website / link"
-                        className="p-2 rounded border bg-transparent md:col-span-2"
-                      />
+                      <input value={h.name ?? ''} onChange={e=>updateHost(idx,{name:e.target.value})} placeholder="Host name" className="p-2 rounded border bg-transparent md:col-span-2" />
+                      <input value={h.url ?? ''} onChange={e=>updateHost(idx,{url:e.target.value})} placeholder="Host website / link" className="p-2 rounded border bg-transparent md:col-span-2" />
                       <div className="md:col-span-1 flex justify-end">
                         <button type="button" className="px-3 py-2 rounded border hover:bg-slate-800" onClick={()=>removeHost(idx)}>Remove</button>
                       </div>
@@ -609,8 +591,10 @@ export default function DashboardPage() {
             </div>
 
             <div className="flex items-center justify-end gap-2">
-              <button className="px-3 py-2 rounded border hover:bg-slate-800" onClick={closeEditEvent}>Cancel</button>
-              <button className="px-3 py-2 rounded border bg-blue-700 hover:bg-blue-600" onClick={saveEvent}>Save changes</button>
+              <button className="px-3 py-2 rounded border hover:bg-slate-800" onClick={closeEditEvent} disabled={saving}>Cancel</button>
+              <button className="px-3 py-2 rounded border bg-blue-700 hover:bg-blue-600 disabled:opacity-50" onClick={saveEvent} disabled={saving}>
+                {saving ? 'Saving…' : 'Save changes'}
+              </button>
             </div>
           </div>
         </div>
