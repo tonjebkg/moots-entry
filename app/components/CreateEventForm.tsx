@@ -113,11 +113,8 @@ export default function CreateEventForm() {
             const plusOnesRaw =
               r.plus_ones ?? r['plus-ones'] ?? r['Plus Ones'] ?? r['plus ones'] ?? 0
             const priority = normalizePriority(r.priority || r['Priority'])
-            const comments =
-              r.comments || r['Comments'] || r['Notes'] || r['Note'] || null
-            const plus_ones = Number.isFinite(+plusOnesRaw)
-              ? Math.max(0, +plusOnesRaw)
-              : 0
+            const comments = r.comments || r['Comments'] || r['Notes'] || r['Note'] || null
+            const plus_ones = Number.isFinite(+plusOnesRaw) ? Math.max(0, +plusOnesRaw) : 0
 
             return {
               event_id: currentEventId,
@@ -133,7 +130,6 @@ export default function CreateEventForm() {
           const clean = guests.filter((g) => g.full_name || g.email)
           setGuests(clean)
 
-          // Batch insert in chunks to avoid payload limits
           const chunkSize = 500
           for (let i = 0; i < clean.length; i += chunkSize) {
             const slice = clean.slice(i, i + chunkSize)
@@ -159,14 +155,9 @@ export default function CreateEventForm() {
 
   // ---------- RENDER ----------
   return (
-    <div className="max-w-2xl mx-auto space-y-6 p-4 text-slate-100">
-      <h1 className="text-3xl font-semibold">Create an event. Start check-in. See results.</h1>
-      <p className="text-slate-400 text-sm">
-        No login for this MVP. Create an event below — it will appear on this page and link directly to its dashboard.
-      </p>
-
-      {/* EVENT FORM */}
-      <div className="space-y-4 border border-slate-800 rounded-xl p-6 bg-slate-900/40">
+    <div className="max-w-2xl mx-auto">
+      {/* FORM CARD — no duplicated heading here */}
+      <div className="space-y-4 border border-slate-800 rounded-xl p-6 bg-slate-900/40 text-slate-100">
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="block text-sm text-slate-400">Event name *</label>
