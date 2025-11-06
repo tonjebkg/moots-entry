@@ -64,18 +64,17 @@ export default function DashboardPage() {
   const [isAdding, setIsAdding] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
 
-  // Edit event modal
+  // Edit event modal state
   const [isEditingEvent, setIsEditingEvent] = useState(false)
-  const [evDraft, setEvDraft] = useState<{
-    name: string
-    city: string
-    timezone: string
-    starts_at: string
-    capacity: number
-    image_url: string
-    event_url: string
-    hostsText: string
-  } | null>(null)
+  const [evName, setEvName] = useState('')
+  const [evCity, setEvCity] = useState('')
+  const [evTimezone, setEvTimezone] = useState('')
+  const [evStartsAtLocal, setEvStartsAtLocal] = useState('') // datetime-local value
+  const [evCapacity, setEvCapacity] = useState<number>(0)
+  const [evEventUrl, setEvEventUrl] = useState('')
+  const [evImageUrl, setEvImageUrl] = useState<string>('') // preview existing
+  const [newImageFile, setNewImageFile] = useState<File | null>(null)
+  const [hosts, setHosts] = useState<Host[]>([])
 
   // Comments modal
   const [commentGuest, setCommentGuest] = useState<Guest | null>(null)
@@ -159,7 +158,7 @@ export default function DashboardPage() {
     return list
   }, [guests, q, sortKey])
 
-  // ---- mutations ----
+  // ---- guest mutations ----
   async function handleStatusChange(g: Guest, next: Status) {
     await supabase.from('guests').update({ status: next }).eq('id', g.id)
     setGuests(prev => prev.map(x => x.id === g.id ? { ...x, status: next } : x))
@@ -209,60 +208,78 @@ export default function DashboardPage() {
     setMessage('Guest added.')
   }
 
-  // ---- edit event modal ----
+  // ---- edit event modal helpers ----
   function openEditEvent() {
     if (!event) return
-    const hostsText = (event.hosts ?? [])
-      .map(h => h.url ? `${h.name} | ${h.url}` : h.name)
-      .join('\n')
-    setEvDraft({
-      name: event.name ?? '',
-      city: event.city ?? '',
-      timezone: event.timezone ?? '',
-      starts_at: new Date(event.starts_at).toISOString().slice(0,16), // for <input type="datetime-local">
-      capacity: event.capacity ?? 0,
-      image_url: event.image_url ?? '',
-      event_url: event.event_url ?? '',
-      hostsText,
-    })
+    setEvName(event.name ?? '')
+    setEvCity(event.city ?? '')
+    setEvTimezone(event.timezone ?? '')
+    setEvStartsAtLocal(new Date(event.starts_at).toISOString().slice(0,16)) // YYYY-MM-DDTHH:mm
+    setEvCapacity(event.capacity ?? 0)
+    setEvEventUrl(event.event_url ?? '')
+    setEvImageUrl(event.image_url ?? '')
+    setNewImageFile(null)
+    setHosts(Array.isArray(event.hosts) ? [...event.hosts] : [])
     setIsEditingEvent(true)
   }
   function closeEditEvent() {
     setIsEditingEvent(false)
-    setEvDraft(null)
   }
-  function parseHosts(text: string): Host[] {
-    return text
-      .split('\n')
-      .map(l => l.trim())
-      .filter(Boolean)
-      .map(line => {
-        const [name, url] = line.split('|').map(s => s.trim())
-        return url ? { name, url } : { name }
-      })
+  function updateHost(idx: number, patch: Partial<Host>) {
+    setHosts(prev => prev.map((h,i)=> i===idx ? { ...h, ...patch } : h))
   }
+  function addHost() {
+    setHosts(prev => [...prev, { name: '', url: '' }])
+  }
+  function removeHost(idx: number) {
+    setHosts(prev => prev.filter((_,i)=> i!==idx))
+  }
+
+  // Upload selected image to Supabase Storage and return public URL
+  async function uploadEventImageIfNeeded(evId: string): Promise<string | null> {
+    if (!newImageFile) return null
+    const ext = newImageFile.name.split('.').pop() || 'jpg'
+    const path = `images/${evId}-${Date.now()}.${ext}`
+    const { error: upErr } = await supabase.storage.from('events').upload(path, newImageFile, { upsert: true, cacheControl: '3600' })
+    if (upErr) { throw upErr }
+    const { data } = supabase.storage.from('events').getPublicUrl(path)
+    return data.publicUrl
+  }
+
   async function saveEvent() {
-    if (!event || !evDraft) return
-    const patch = {
-      name: evDraft.name.trim(),
-      city: evDraft.city.trim() || null,
-      timezone: evDraft.timezone.trim() || null,
-      starts_at: new Date(evDraft.starts_at).toISOString(),
-      capacity: Number.isFinite(evDraft.capacity) ? evDraft.capacity : null,
-      image_url: evDraft.image_url.trim() || null,
-      event_url: evDraft.event_url.trim() || null,
-      hosts: parseHosts(evDraft.hostsText),
+    if (!event) return
+    try {
+      let nextImageUrl = evImageUrl
+      const uploaded = await uploadEventImageIfNeeded(event.id)
+      if (uploaded) nextImageUrl = uploaded
+
+      const patch = {
+        name: evName.trim(),
+        city: evCity.trim() || null,
+        timezone: evTimezone.trim() || null,
+        starts_at: new Date(evStartsAtLocal).toISOString(),
+        capacity: Number.isFinite(evCapacity) ? evCapacity : null,
+        image_url: nextImageUrl || null,
+        event_url: evEventUrl.trim() || null,
+        hosts: hosts
+          .map(h => ({ name: (h.name ?? '').trim(), url: (h.url ?? '').trim() || null }))
+          .filter(h => h.name.length > 0),
+      }
+
+      const { data, error } = await supabase
+        .from('events')
+        .update(patch)
+        .eq('id', event.id)
+        .select('id,name,city,starts_at,timezone,capacity,image_url,event_url,hosts')
+        .single()
+      if (error) throw error
+
+      setEvent(data as EventRow)
+      setMessage('Event updated.')
+      closeEditEvent()
+    } catch (err: any) {
+      setMessage(err.message ?? 'Failed to update event')
     }
-    const { data, error } = await supabase
-      .from('events')
-      .update(patch)
-      .eq('id', event.id)
-      .select('id,name,city,starts_at,timezone,capacity,image_url,event_url,hosts')
-      .single()
-    if (error) { setMessage(error.message); return }
-    setEvent(data as EventRow)
-    closeEditEvent()
-    setMessage('Event updated.')
   }
 
   if (!event) return <main className="p-6 text-white">Loading…</main>
@@ -280,7 +297,9 @@ export default function DashboardPage() {
               className="w-14 h-14 rounded-lg object-cover border border-slate-700 shrink-0"
             />
           ) : (
-            <div className="w-14 h-14 rounded-lg border border-dashed border-slate-700 shrink-0 flex items-center justify-center text-slate-500 text-xs">No image</div>
+            <div className="w-14 h-14 rounded-lg border border-dashed border-slate-700 shrink-0 flex items-center justify-center text-slate-500 text-xs">
+              No image
+            </div>
           )}
 
           <div className="min-w-0">
@@ -320,11 +339,9 @@ export default function DashboardPage() {
         </div>
 
         <div className="flex items-center gap-3 shrink-0">
-          {/* Edit event */}
           <button onClick={openEditEvent} className="whitespace-nowrap px-4 py-2 rounded border hover:bg-slate-900">
             Edit event
           </button>
-
           <Link href="/" className="whitespace-nowrap px-4 py-2 rounded border hover:bg-slate-900">
             New Event
           </Link>
@@ -363,7 +380,7 @@ export default function DashboardPage() {
         </div>
       </section>
 
-      {/* ADD GUEST (always above search) */}
+      {/* ADD GUEST */}
       <section className="flex items-center justify-between">
         <button className="px-3 py-2 rounded border hover:bg-slate-900" onClick={() => setIsAdding(v=>!v)}>
           {isAdding ? 'Cancel' : 'Add guest'}
@@ -494,8 +511,8 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* Edit Event Modal */}
-      {isEditingEvent && evDraft && (
+      {/* Edit Event Modal — create-form style */}
+      {isEditingEvent && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
           <div className="absolute inset-0 bg-black/60" onClick={closeEditEvent} />
           <div className="relative z-10 w-[min(900px,95vw)] max-h-[92vh] overflow-auto bg-slate-900 border border-slate-700 rounded-xl p-5 shadow-xl space-y-4">
@@ -505,30 +522,90 @@ export default function DashboardPage() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <label className="text-sm">Name
-                <input value={evDraft.name} onChange={e=>setEvDraft(s=>s && ({...s,name:e.target.value}))} className="mt-1 w-full p-2 rounded border bg-transparent" />
+              <label className="text-sm">Event name
+                <input value={evName} onChange={e=>setEvName(e.target.value)} className="mt-1 w-full p-2 rounded border bg-transparent" />
               </label>
               <label className="text-sm">City
-                <input value={evDraft.city} onChange={e=>setEvDraft(s=>s && ({...s,city:e.target.value}))} className="mt-1 w-full p-2 rounded border bg-transparent" />
-              </label>
-              <label className="text-sm">Timezone
-                <input value={evDraft.timezone} onChange={e=>setEvDraft(s=>s && ({...s,timezone:e.target.value}))} className="mt-1 w-full p-2 rounded border bg-transparent" />
+                <input value={evCity} onChange={e=>setEvCity(e.target.value)} className="mt-1 w-full p-2 rounded border bg-transparent" />
               </label>
               <label className="text-sm">Starts at
-                <input type="datetime-local" value={evDraft.starts_at} onChange={e=>setEvDraft(s=>s && ({...s,starts_at:e.target.value}))} className="mt-1 w-full p-2 rounded border bg-transparent" />
+                <input type="datetime-local" value={evStartsAtLocal} onChange={e=>setEvStartsAtLocal(e.target.value)} className="mt-1 w-full p-2 rounded border bg-transparent" />
+              </label>
+              <label className="text-sm">Timezone
+                <input value={evTimezone} onChange={e=>setEvTimezone(e.target.value)} className="mt-1 w-full p-2 rounded border bg-transparent" />
               </label>
               <label className="text-sm">Capacity
-                <input type="number" min={0} value={evDraft.capacity} onChange={e=>setEvDraft(s=>s && ({...s,capacity: Number(e.target.value)}))} className="mt-1 w-full p-2 rounded border bg-transparent" />
+                <input type="number" min={0} value={evCapacity} onChange={e=>setEvCapacity(Number(e.target.value))} className="mt-1 w-full p-2 rounded border bg-transparent" />
               </label>
-              <label className="text-sm">Event URL
-                <input value={evDraft.event_url} onChange={e=>setEvDraft(s=>s && ({...s,event_url:e.target.value}))} className="mt-1 w-full p-2 rounded border bg-transparent" placeholder="https://…" />
+              <label className="text-sm">Event link (Luma / Eventbrite / site)
+                <input value={evEventUrl} onChange={e=>setEvEventUrl(e.target.value)} className="mt-1 w-full p-2 rounded border bg-transparent" placeholder="https://…" />
               </label>
-              <label className="text-sm md:col-span-2">Image URL
-                <input value={evDraft.image_url} onChange={e=>setEvDraft(s=>s && ({...s,image_url:e.target.value}))} className="mt-1 w-full p-2 rounded border bg-transparent" placeholder="https://…" />
-              </label>
-              <label className="text-sm md:col-span-2">Hosts (one per line — `Name` or `Name | https://link`)
-                <textarea rows={5} value={evDraft.hostsText} onChange={e=>setEvDraft(s=>s && ({...s,hostsText:e.target.value}))} className="mt-1 w-full p-2 rounded border bg-transparent" />
-              </label>
+
+              {/* Image upload (no URL typing) */}
+              <div className="md:col-span-2">
+                <div className="text-sm mb-1">Event image (optional)</div>
+                <div className="flex items-center gap-4">
+                  <div className="w-24 h-24 rounded-lg border border-slate-700 overflow-hidden bg-slate-800 flex items-center justify-center">
+                    {newImageFile ? (
+                      <img
+                        src={URL.createObjectURL(newImageFile)}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : evImageUrl ? (
+                      <img src={evImageUrl} className="w-full h-full object-cover" />
+                    ) : (
+                      <span className="text-xs text-slate-400">No image</span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <label className="px-3 py-2 rounded border cursor-pointer hover:bg-slate-800">
+                      Choose file
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e)=> setNewImageFile(e.target.files?.[0] ?? null)}
+                      />
+                    </label>
+                    {newImageFile || evImageUrl ? (
+                      <button
+                        className="px-3 py-2 rounded border hover:bg-slate-800"
+                        onClick={() => { setNewImageFile(null); setEvImageUrl('') }}
+                        type="button"
+                      >
+                        Remove
+                      </button>
+                    ) : null}
+                  </div>
+                </div>
+              </div>
+
+              {/* Hosts — name + link rows */}
+              <div className="md:col-span-2">
+                <div className="text-sm mb-2">Hosts</div>
+                <div className="space-y-2">
+                  {hosts.map((h, idx) => (
+                    <div key={idx} className="grid grid-cols-1 md:grid-cols-5 gap-2">
+                      <input
+                        value={h.name ?? ''}
+                        onChange={e=>updateHost(idx,{name:e.target.value})}
+                        placeholder="Host name"
+                        className="p-2 rounded border bg-transparent md:col-span-2"
+                      />
+                      <input
+                        value={h.url ?? ''}
+                        onChange={e=>updateHost(idx,{url:e.target.value})}
+                        placeholder="Host website / link"
+                        className="p-2 rounded border bg-transparent md:col-span-2"
+                      />
+                      <div className="md:col-span-1 flex justify-end">
+                        <button type="button" className="px-3 py-2 rounded border hover:bg-slate-800" onClick={()=>removeHost(idx)}>Remove</button>
+                      </div>
+                    </div>
+                  ))}
+                  <button type="button" className="px-3 py-2 rounded border hover:bg-slate-800" onClick={addHost}>+ Add host</button>
+                </div>
+              </div>
             </div>
 
             <div className="flex items-center justify-end gap-2">
