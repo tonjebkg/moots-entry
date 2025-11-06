@@ -51,6 +51,15 @@ export default function DashboardPage() {
 
   const [message, setMessage] = useState<string | null>(null)
 
+  // Add guest UI state
+  const [isAdding, setIsAdding] = useState(false)
+  const [newGuest, setNewGuest] = useState<{
+    full_name: string
+    email: string
+    status: Status
+    plus_ones: number
+  }>({ full_name: '', email: '', status: 'invited', plus_ones: 0 })
+
   useEffect(() => {
     if (!eventId) return
     ;(async () => {
@@ -118,6 +127,36 @@ export default function DashboardPage() {
     setGuests(prev => prev.map(x => (x.id === g.id ? { ...x, plus_ones: next } : x)))
   }
 
+  async function handleCreateGuest(e: React.FormEvent) {
+    e.preventDefault()
+    if (!event) return
+    const payload = {
+      event_id: event.id,
+      full_name: newGuest.full_name.trim(),
+      email: newGuest.email.trim(),
+      status: newGuest.status,
+      plus_ones: Math.max(0, newGuest.plus_ones),
+    }
+
+    const { data, error } = await supabase
+      .from('guests')
+      .insert([payload])
+      .select('id,event_id,full_name,email,status,plus_ones')
+      .single()
+
+    if (error) {
+      setMessage(error.message)
+      return
+    }
+
+    setGuests(prev =>
+      [...prev, data as Guest].sort((a, b) => a.full_name.localeCompare(b.full_name))
+    )
+    setIsAdding(false)
+    setNewGuest({ full_name: '', email: '', status: 'invited', plus_ones: 0 })
+    setMessage('Guest added.')
+  }
+
   if (!event) return <main className="p-6 text-white">Loading...</main>
 
   const capacity = event.capacity ?? 0
@@ -174,6 +213,68 @@ export default function DashboardPage() {
           <span className="px-2 py-1 rounded bg-slate-700 text-slate-100">all: <b className="ml-1">{totals.all}</b></span>
         </div>
       </section>
+
+      {/* ADD GUEST (always above search) */}
+      <section className="flex items-center justify-between">
+        <button
+          className="px-3 py-2 rounded border hover:bg-slate-900"
+          onClick={() => setIsAdding(v => !v)}
+        >
+          {isAdding ? 'Cancel' : 'Add guest'}
+        </button>
+      </section>
+
+      {isAdding && (
+        <form
+          onSubmit={handleCreateGuest}
+          className="mt-3 grid grid-cols-1 md:grid-cols-5 gap-3 p-3 border rounded bg-slate-900/30"
+        >
+          <input
+            required
+            value={newGuest.full_name}
+            onChange={e => setNewGuest(s => ({ ...s, full_name: e.target.value }))}
+            placeholder="Full name"
+            className="p-2 rounded border bg-transparent md:col-span-2"
+          />
+          <input
+            required
+            type="email"
+            value={newGuest.email}
+            onChange={e => setNewGuest(s => ({ ...s, email: e.target.value }))}
+            placeholder="Email"
+            className="p-2 rounded border bg-transparent md:col-span-2"
+          />
+          <select
+            value={newGuest.status}
+            onChange={e => setNewGuest(s => ({ ...s, status: e.target.value as Status }))}
+            className="p-2 rounded border bg-transparent"
+          >
+            {(Object.keys(STATUS_LABEL) as Status[]).map(s => (
+              <option key={s} value={s}>{STATUS_LABEL[s]}</option>
+            ))}
+          </select>
+          <div className="flex items-center gap-2 md:col-span-4">
+            <label className="text-sm text-slate-300">Plus-ones</label>
+            <button
+              type="button"
+              className="px-2 py-1 rounded border hover:bg-slate-900"
+              onClick={() => setNewGuest(s => ({ ...s, plus_ones: Math.max(0, s.plus_ones - 1) }))}
+            >−</button>
+            <span className="min-w-6 text-center">{newGuest.plus_ones}</span>
+            <button
+              type="button"
+              className="px-2 py-1 rounded border hover:bg-slate-900"
+              onClick={() => setNewGuest(s => ({ ...s, plus_ones: s.plus_ones + 1 }))}
+            >＋</button>
+            <button
+              type="submit"
+              className="ml-auto px-3 py-2 rounded border bg-blue-700 hover:bg-blue-600"
+            >
+              Save
+            </button>
+          </div>
+        </form>
+      )}
 
       {/* CONTROLS */}
       <section className="flex gap-3 items-center">
