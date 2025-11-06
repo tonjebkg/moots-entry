@@ -19,6 +19,8 @@ type Guest = {
   comments?: string | null
 }
 
+type Host = { name: string; url?: string | null }
+
 type EventRow = {
   id: string
   name: string
@@ -26,6 +28,9 @@ type EventRow = {
   starts_at: string
   timezone: string | null
   capacity: number | null
+  image_url?: string | null
+  event_url?: string | null
+  hosts?: Host[] | null
 }
 
 const STATUS_LABEL: Record<Status, string> = {
@@ -59,7 +64,20 @@ export default function DashboardPage() {
   const [isAdding, setIsAdding] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
 
-  // Modal state for comments
+  // Edit event modal
+  const [isEditingEvent, setIsEditingEvent] = useState(false)
+  const [evDraft, setEvDraft] = useState<{
+    name: string
+    city: string
+    timezone: string
+    starts_at: string
+    capacity: number
+    image_url: string
+    event_url: string
+    hostsText: string
+  } | null>(null)
+
+  // Comments modal
   const [commentGuest, setCommentGuest] = useState<Guest | null>(null)
   const [commentDraft, setCommentDraft] = useState('')
 
@@ -77,10 +95,10 @@ export default function DashboardPage() {
     ;(async () => {
       const { data: ev } = await supabase
         .from('events')
-        .select('id,name,city,starts_at,timezone,capacity')
+        .select('id,name,city,starts_at,timezone,capacity,image_url,event_url,hosts')
         .eq('id', eventId)
         .single()
-      setEvent(ev)
+      setEvent(ev as EventRow)
 
       const { data: gs } = await supabase
         .from('guests')
@@ -92,12 +110,12 @@ export default function DashboardPage() {
         ...g,
         priority: (g.priority as Priority) ?? 'normal',
         comments: g.comments ?? '',
-        status: (g.status as any) === 'invited' ? 'invite_sent' : g.status, // legacy safe-guard
+        status: (g.status as any) === 'invited' ? 'invite_sent' : g.status,
       })))
     })()
   }, [eventId])
 
-  // totals (headcounts include plus-ones)
+  // ---- totals (headcounts include plus-ones) ----
   const totals = useMemo(() => {
     const base = { invite_sent: 0, confirmed: 0, waitlist: 0, cancelled: 0, checked_in: 0 }
     let invitedMetric = 0
@@ -141,9 +159,10 @@ export default function DashboardPage() {
     return list
   }, [guests, q, sortKey])
 
+  // ---- mutations ----
   async function handleStatusChange(g: Guest, next: Status) {
     await supabase.from('guests').update({ status: next }).eq('id', g.id)
-    setGuests(prev => prev.map(x => x.id===g.id ? { ...x, status: next } : x))
+    setGuests(prev => prev.map(x => x.id === g.id ? { ...x, status: next } : x))
   }
   async function handlePriorityChange(g: Guest, next: Priority) {
     await supabase.from('guests').update({ priority: next }).eq('id', g.id)
@@ -155,40 +174,17 @@ export default function DashboardPage() {
     setGuests(prev => prev.map(x => x.id===g.id ? { ...x, plus_ones: next } : x))
   }
 
-  // --- Comments modal handlers ---
-  function openCommentModal(g: Guest) {
-    setCommentGuest(g)
-    setCommentDraft(g.comments ?? '')
-  }
-  function closeCommentModal() {
-    setCommentGuest(null)
-    setCommentDraft('')
-  }
+  // ---- comments modal ----
+  function openCommentModal(g: Guest) { setCommentGuest(g); setCommentDraft(g.comments ?? '') }
+  function closeCommentModal() { setCommentGuest(null); setCommentDraft('') }
   async function saveCommentModal() {
     if (!commentGuest) return
-    const text = commentDraft
-    await supabase.from('guests').update({ comments: text }).eq('id', commentGuest.id)
-    setGuests(prev => prev.map(x => (x.id === commentGuest.id ? { ...x, comments: text } : x)))
+    await supabase.from('guests').update({ comments: commentDraft }).eq('id', commentGuest.id)
+    setGuests(prev => prev.map(x => x.id === commentGuest.id ? { ...x, comments: commentDraft } : x))
     closeCommentModal()
   }
 
-  // keyboard shortcuts inside modal: Esc to close, Cmd/Ctrl+Enter to save
-  useEffect(() => {
-    function onKey(e: KeyboardEvent) {
-      if (!commentGuest) return
-      if (e.key === 'Escape') {
-        e.preventDefault()
-        closeCommentModal()
-      }
-      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
-        e.preventDefault()
-        saveCommentModal()
-      }
-    }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [commentGuest, commentDraft])
-
+  // ---- add guest ----
   async function handleCreateGuest(e: React.FormEvent) {
     e.preventDefault()
     if (!event) return
@@ -213,24 +209,132 @@ export default function DashboardPage() {
     setMessage('Guest added.')
   }
 
+  // ---- edit event modal ----
+  function openEditEvent() {
+    if (!event) return
+    const hostsText = (event.hosts ?? [])
+      .map(h => h.url ? `${h.name} | ${h.url}` : h.name)
+      .join('\n')
+    setEvDraft({
+      name: event.name ?? '',
+      city: event.city ?? '',
+      timezone: event.timezone ?? '',
+      starts_at: new Date(event.starts_at).toISOString().slice(0,16), // for <input type="datetime-local">
+      capacity: event.capacity ?? 0,
+      image_url: event.image_url ?? '',
+      event_url: event.event_url ?? '',
+      hostsText,
+    })
+    setIsEditingEvent(true)
+  }
+  function closeEditEvent() {
+    setIsEditingEvent(false)
+    setEvDraft(null)
+  }
+  function parseHosts(text: string): Host[] {
+    return text
+      .split('\n')
+      .map(l => l.trim())
+      .filter(Boolean)
+      .map(line => {
+        const [name, url] = line.split('|').map(s => s.trim())
+        return url ? { name, url } : { name }
+      })
+  }
+  async function saveEvent() {
+    if (!event || !evDraft) return
+    const patch = {
+      name: evDraft.name.trim(),
+      city: evDraft.city.trim() || null,
+      timezone: evDraft.timezone.trim() || null,
+      starts_at: new Date(evDraft.starts_at).toISOString(),
+      capacity: Number.isFinite(evDraft.capacity) ? evDraft.capacity : null,
+      image_url: evDraft.image_url.trim() || null,
+      event_url: evDraft.event_url.trim() || null,
+      hosts: parseHosts(evDraft.hostsText),
+    }
+    const { data, error } = await supabase
+      .from('events')
+      .update(patch)
+      .eq('id', event.id)
+      .select('id,name,city,starts_at,timezone,capacity,image_url,event_url,hosts')
+      .single()
+    if (error) { setMessage(error.message); return }
+    setEvent(data as EventRow)
+    closeEditEvent()
+    setMessage('Event updated.')
+  }
+
   if (!event) return <main className="p-6 text-white">Loading…</main>
 
   return (
     <main className="p-6 max-w-6xl mx-auto space-y-6 text-white">
       {/* HEADER */}
       <header className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-        <div className="flex-1 min-w-0">
-          <h1 className="text-2xl font-semibold leading-tight truncate" title={event.name}>{event.name}</h1>
-          <p className="text-sm text-slate-400 truncate">
-            {event.city ?? '—'} · {new Date(event.starts_at).toLocaleString()} · {event.timezone ?? '—'}
-          </p>
+        <div className="flex items-start gap-3 min-w-0 flex-1">
+          {/* Event image */}
+          {event.image_url ? (
+            <img
+              src={event.image_url}
+              alt="Event"
+              className="w-14 h-14 rounded-lg object-cover border border-slate-700 shrink-0"
+            />
+          ) : (
+            <div className="w-14 h-14 rounded-lg border border-dashed border-slate-700 shrink-0 flex items-center justify-center text-slate-500 text-xs">No image</div>
+          )}
+
+          <div className="min-w-0">
+            <h1 className="text-2xl font-semibold leading-tight truncate" title={event.name}>
+              {event.name}
+            </h1>
+            <p className="text-sm text-slate-400 truncate">
+              {event.city ?? '—'} · {new Date(event.starts_at).toLocaleString()} · {event.timezone ?? '—'}
+            </p>
+
+            {/* Hosts + event link */}
+            <div className="text-xs text-slate-300 mt-1 flex flex-wrap gap-2">
+              {Array.isArray(event.hosts) && event.hosts.length > 0 && (
+                <span className="truncate">
+                  <span className="text-slate-400">Hosts:</span>{' '}
+                  {event.hosts.map((h, i) => (
+                    <span key={`${h.name}-${i}`}>
+                      {h.url ? (
+                        <a href={h.url} target="_blank" rel="noreferrer" className="underline hover:text-slate-100">
+                          {h.name}
+                        </a>
+                      ) : (
+                        <span>{h.name}</span>
+                      )}
+                      {i < event.hosts!.length - 1 ? ', ' : ''}
+                    </span>
+                  ))}
+                </span>
+              )}
+              {event.event_url && (
+                <a href={event.event_url} target="_blank" rel="noreferrer" className="underline hover:text-slate-100">
+                  Event link
+                </a>
+              )}
+            </div>
+          </div>
         </div>
+
         <div className="flex items-center gap-3 shrink-0">
-          <Link href="/" className="whitespace-nowrap px-4 py-2 rounded border hover:bg-slate-900">New Event</Link>
+          {/* Edit event */}
+          <button onClick={openEditEvent} className="whitespace-nowrap px-4 py-2 rounded border hover:bg-slate-900">
+            Edit event
+          </button>
+
+          <Link href="/" className="whitespace-nowrap px-4 py-2 rounded border hover:bg-slate-900">
+            New Event
+          </Link>
           <label className="whitespace-nowrap px-4 py-2 rounded border cursor-pointer hover:bg-slate-900">
-            Re-upload CSV <input type="file" accept=".csv,.txt" className="hidden" />
+            Re-upload CSV
+            <input type="file" accept=".csv,.txt" className="hidden" />
           </label>
-          <Link href={`/checkin/${event.id}`} className="whitespace-nowrap px-4 py-2 rounded border hover:bg-slate-900">Check-in</Link>
+          <Link href={`/checkin/${event.id}`} className="whitespace-nowrap px-4 py-2 rounded border hover:bg-slate-900">
+            Check-in
+          </Link>
         </div>
       </header>
 
@@ -241,10 +345,12 @@ export default function DashboardPage() {
           <div>Confirmed headcount: <span className="font-medium">{totals.confirmedHeadcount}</span></div>
           <div>Checked-in headcount: <span className="font-medium">{totals.checkedInHeadcount}</span></div>
         </div>
+
         <div className="h-2 w-full bg-slate-800 rounded overflow-hidden">
           <div className="h-full bg-blue-600" style={{ width: `${confirmedPct}%` }} title="Confirmed" />
           <div className="h-full bg-green-600 -mt-2" style={{ width: `${checkedPct}%` }} title="Checked-in" />
         </div>
+
         <div className="flex items-center gap-3 text-sm mt-2">
           <span className="text-slate-400">Totals —</span>
           <span className="px-2 py-1 rounded bg-slate-700 text-slate-100">Invited <b className="ml-1">{totals.invitedMetric}</b></span>
@@ -253,6 +359,7 @@ export default function DashboardPage() {
               {STATUS_LABEL[s]} <b className="ml-1">{(totals as any)[s]}</b>
             </span>
           ))}
+          <span className="px-2 py-1 rounded bg-slate-700 text-slate-100">all: <b className="ml-1">{guests.length}</b></span>
         </div>
       </section>
 
@@ -336,11 +443,10 @@ export default function DashboardPage() {
                   </div>
                 </td>
                 <td className="p-2">
-                  {/* Input kept for quick glance, but readOnly; clicking opens modal */}
                   <input
                     value={g.comments ?? ''}
                     readOnly
-                    onClick={() => openCommentModal(g)}
+                    onClick={() => { setCommentGuest(g); setCommentDraft(g.comments ?? '') }}
                     placeholder="Add a note…"
                     className="w-full p-1 rounded border bg-transparent cursor-pointer"
                     title={g.comments ?? ''}
@@ -361,10 +467,7 @@ export default function DashboardPage() {
               <h2 className="text-lg font-semibold">
                 Edit note — {commentGuest.full_name}
               </h2>
-              <button
-                className="px-3 py-1 rounded border hover:bg-slate-800"
-                onClick={closeCommentModal}
-              >
+              <button className="px-3 py-1 rounded border hover:bg-slate-800" onClick={closeCommentModal}>
                 Close (Esc)
               </button>
             </div>
@@ -386,6 +489,51 @@ export default function DashboardPage() {
               >
                 Save
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Event Modal */}
+      {isEditingEvent && evDraft && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/60" onClick={closeEditEvent} />
+          <div className="relative z-10 w-[min(900px,95vw)] max-h-[92vh] overflow-auto bg-slate-900 border border-slate-700 rounded-xl p-5 shadow-xl space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-semibold">Edit event</h2>
+              <button className="px-3 py-1 rounded border hover:bg-slate-800" onClick={closeEditEvent}>Close</button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <label className="text-sm">Name
+                <input value={evDraft.name} onChange={e=>setEvDraft(s=>s && ({...s,name:e.target.value}))} className="mt-1 w-full p-2 rounded border bg-transparent" />
+              </label>
+              <label className="text-sm">City
+                <input value={evDraft.city} onChange={e=>setEvDraft(s=>s && ({...s,city:e.target.value}))} className="mt-1 w-full p-2 rounded border bg-transparent" />
+              </label>
+              <label className="text-sm">Timezone
+                <input value={evDraft.timezone} onChange={e=>setEvDraft(s=>s && ({...s,timezone:e.target.value}))} className="mt-1 w-full p-2 rounded border bg-transparent" />
+              </label>
+              <label className="text-sm">Starts at
+                <input type="datetime-local" value={evDraft.starts_at} onChange={e=>setEvDraft(s=>s && ({...s,starts_at:e.target.value}))} className="mt-1 w-full p-2 rounded border bg-transparent" />
+              </label>
+              <label className="text-sm">Capacity
+                <input type="number" min={0} value={evDraft.capacity} onChange={e=>setEvDraft(s=>s && ({...s,capacity: Number(e.target.value)}))} className="mt-1 w-full p-2 rounded border bg-transparent" />
+              </label>
+              <label className="text-sm">Event URL
+                <input value={evDraft.event_url} onChange={e=>setEvDraft(s=>s && ({...s,event_url:e.target.value}))} className="mt-1 w-full p-2 rounded border bg-transparent" placeholder="https://…" />
+              </label>
+              <label className="text-sm md:col-span-2">Image URL
+                <input value={evDraft.image_url} onChange={e=>setEvDraft(s=>s && ({...s,image_url:e.target.value}))} className="mt-1 w-full p-2 rounded border bg-transparent" placeholder="https://…" />
+              </label>
+              <label className="text-sm md:col-span-2">Hosts (one per line — `Name` or `Name | https://link`)
+                <textarea rows={5} value={evDraft.hostsText} onChange={e=>setEvDraft(s=>s && ({...s,hostsText:e.target.value}))} className="mt-1 w-full p-2 rounded border bg-transparent" />
+              </label>
+            </div>
+
+            <div className="flex items-center justify-end gap-2">
+              <button className="px-3 py-2 rounded border hover:bg-slate-800" onClick={closeEditEvent}>Cancel</button>
+              <button className="px-3 py-2 rounded border bg-blue-700 hover:bg-blue-600" onClick={saveEvent}>Save changes</button>
             </div>
           </div>
         </div>
