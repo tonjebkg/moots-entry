@@ -1,7 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import { supabase } from '@/lib/supabase'
 import Papa from 'papaparse'
 
 type NewGuest = {
@@ -21,9 +20,11 @@ export default function CreateEventForm() {
   const [capacity, setCapacity] = useState<number | ''>('')
   const [eventUrl, setEventUrl] = useState('')
   const [hosts, setHosts] = useState<{ name: string; link?: string }[]>([{ name: '', link: '' }])
-  const [imageFile, setImageFile] = useState<File | null>(null)
 
-  // Staged guests parsed from CSV (no event required yet)
+  const [imageUploading, setImageUploading] = useState(false)
+  const [imageError, setImageError] = useState<string | null>(null)
+  const [imageUrl, setImageUrl] = useState<string | null>(null)
+
   const [stagedGuests, setStagedGuests] = useState<NewGuest[]>([])
   const [parsing, setParsing] = useState(false)
 
@@ -45,7 +46,6 @@ export default function CreateEventForm() {
       return 'checked_in'
     return 'invite_sent'
   }
-
   function normalizePriority(x?: string): 'normal' | 'vip' | 'vvip' {
     const s = (x || '').trim().toLowerCase()
     if (s === 'vvip') return 'vvip'
@@ -53,7 +53,7 @@ export default function CreateEventForm() {
     return 'normal'
   }
 
-  // ---------- CSV handler (stages guests; no event required) ----------
+  // ---------- CSV handler (stage guests; no event required) ----------
   async function handleGuestFile(file?: File) {
     if (!file) return
     setParsing(true)
@@ -77,14 +77,7 @@ export default function CreateEventForm() {
             const comments = r.comments || r['Comments'] || r['Notes'] || r['Note'] || null
             const plus_ones = Number.isFinite(+plusOnesRaw) ? Math.max(0, +plusOnesRaw) : 0
 
-            return {
-              full_name: String(fullName).trim(),
-              email,
-              status,
-              plus_ones,
-              priority,
-              comments,
-            }
+            return { full_name: String(fullName).trim(), email, status, plus_ones, priority, comments }
           })
 
           const clean = guests.filter((g) => g.full_name || g.email)
@@ -105,66 +98,70 @@ export default function CreateEventForm() {
     })
   }
 
-  // ---------- Create Event (then attach staged guests) ----------
+  // ---------- Image upload via server route ----------
+  async function handleImageFile(file?: File | null) {
+    try {
+      setImageUploading(true)
+      setImageError(null)
+      setImageUrl(null)
+
+      if (!file) {
+        setImageUploading(false)
+        return
+      }
+
+      const fd = new FormData()
+      fd.append('file', file)
+
+      const res = await fetch('/api/uploads/event-image', { method: 'POST', body: fd })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error || 'Upload failed')
+
+      setImageUrl(json.url as string)
+    } catch (e: any) {
+      console.error(e)
+      setImageError(e.message ?? 'Upload failed')
+    } finally {
+      setImageUploading(false)
+    }
+  }
+
+  // ---------- Create Event (server route) ----------
   async function handleCreateEvent() {
     try {
+      setLoading(true)
       setError(null)
       setToast(null)
-      setLoading(true)
 
-      // 1) Upload image if present
-      let image_url: string | null = null
-      if (imageFile) {
-        const { data: upload, error: uploadErr } = await supabase.storage
-          .from('events')
-          .upload(`images/${Date.now()}_${imageFile.name}`, imageFile, {
-            cacheControl: '3600',
-            upsert: false,
-          })
-        if (uploadErr) throw uploadErr
-        const { data: publicUrl } = supabase.storage.from('events').getPublicUrl(upload.path)
-        image_url = publicUrl.publicUrl
+      const payload = {
+        event: {
+          name: name.trim(),
+          city: city.trim() || null,
+          starts_at: startsAt ? new Date(startsAt).toISOString() : null,
+          timezone: timezone || '',
+          capacity: Number(capacity) || null,
+          image_url: imageUrl || null,
+          event_url: eventUrl.trim() || null,
+          hosts: hosts.map(h => ({ name: h.name?.trim(), url: h.link?.trim() })).filter(h => h.name),
+        },
+        guests: stagedGuests,
       }
 
-      // 2) Create event
-      const { data: created, error: insertErr } = await supabase
-        .from('events')
-        .insert([
-          {
-            name,
-            city,
-            timezone,
-            starts_at: startsAt ? new Date(startsAt).toISOString() : null,
-            capacity: capacity || null,
-            event_url: eventUrl || null,
-            image_url,
-            hosts,
-          },
-        ])
-        .select('id')
-        .single()
-      if (insertErr) throw insertErr
-      const eventId = created.id as string
+      const r = await fetch('/api/events/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+      const j = await r.json()
+      if (!r.ok) throw new Error(j.error || 'Failed to create event')
 
-      // 3) If guests were staged, attach event_id and batch-insert
-      if (stagedGuests.length > 0) {
-        const rows = stagedGuests.map((g) => ({ ...g, event_id: eventId }))
-        const chunkSize = 500
-        for (let i = 0; i < rows.length; i += chunkSize) {
-          const slice = rows.slice(i, i + chunkSize)
-          const { error } = await supabase.from('guests').insert(slice)
-          if (error) throw error
-        }
-      }
-
-      setToast(
-        `Event created${stagedGuests.length ? ` + ${stagedGuests.length} guest(s) imported` : ''}.`
-      )
-      // Optional: clear staged guests after successful import
+      setToast(`Event created${stagedGuests.length ? ` + ${stagedGuests.length} guest(s) imported` : ''}.`)
+      // Optionally reset form here
+      // setName(''); setCity(''); ...
       setStagedGuests([])
     } catch (e: any) {
       console.error(e)
-      setError(e?.message || 'Failed to create event')
+      setError(e.message ?? 'Failed to create event')
     } finally {
       setLoading(false)
     }
@@ -176,59 +173,40 @@ export default function CreateEventForm() {
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="block text-sm text-slate-400">Event name *</label>
-            <input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="w-full p-2 rounded bg-slate-800 border border-slate-700"
-            />
+            <input value={name} onChange={(e) => setName(e.target.value)}
+                   className="w-full p-2 rounded bg-slate-800 border border-slate-700" />
           </div>
           <div>
             <label className="block text-sm text-slate-400">City</label>
-            <input
-              value={city}
-              onChange={(e) => setCity(e.target.value)}
-              className="w-full p-2 rounded bg-slate-800 border border-slate-700"
-            />
+            <input value={city} onChange={(e) => setCity(e.target.value)}
+                   className="w-full p-2 rounded bg-slate-800 border border-slate-700" />
           </div>
         </div>
 
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="block text-sm text-slate-400">Starts at *</label>
-            <input
-              type="datetime-local"
-              value={startsAt}
-              onChange={(e) => setStartsAt(e.target.value)}
-              className="w-full p-2 rounded bg-slate-800 border border-slate-700"
-            />
+            <input type="datetime-local" value={startsAt}
+                   onChange={(e) => setStartsAt(e.target.value)}
+                   className="w-full p-2 rounded bg-slate-800 border border-slate-700" />
           </div>
           <div>
             <label className="block text-sm text-slate-400">Timezone</label>
-            <input
-              value={timezone}
-              onChange={(e) => setTimezone(e.target.value)}
-              className="w-full p-2 rounded bg-slate-800 border border-slate-700"
-            />
+            <input value={timezone} onChange={(e) => setTimezone(e.target.value)}
+                   className="w-full p-2 rounded bg-slate-800 border border-slate-700" />
           </div>
         </div>
 
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="block text-sm text-slate-400">Capacity</label>
-            <input
-              type="number"
-              value={capacity}
-              onChange={(e) => setCapacity(Number(e.target.value))}
-              className="w-full p-2 rounded bg-slate-800 border border-slate-700"
-            />
+            <input type="number" value={capacity as number | ''} onChange={(e) => setCapacity(Number(e.target.value))}
+                   className="w-full p-2 rounded bg-slate-800 border border-slate-700" />
           </div>
           <div>
             <label className="block text-sm text-slate-400">Event link (Luma, Eventbrite, etc.)</label>
-            <input
-              value={eventUrl}
-              onChange={(e) => setEventUrl(e.target.value)}
-              className="w-full p-2 rounded bg-slate-800 border border-slate-700"
-            />
+            <input value={eventUrl} onChange={(e) => setEventUrl(e.target.value)}
+                   className="w-full p-2 rounded bg-slate-800 border border-slate-700" />
           </div>
         </div>
 
@@ -237,41 +215,20 @@ export default function CreateEventForm() {
           <label className="block text-sm text-slate-400">Hosts</label>
           {hosts.map((h, i) => (
             <div key={i} className="flex gap-2 mb-2">
-              <input
-                placeholder="Host name"
-                value={h.name}
-                onChange={(e) => {
-                  const next = [...hosts]
-                  next[i].name = e.target.value
-                  setHosts(next)
-                }}
-                className="flex-1 p-2 rounded bg-slate-800 border border-slate-700"
-              />
-              <input
-                placeholder="Host website / link"
-                value={h.link}
-                onChange={(e) => {
-                  const next = [...hosts]
-                  next[i].link = e.target.value
-                  setHosts(next)
-                }}
-                className="flex-1 p-2 rounded bg-slate-800 border border-slate-700"
-              />
+              <input placeholder="Host name" value={h.name}
+                     onChange={(e) => { const next = [...hosts]; next[i].name = e.target.value; setHosts(next) }}
+                     className="flex-1 p-2 rounded bg-slate-800 border border-slate-700" />
+              <input placeholder="Host website / link" value={h.link}
+                     onChange={(e) => { const next = [...hosts]; next[i].link = e.target.value; setHosts(next) }}
+                     className="flex-1 p-2 rounded bg-slate-800 border border-slate-700" />
               {i > 0 && (
-                <button
-                  onClick={() => setHosts(hosts.filter((_, idx) => idx !== i))}
-                  className="px-2 text-red-400"
-                  aria-label="Remove host"
-                >
-                  ✕
-                </button>
+                <button onClick={() => setHosts(hosts.filter((_, idx) => idx !== i))}
+                        className="px-2 text-red-400" aria-label="Remove host">✕</button>
               )}
             </div>
           ))}
-          <button
-            onClick={() => setHosts([...hosts, { name: '', link: '' }])}
-            className="px-3 py-1 text-sm bg-slate-800 rounded border border-slate-700 hover:bg-slate-700"
-          >
+          <button onClick={() => setHosts([...hosts, { name: '', link: '' }])}
+                  className="px-3 py-1 text-sm bg-slate-800 rounded border border-slate-700 hover:bg-slate-700">
             + Add host
           </button>
         </div>
@@ -279,12 +236,12 @@ export default function CreateEventForm() {
         {/* Image */}
         <div>
           <label className="block text-sm text-slate-400">Event image (optional)</label>
-          <input
-            type="file"
-            accept="image/*"
-            onChange={(e) => setImageFile(e.target.files?.[0] || null)}
-            className="block w-full text-sm text-slate-300 file:mr-4 file:py-2 file:px-3 file:rounded file:border-0 file:text-sm file:bg-slate-900 file:text-slate-200 hover:file:bg-slate-800"
-          />
+          <input type="file" accept="image/*"
+                 onChange={(e) => handleImageFile(e.target.files?.[0] || null)}
+                 className="block w-full text-sm text-slate-300 file:mr-4 file:py-2 file:px-3 file:rounded file:border-0 file:text-sm file:bg-slate-900 file:text-slate-200 hover:file:bg-slate-800" />
+          {imageUploading && <p className="text-xs text-slate-400 mt-1">Uploading…</p>}
+          {imageError && <p className="text-xs text-red-400 mt-1">{imageError}</p>}
+          {imageUrl && <p className="text-xs text-slate-400 mt-1">Uploaded ✓</p>}
         </div>
 
         {/* CSV */}
@@ -295,26 +252,20 @@ export default function CreateEventForm() {
               <span className="text-xs text-slate-400">{stagedGuests.length} staged</span>
             )}
           </div>
-          <input
-            type="file"
-            accept=".csv,.txt"
-            onChange={(e) => handleGuestFile(e.target.files?.[0])}
-            className="block w-full text-sm text-slate-300 file:mr-4 file:py-2 file:px-3 file:rounded file:border-0 file:text-sm file:bg-slate-900 file:text-slate-200 hover:file:bg-slate-800"
-          />
+          <input type="file" accept=".csv,.txt"
+                 onChange={(e) => handleGuestFile(e.target.files?.[0])}
+                 className="block w-full text-sm text-slate-300 file:mr-4 file:py-2 file:px-3 file:rounded file:border-0 file:text-sm file:bg-slate-900 file:text-slate-200 hover:file:bg-slate-800" />
           <p className="text-xs text-slate-500">
-            Required columns: <code>full_name</code> (or <code>name</code>/<code>Full Name</code>) and{' '}
-            <code>email</code>. We auto-detect headers and ignore empty rows.
+            Required columns: <code>full_name</code> (or <code>name</code>/<code>Full Name</code>) and <code>email</code>.
+            We auto-detect headers and ignore empty rows.
           </p>
           {parsing && <p className="text-xs text-slate-400">Parsing…</p>}
         </div>
 
         {/* Actions */}
         <div className="pt-2 flex justify-end">
-          <button
-            onClick={handleCreateEvent}
-            disabled={loading}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded disabled:opacity-50"
-          >
+          <button onClick={handleCreateEvent} disabled={loading}
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded disabled:opacity-50">
             {loading ? 'Creating…' : 'Create event'}
           </button>
         </div>
