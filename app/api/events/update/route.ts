@@ -1,69 +1,63 @@
-// app/api/events/update/route.ts
 import { NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { supabaseAdmin } from '@/lib/supabaseAdmin'
 
-// Ensure this runs on the Node runtime and is always dynamic (not prerendered)
-export const runtime = 'nodejs'
-export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs' // ensure proper server environment
 
-function getAdminClient() {
-  const url = process.env.SUPABASE_URL
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-  if (!url || !serviceKey) {
-    throw new Error('Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY')
+/**
+ * PATCH /api/events/update
+ * Updates an existing event (name, city, capacity, time, etc.)
+ * Accepts JSON body:
+ * {
+ *   id: string,
+ *   name?: string,
+ *   city?: string,
+ *   timezone?: string,
+ *   starts_at?: string,
+ *   capacity?: number,
+ *   event_url?: string | null,
+ *   image_url?: string | null,
+ *   hosts?: { name: string; url?: string | null }[]
+ * }
+ */
+export async function PATCH(req: Request) {
+  try {
+    const body = await req.json()
+    const { id, ...fields } = body
+
+    if (!id) {
+      return NextResponse.json({ error: 'Missing event ID' }, { status: 400 })
+    }
+
+    // Handle host_name fallback for old schema
+    let hostName: string | null = null
+    if (fields.hosts && Array.isArray(fields.hosts) && fields.hosts.length > 0) {
+      hostName = fields.hosts[0]?.name ?? null
+    }
+
+    const updatePayload: any = {
+      ...fields,
+      host_name: hostName,
+      updated_at: new Date().toISOString(),
+    }
+
+    const { error } = await supabaseAdmin
+      .from('events')
+      .update(updatePayload)
+      .eq('id', id)
+
+    if (error) throw error
+
+    return NextResponse.json({ success: true })
+  } catch (err: any) {
+    console.error('Update event error:', err)
+    return NextResponse.json({ error: err.message ?? 'Failed to update event' }, { status: 400 })
   }
-  return createClient(url, serviceKey, { auth: { persistSession: false } })
 }
 
+/**
+ * POST /api/events/update
+ * (Alias for backward compatibility — accepts the same body as PATCH)
+ */
 export async function POST(req: Request) {
-  try {
-    const { eventId, editToken, patch } = await req.json()
-
-    if (!eventId || !editToken || !patch) {
-      return NextResponse.json({ error: 'missing fields' }, { status: 400 })
-    }
-
-    const supabaseAdmin = getAdminClient()
-
-    // Verify token belongs to this event
-    const { data: ev, error: evErr } = await supabaseAdmin
-      .from('events')
-      .select('id, edit_token')
-      .eq('id', eventId)
-      .single()
-
-    if (evErr || !ev) {
-      return NextResponse.json({ error: 'event not found' }, { status: 404 })
-    }
-    if (String(ev.edit_token) !== String(editToken)) {
-      return NextResponse.json({ error: 'invalid token' }, { status: 403 })
-    }
-
-    // Whitelist fields
-    const allowed = {
-      name: patch.name ?? null,
-      city: patch.city ?? null,
-      timezone: patch.timezone ?? null,
-      starts_at: patch.starts_at ?? null,
-      capacity: patch.capacity ?? null,
-      image_url: patch.image_url ?? null,
-      event_url: patch.event_url ?? null,
-      hosts: patch.hosts ?? null,
-    }
-
-    const { data, error } = await supabaseAdmin
-      .from('events')
-      .update(allowed)
-      .eq('id', eventId)
-      .select('id,name,city,starts_at,timezone,capacity,image_url,event_url,hosts,edit_token')
-      .single()
-
-    if (error) {
-      return NextResponse.json({ error: error.message }, { status: 400 })
-    }
-
-    return NextResponse.json({ event: data })
-  } catch (e: any) {
-    return NextResponse.json({ error: e?.message || 'server error' }, { status: 500 })
-  }
+  return PATCH(req)
 }
