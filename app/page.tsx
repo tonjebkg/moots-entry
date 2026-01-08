@@ -1,20 +1,17 @@
 'use client'
 
-
-
-const BRAND = "Moots";
+const BRAND = 'Moots'
 
 // Update these links:
-const PRIMARY_CTA_HREF = "https://calendly.com/moots/demo";
-const SECONDARY_CTA_HREF = "#how-it-works";
-
-
+const PRIMARY_CTA_HREF = 'https://calendly.com/moots/demo'
+const SECONDARY_CTA_HREF = '#how-it-works'
 
 export default function Page() {
   return (
     <main className="page">
+      {/* Top nav */}
       <header className="nav">
-        <div className="navInner">
+        <div className="container navInner">
           <div className="brand">{BRAND}</div>
           <div className="navActions">
             <a className="link" href="#faq">FAQ</a>
@@ -25,189 +22,148 @@ export default function Page() {
         </div>
       </header>
 
+      {/* Hero (dark) */}
       <section className="hero">
-        <div className="container">
-          <p className="eyebrow">Private experience infrastructure</p>
+        <div className="container heroInner">
+          <p className="eyebrow">Outcome-driven guest experience</p>
 
-          <h1 className="h1">Where meaningful encounters begin.</h1>
+          <h1 className="h1">Make sure the right people meet in the room.</h1>
+
           <p className="subhead">
-            A private experience layer for gatherings where who meets matters.
+            {BRAND} helps hosts run curated professional gatherings where guests meet the people who can materially impact
+            their life or business—and where those connections continue after the event.
           </p>
 
           <div className="ctaRow">
             <a className="btn btnPrimary" href={PRIMARY_CTA_HREF}>
               Request a Private Pilot
             </a>
-            <a className="btn btnGhost" href={SECONDARY_CTA_HREF}>
+            <a className="btn btnSecondary" href={SECONDARY_CTA_HREF}>
               How it works
             </a>
           </div>
 
-          <p className="fineprint">
-            Built for curated dinners, salons, and professional gatherings—moments designed for impact.
-          </p>
-        </div>
-      </section>
-
-      <section className="section">
-        <div className="container">
-          <h2 className="h2">An experience, not a tool</h2>
-          <div className="prose">
-            <p>
-              Some gatherings are designed for scale. Others are designed for impact.
-            </p>
-            <p>
-              {BRAND} is built for the latter.
-            </p>
-            <p>
-              We work with brands and communities who host private dinners, salons, and curated gatherings—moments where the people in the room matter as much as the setting.
-            </p>
-            <p>
-              {BRAND} becomes the invisible layer that shapes what happens between guests, before, during, and after they come together.
-            </p>
+          {/* Credibility row (shorter: single-line on laptop) */}
+          <div className="cred">
+            <div className="credLabel">Used for</div>
+            <div className="credPills" aria-label="Examples of gatherings">
+              <span className="pill">CES side events</span>
+              <span className="pill">Cannes Lions dinners</span>
+              <span className="pill">NY Fashion Week gatherings</span>
+              <span className="pill">F1 weekends</span>
+            </div>
+            <div className="credNote">
+              Also used for standalone client, partner, and community gatherings not tied to major moments.
+            </div>
           </div>
         </div>
       </section>
 
-      <section className="section muted">
+      {/* Light section with higher contrast */}
+      <section className="section light" id="breaks">
         <div className="container">
-          <h2 className="h2">The challenge with high-level gatherings</h2>
-          <ul className="bullets">
-            <li>The right people are in the room, but context is missing</li>
-            <li>Conversations stay surface-level or repetitive</li>
-            <li>Valuable encounters happen by chance</li>
-            <li>Once the gathering ends, momentum fades</li>
-          </ul>
-          <p className="note">
-            The result is a beautiful moment that could have gone further.
-          </p>
+          <h2 className="h2">What breaks in high-quality gatherings</h2>
+
+          <div className="cards2">
+            <div className="cardLight">
+              <p className="cardText">
+                The right people attend, but guests don’t know who matters for them.
+              </p>
+            </div>
+            <div className="cardLight">
+              <p className="cardText">
+                Introductions depend on luck, timing, or social confidence.
+              </p>
+            </div>
+            <div className="cardLight">
+              <p className="cardText">
+                Guests leave without a clean way to follow up with the right people.
+              </p>
+            </div>
+            <div className="cardLight">
+              <p className="cardText">
+                The host has no structured way to extend the experience beyond the night.
+              </p>
+            </div>
+          </div>
         </div>
       </section>
 
-      <section className="section" id="how-it-works">
+      {/* Dark section */}
+      <section className="section dark" id="how-it-works">
         <div className="container">
-          <h2 className="h2">{BRAND} designs the conditions for meaningful encounters</h2>
-          <div className="prose">
-            <p>
-              We don’t “facilitate networking.” We curate the conditions that allow the right relationships to emerge.
-            </p>
-            <p>
-              {BRAND} helps participants understand who is present, why certain encounters matter, and how conversations can continue beyond the moment—so guests don’t simply attend. They leave changed.
-            </p>
-          </div>
+          <h2 className="h2 h2OnDark">How {BRAND} adds value to your guests</h2>
+          <p className="proseOnDark">
+            Guests don’t attend curated events to “consume content.” They attend because the value of the night is the people in the room.
+            {` ${BRAND}`} signals that guests matter—and makes it easier for them to connect with the people other guests want to meet.
+          </p>
 
           <div className="triptych">
-            <div className="card">
-              <h3 className="h3">Before the gathering</h3>
-              <p className="cardTitle">Context replaces chance.</p>
+            <div className="cardDark">
+              <div className="kicker">Before</div>
+              <h3 className="h3">Arrive with intent</h3>
               <p className="cardBody">
-                Participants receive thoughtful guidance ahead of the event—clarity on who will be present and which encounters may be most meaningful.
-                They arrive prepared, not hopeful.
+                Guests see who is attending and who they should prioritize—based on the host’s goals for the room and the guest’s role.
               </p>
             </div>
 
-            <div className="card">
-              <h3 className="h3">During the gathering</h3>
-              <p className="cardTitle">Presence, without friction.</p>
+            <div className="cardDark">
+              <div className="kicker">During</div>
+              <h3 className="h3">Meet the right people</h3>
               <p className="cardBody">
-                {BRAND} lives quietly alongside the moment: a seamless arrival, a private space to continue conversations, and an effortless way to break the ice.
-                Nothing distracts from the experience. Everything supports it.
+                Guests use a lightweight flow to connect in the moment—without awkward “what do you do?” loops or losing names in a crowded room.
               </p>
             </div>
 
-            <div className="card">
-              <h3 className="h3">After the gathering</h3>
-              <p className="cardTitle">The moment doesn’t dissolve.</p>
+            <div className="cardDark">
+              <div className="kicker">After</div>
+              <h3 className="h3">Keep continuity for 30 days</h3>
               <p className="cardBody">
-                Connections don’t disappear when the room empties. Participants retain clarity on who they met and why it mattered.
-                Hosts gain insight into how relationships formed. Continuity stays alive until the next gathering.
+                For 30 days, guests can follow up with the people they met and connect with the people they did not reach—so the room keeps working after the event.
               </p>
             </div>
           </div>
         </div>
       </section>
 
-      <section className="section muted">
+      {/* Light section with stronger contrast */}
+      <section className="section light" id="fit">
         <div className="container">
-          <h2 className="h2">For hosts who curate with intention</h2>
+          <h2 className="h2">Built for hosts who curate relationships</h2>
+
           <div className="grid2">
-            <div className="prose">
-              <p>{BRAND} is designed for:</p>
-              <ul className="bullets compact">
-                <li>brands with private communities</li>
-                <li>leadership and founder communities</li>
-                <li>cultural and professional collectives</li>
-                <li>organizations that host repeatedly, not occasionally</li>
+            <div className="panelLight">
+              <div className="panelTitle">Designed for</div>
+              <ul className="list">
+                <li>Invite-only dinners, salons, breakfasts, and private talks</li>
+                <li>Networking cocktails and small summits</li>
+                <li>Client and partner events that repeat over time</li>
+                <li>Company offsites and retreats (including larger internal gatherings)</li>
               </ul>
             </div>
-            <div className="panel">
-              <p className="panelTitle">A clear filter</p>
-              <p className="panelBody">
-                If your gatherings are built on trust, relevance, and long-term relationships, {BRAND} fits naturally.
-                If scale matters more than substance, it doesn’t.
-              </p>
+
+            <div className="panelLight">
+              <div className="panelTitle">Not built for</div>
+              <ul className="list">
+                <li>Mass conferences and trade shows</li>
+                <li>High-volume ticketing-first events</li>
+                <li>Events where scale matters more than who meets</li>
+              </ul>
             </div>
           </div>
         </div>
       </section>
 
-      <section className="section">
+      {/* Dark pricing */}
+      <section className="section dark" id="pilots">
         <div className="container">
-          <h2 className="h2">From gathering to continuity</h2>
-          <div className="prose">
-            <p>
-              A single gathering is a moment. A series of gatherings becomes continuity.
-            </p>
-            <p>
-              When {BRAND} is used over time, participants recognize one another across cities and moments, conversations resume instead of restarting,
-              and gatherings begin to feel like membership—without the overhead.
-            </p>
-            <p>The experience compounds.</p>
-          </div>
-        </div>
-      </section>
+          <h2 className="h2 h2OnDark">Private pilots</h2>
 
-      <section className="section muted">
-        <div className="container">
-          <h2 className="h2">Understanding what truly happened</h2>
-          <div className="prose">
-            <p>
-              After each gathering, hosts receive a concise engagement brief that reflects the experience—not vanity metrics.
-            </p>
-          </div>
-          <ul className="bullets">
-            <li>participation and presence</li>
-            <li>conversational activity</li>
-            <li>signals of connection and influence</li>
-            <li>insight to shape what comes next</li>
-          </ul>
-          <p className="note">Not analytics for reporting. Insight for curation.</p>
-        </div>
-      </section>
-
-      <section className="section">
-        <div className="container">
-          <h2 className="h2">Why this matters</h2>
-          <div className="prose">
-            <p>People may forget the menu. They may forget the venue. They may forget the photographer.</p>
-            <p>
-              They won’t forget who they met, what that relationship unlocked, and how that moment influenced their path.
-            </p>
-            <p>
-              {BRAND} exists to make those encounters intentional—and enduring.
-            </p>
-          </div>
-        </div>
-      </section>
-
-      <section className="section muted">
-        <div className="container">
-          <h2 className="h2">Private pilots</h2>
-          <div className="prose">
-            <p>
+          <div className="proseOnDark">
+            <p className="pOnDark">
               {BRAND} partners with a limited number of hosts who design gatherings with care.
             </p>
-            <p>
+            <p className="pOnDark">
               Engagements typically range from <strong>$2,000 to $5,000</strong> per gathering, depending on format and scale.
             </p>
           </div>
@@ -216,14 +172,15 @@ export default function Page() {
             <a className="btn btnPrimary" href={PRIMARY_CTA_HREF}>
               Request a Private Pilot
             </a>
-            <a className="btn btnGhost" href="#faq">
+            <a className="btn btnSecondary" href="#faq">
               Read FAQs
             </a>
           </div>
         </div>
       </section>
 
-      <section className="section" id="faq">
+      {/* FAQ (light, high contrast) */}
+      <section className="section light" id="faq">
         <div className="container">
           <h2 className="h2">FAQ</h2>
 
@@ -243,22 +200,24 @@ export default function Page() {
             </details>
 
             <details>
-              <summary>Is this for professional gatherings only?</summary>
-              <p>
-                Yes—{BRAND} is designed for business-focused communities where the right encounters create long-term value.
-              </p>
-            </details>
-
-            <details>
               <summary>How fast can we run a pilot?</summary>
               <p>
                 Typically within days. If you have a guest list, we can set up a pilot quickly.
               </p>
             </details>
+
+            <details>
+              <summary>What does the host get after the event?</summary>
+              <p>
+                A concise brief on participation and connection patterns, so you can refine guest curation and improve the next gathering.
+              </p>
+            </details>
           </div>
 
           <div className="footerCta">
-            <p className="footerLine">If you host gatherings where who meets matters—let’s talk.</p>
+            <p className="footerLine">
+              If you host gatherings where who meets matters—let’s talk.
+            </p>
             <a className="btn btnPrimary" href={PRIMARY_CTA_HREF}>
               Request a Private Pilot
             </a>
@@ -278,264 +237,351 @@ export default function Page() {
         :global(body) {
           font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
           color: #0b0b0f;
-          background: #ffffff;
+          background: #0a0a0d;
         }
-        :global(a) { color: inherit; text-decoration: none; }
         :global(*) { box-sizing: border-box; }
+        :global(a) { color: inherit; text-decoration: none; }
 
         .page { min-height: 100vh; }
 
+        .container {
+          max-width: 1080px;
+          margin: 0 auto;
+          padding: 0 22px;
+        }
+
+        /* Nav */
         .nav {
           position: sticky;
           top: 0;
-          z-index: 10;
+          z-index: 20;
+          background: rgba(16,16,20,0.88);
+          border-bottom: 1px solid rgba(255,255,255,0.08);
           backdrop-filter: blur(10px);
-          background: rgba(255,255,255,0.85);
-          border-bottom: 1px solid rgba(0,0,0,0.06);
         }
         .navInner {
-          max-width: 1040px;
-          margin: 0 auto;
-          padding: 14px 20px;
+          height: 62px;
           display: flex;
           align-items: center;
           justify-content: space-between;
-          gap: 16px;
+          gap: 14px;
         }
         .brand {
+          font-weight: 700;
           letter-spacing: 0.2px;
-          font-weight: 600;
+          color: rgba(255,255,255,0.92);
         }
         .navActions {
           display: flex;
           align-items: center;
-          gap: 10px;
+          gap: 12px;
         }
         .link {
-          font-size: 14px;
-          opacity: 0.8;
-          padding: 8px 10px;
+          font-size: 13px;
+          color: rgba(255,255,255,0.75);
+          padding: 10px 10px;
           border-radius: 10px;
         }
-        .link:hover { background: rgba(0,0,0,0.04); opacity: 1; }
+        .link:hover { background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.9); }
 
-        .container {
-          max-width: 1040px;
-          margin: 0 auto;
-          padding: 0 20px;
-        }
-
-        .hero {
-          padding: 78px 0 42px;
-        }
-        .eyebrow {
-          font-size: 12px;
-          text-transform: uppercase;
-          letter-spacing: 0.18em;
-          opacity: 0.7;
-          margin: 0 0 14px;
-        }
-        .h1 {
-          font-size: clamp(38px, 5vw, 56px);
-          line-height: 1.05;
-          letter-spacing: -0.03em;
-          margin: 0 0 14px;
-          font-weight: 650;
-        }
-        .subhead {
-          font-size: 18px;
-          line-height: 1.6;
-          max-width: 720px;
-          opacity: 0.85;
-          margin: 0 0 22px;
-        }
-
-        .ctaRow {
-          display: flex;
-          flex-wrap: wrap;
-          gap: 12px;
-          margin: 14px 0 16px;
-        }
+        /* Buttons */
         .btn {
           display: inline-flex;
           align-items: center;
           justify-content: center;
           padding: 12px 14px;
           border-radius: 14px;
-          font-size: 14px;
+          font-size: 13px;
           line-height: 1;
-          border: 1px solid rgba(0,0,0,0.10);
-          transition: transform 120ms ease, background 120ms ease, border-color 120ms ease;
+          border: 1px solid transparent;
+          transition: transform 140ms ease, background 140ms ease, border-color 140ms ease, opacity 140ms ease;
           user-select: none;
           white-space: nowrap;
         }
-        .btn:hover { transform: translateY(-1px); border-color: rgba(0,0,0,0.16); }
+        .btn:hover { transform: translateY(-1px); }
         .btnPrimary {
-          background: #0b0b0f;
-          color: #fff;
-          border-color: #0b0b0f;
+          background: #ffffff;
+          color: #0b0b0f;
+          border-color: rgba(255,255,255,0.9);
         }
-        .btnPrimary:hover { background: #14141a; border-color: #14141a; }
-        .btnGhost {
-          background: rgba(0,0,0,0.02);
+        .btnPrimary:hover { opacity: 0.92; }
+        .btnSecondary {
+          background: rgba(255,255,255,0.08);
+          color: rgba(255,255,255,0.92);
+          border-color: rgba(255,255,255,0.14);
+        }
+        .btnSecondary:hover { background: rgba(255,255,255,0.10); border-color: rgba(255,255,255,0.18); }
+
+        .ctaRow {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 12px;
+          margin-top: 18px;
         }
 
-        .fineprint {
+        /* Hero */
+        .hero {
+          background: radial-gradient(1200px 650px at 20% 20%, rgba(120,90,255,0.20), transparent 55%),
+                      radial-gradient(900px 520px at 80% 25%, rgba(0,200,255,0.10), transparent 60%),
+                      linear-gradient(180deg, #0a0a0d 0%, #07070a 100%);
+          border-bottom: 1px solid rgba(255,255,255,0.08);
+          padding: 78px 0 54px;
+        }
+        .heroInner { padding-top: 8px; }
+        .eyebrow {
+          margin: 0 0 14px;
+          font-size: 11px;
+          letter-spacing: 0.22em;
+          text-transform: uppercase;
+          color: rgba(255,255,255,0.62);
+        }
+        .h1 {
+          margin: 0 0 14px;
+          font-size: clamp(42px, 5.2vw, 64px);
+          line-height: 1.03;
+          letter-spacing: -0.03em;
+          color: rgba(255,255,255,0.96);
+          font-weight: 750;
+          max-width: 980px;
+        }
+        .subhead {
+          margin: 0;
+          margin-top: 6px;
+          font-size: 16px;
+          line-height: 1.7;
+          color: rgba(255,255,255,0.72);
+          max-width: 820px;
+        }
+
+        /* Credibility row */
+        .cred {
+          margin-top: 22px;
+          padding: 16px 16px;
+          border-radius: 18px;
+          border: 1px solid rgba(255,255,255,0.14);
+          background: rgba(255,255,255,0.06);
+          max-width: 980px;
+        }
+        .credLabel {
+          font-size: 11px;
+          letter-spacing: 0.18em;
+          text-transform: uppercase;
+          color: rgba(255,255,255,0.62);
+          margin-bottom: 10px;
+        }
+        .credPills {
+          display: flex;
+          flex-wrap: nowrap; /* keep on one row */
+          overflow-x: auto;  /* safe on smaller screens */
+          gap: 8px;
+          padding-bottom: 2px;
+        }
+        .pill {
+          flex: 0 0 auto;
+          font-size: 12px;
+          color: rgba(255,255,255,0.82);
+          border: 1px solid rgba(255,255,255,0.16);
+          background: rgba(0,0,0,0.18);
+          padding: 6px 10px;
+          border-radius: 999px;
+          white-space: nowrap;
+        }
+        .credNote {
+          margin-top: 10px;
           font-size: 13px;
-          opacity: 0.7;
-          max-width: 760px;
-          margin: 10px 0 0;
+          color: rgba(255,255,255,0.68);
         }
 
-        .section { padding: 56px 0; }
-        .muted { background: rgba(0,0,0,0.02); border-top: 1px solid rgba(0,0,0,0.04); border-bottom: 1px solid rgba(0,0,0,0.04); }
+        /* Sections */
+        .section { padding: 64px 0; }
+        .dark {
+          background: linear-gradient(180deg, #0b0b0f 0%, #08080b 100%);
+          border-top: 1px solid rgba(255,255,255,0.08);
+          border-bottom: 1px solid rgba(255,255,255,0.08);
+        }
+        .light {
+          background: #f6f7fb; /* higher contrast than plain white */
+          border-top: 1px solid rgba(0,0,0,0.06);
+          border-bottom: 1px solid rgba(0,0,0,0.06);
+          color: #0b0b0f;
+        }
 
         .h2 {
+          margin: 0 0 14px;
           font-size: 26px;
           letter-spacing: -0.02em;
-          margin: 0 0 14px;
-          font-weight: 650;
+          font-weight: 750;
+        }
+        .h2OnDark {
+          color: rgba(255,255,255,0.94);
+        }
+        .proseOnDark {
+          max-width: 900px;
+          color: rgba(255,255,255,0.72);
+          font-size: 15px;
+          line-height: 1.75;
+          margin-top: 6px;
+        }
+        .pOnDark { margin: 0 0 10px; }
+
+        /* Light cards (higher contrast) */
+        .cards2 {
+          margin-top: 18px;
+          display: grid;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 14px;
+          max-width: 980px;
+        }
+        .cardLight {
+          background: #ffffff;
+          border: 1px solid rgba(15,15,20,0.14);
+          box-shadow: 0 1px 0 rgba(0,0,0,0.04), 0 10px 30px rgba(0,0,0,0.06);
+          border-radius: 16px;
+          padding: 16px 16px;
+        }
+        .cardText {
+          margin: 0;
+          color: rgba(10,10,14,0.88);
+          font-size: 14px;
+          line-height: 1.65;
+          font-weight: 520;
+        }
+
+        /* Dark triptych */
+        .triptych {
+          margin-top: 18px;
+          display: grid;
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+          gap: 14px;
+        }
+        .cardDark {
+          border: 1px solid rgba(255,255,255,0.14);
+          background: rgba(255,255,255,0.06);
+          border-radius: 18px;
+          padding: 18px;
+        }
+        .kicker {
+          font-size: 11px;
+          letter-spacing: 0.18em;
+          text-transform: uppercase;
+          color: rgba(255,255,255,0.60);
+          margin-bottom: 10px;
         }
         .h3 {
           margin: 0 0 10px;
           font-size: 16px;
-          font-weight: 650;
+          font-weight: 750;
           letter-spacing: -0.01em;
-        }
-        .prose p {
-          margin: 0 0 12px;
-          font-size: 16px;
-          line-height: 1.75;
-          opacity: 0.9;
-          max-width: 860px;
-        }
-
-        .bullets {
-          margin: 14px 0 0;
-          padding-left: 18px;
-          max-width: 860px;
-        }
-        .bullets li {
-          margin: 8px 0;
-          line-height: 1.6;
-          opacity: 0.9;
-        }
-        .bullets.compact li { margin: 6px 0; }
-
-        .note {
-          margin: 14px 0 0;
-          font-size: 14px;
-          opacity: 0.75;
-        }
-
-        .triptych {
-          margin-top: 18px;
-          display: grid;
-          grid-template-columns: repeat(3, 1fr);
-          gap: 12px;
-        }
-        .card {
-          border: 1px solid rgba(0,0,0,0.08);
-          background: #fff;
-          border-radius: 18px;
-          padding: 18px;
-          box-shadow: 0 1px 0 rgba(0,0,0,0.02);
-        }
-        .cardTitle {
-          margin: 0 0 10px;
-          font-size: 14px;
-          opacity: 0.75;
+          color: rgba(255,255,255,0.92);
         }
         .cardBody {
           margin: 0;
           font-size: 14px;
           line-height: 1.7;
-          opacity: 0.9;
+          color: rgba(255,255,255,0.72);
         }
 
+        /* Panels (light, higher contrast) */
         .grid2 {
+          margin-top: 18px;
           display: grid;
-          grid-template-columns: 1.4fr 0.9fr;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
           gap: 14px;
-          align-items: start;
-          margin-top: 10px;
+          max-width: 980px;
         }
-        .panel {
-          border: 1px solid rgba(0,0,0,0.08);
+        .panelLight {
+          background: #ffffff;
+          border: 1px solid rgba(15,15,20,0.14);
+          box-shadow: 0 1px 0 rgba(0,0,0,0.04), 0 10px 30px rgba(0,0,0,0.06);
           border-radius: 18px;
           padding: 18px;
-          background: #fff;
         }
         .panelTitle {
-          margin: 0 0 10px;
-          font-size: 14px;
-          opacity: 0.75;
+          font-size: 12px;
+          letter-spacing: 0.16em;
+          text-transform: uppercase;
+          color: rgba(10,10,14,0.55);
+          margin-bottom: 12px;
+          font-weight: 700;
         }
-        .panelBody {
+        .list {
           margin: 0;
+          padding-left: 18px;
+          color: rgba(10,10,14,0.86);
+          line-height: 1.75;
           font-size: 14px;
-          line-height: 1.7;
-          opacity: 0.9;
+          font-weight: 520;
         }
+        .list li { margin: 8px 0; }
 
+        /* FAQ (light) */
         .faq {
           margin-top: 14px;
-          max-width: 860px;
+          max-width: 920px;
         }
         details {
-          border: 1px solid rgba(0,0,0,0.08);
-          background: #fff;
+          background: #ffffff;
+          border: 1px solid rgba(15,15,20,0.14);
           border-radius: 16px;
           padding: 14px 16px;
           margin-bottom: 10px;
+          box-shadow: 0 1px 0 rgba(0,0,0,0.03);
         }
         summary {
           cursor: pointer;
-          font-weight: 600;
+          font-weight: 750;
           letter-spacing: -0.01em;
           list-style: none;
           outline: none;
+          color: rgba(10,10,14,0.92);
         }
         details p {
           margin: 10px 0 0;
           font-size: 14px;
           line-height: 1.7;
-          opacity: 0.9;
+          color: rgba(10,10,14,0.78);
         }
 
+        /* Footer CTA */
         .footerCta {
           margin-top: 18px;
           padding-top: 18px;
-          border-top: 1px solid rgba(0,0,0,0.06);
+          border-top: 1px solid rgba(0,0,0,0.08);
           display: flex;
           flex-direction: column;
           gap: 10px;
+          max-width: 920px;
         }
         .footerLine {
           margin: 0;
           font-size: 14px;
-          opacity: 0.8;
+          color: rgba(10,10,14,0.70);
+          font-weight: 520;
         }
 
         .footer {
-          margin-top: 26px;
-          padding: 18px 0 0;
-          border-top: 1px solid rgba(0,0,0,0.06);
+          margin-top: 28px;
+          padding-top: 16px;
+          border-top: 1px solid rgba(0,0,0,0.08);
         }
         .footerInner {
           display: flex;
           justify-content: space-between;
           font-size: 13px;
-          opacity: 0.75;
+          color: rgba(10,10,14,0.62);
           padding-bottom: 10px;
         }
 
-        @media (max-width: 900px) {
+        /* Responsive */
+        @media (max-width: 980px) {
           .triptych { grid-template-columns: 1fr; }
           .grid2 { grid-template-columns: 1fr; }
+          .cards2 { grid-template-columns: 1fr; }
+        }
+        @media (max-width: 780px) {
           .navActions .link { display: none; }
         }
       `}</style>
     </main>
-  );
+  )
 }
