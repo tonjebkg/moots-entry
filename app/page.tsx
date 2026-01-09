@@ -45,12 +45,12 @@ export default function Page() {
 
           {/* Credibility row (shorter: single-line on laptop) */}
           <div className="cred">
-            <div className="credLabel">Used for</div>
+            <div className="credLabel">Used for curated side events at</div>
             <div className="credPills" aria-label="Examples of gatherings">
-              <span className="pill">CES side events</span>
-              <span className="pill">Cannes Lions dinners</span>
-              <span className="pill">NY Fashion Week gatherings</span>
-              <span className="pill">F1 weekends</span>
+              <span className="pill">CES</span>
+              <span className="pill">Cannes Lions</span>
+              <span className="pill">Davos</span>
+              <span className="pill">UN Week</span>
             </div>
             <div className="credNote">
               Also used for standalone client, partner, and community gatherings not tied to major moments.
@@ -82,7 +82,7 @@ export default function Page() {
             </div>
             <div className="cardLight">
               <p className="cardText">
-                The host has no structured way to extend the experience beyond the night.
+                The host has no structured way to extend the experience beyond the event.
               </p>
             </div>
           </div>
@@ -94,7 +94,7 @@ export default function Page() {
         <div className="container">
           <h2 className="h2 h2OnDark">How {BRAND} adds value to your guests</h2>
           <p className="proseOnDark">
-            Guests don’t attend curated events to “consume content.” They attend because the value of the night is the people in the room.
+            Guests don’t attend curated events only to “consume content.” They attend because the value of the in-person event is the people in the room.
             {` ${BRAND}`} signals that guests matter—and makes it easier for them to connect with the people other guests want to meet.
           </p>
 
@@ -135,7 +135,7 @@ export default function Page() {
             <div className="panelLight">
               <div className="panelTitle">Designed for</div>
               <ul className="list">
-                <li>Invite-only dinners, salons, breakfasts, and private talks</li>
+                <li>Invite-only breakfasts, luncheons, dinners, salons, and private talks</li>
                 <li>Networking cocktails and small summits</li>
                 <li>Client and partner events that repeat over time</li>
                 <li>Company offsites and retreats (including larger internal gatherings)</li>
@@ -210,6 +210,13 @@ export default function Page() {
               <summary>What does the host get after the event?</summary>
               <p>
                 A concise brief on participation and connection patterns, so you can refine guest curation and improve the next gathering.
+              </p>
+            </details>
+
+            <details>
+              <summary>What does the name Moots mean?</summary>
+              <p>
+                The name comes from the idea of a moot: a gathering convened to discuss matters of consequence. Historically, moots were spaces where decisions were shaped through dialogue among peers. Moots exists to bring that spirit into modern professional gatherings using technology to quietly support conversations that matter.
               </p>
             </details>
           </div>
