@@ -136,7 +136,7 @@ export default function Page() {
               <div className="panelTitle">Designed for</div>
               <ul className="list">
                 <li>Invite-only breakfasts, luncheons, dinners, salons, and private talks</li>
-                <li>Networking cocktails and small summits</li>
+                <li>Networking cocktails, demo days, forums and small summits</li>
                 <li>Client and partner events that repeat over time</li>
                 <li>Company offsites and retreats (including larger internal gatherings)</li>
               </ul>
@@ -164,7 +164,7 @@ export default function Page() {
               {BRAND} partners with a limited number of hosts who design gatherings with care.
             </p>
             <p className="pOnDark">
-              Engagements typically range from <strong>$2,000 to $5,000</strong> per gathering, depending on format and scale.
+              Engagements starts from <strong>$2,000</strong> per gathering, depending on event duration, size of the invited community and if a white-glove on-site activation is requested.
             </p>
           </div>
 
@@ -195,7 +195,7 @@ export default function Page() {
             <details>
               <summary>Do guests need to download an app?</summary>
               <p>
-                iOS guests get the full experience in-app. For guests who don’t install, you can still deliver key touchpoints by email (confirmation, QR code, and pre-event context).
+                iOS guests get the full experience in-app. For guests who don’t install, you can still deliver key touchpoints by email or text (confirmation, QR code, and pre-event context).
               </p>
             </details>
 
