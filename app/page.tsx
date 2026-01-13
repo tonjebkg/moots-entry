@@ -31,7 +31,7 @@ export default function Page() {
 
           <p className="subhead">
             {BRAND} helps hosts run curated professional gatherings where guests meet the people who can materially impact
-            their life or business—and where those connections continue after the event.
+            their carreer or business and where those connections continue after the event.
           </p>
 
           <div className="ctaRow">
@@ -72,7 +72,7 @@ export default function Page() {
             </div>
             <div className="cardLight">
               <p className="cardText">
-                Introductions depend on luck, timing, or social confidence.
+                Meaningful onnections depend on luck, timing, or social confidence.
               </p>
             </div>
             <div className="cardLight">
@@ -94,8 +94,8 @@ export default function Page() {
         <div className="container">
           <h2 className="h2 h2OnDark">How {BRAND} adds value to your guests</h2>
           <p className="proseOnDark">
-            Guests don’t attend curated events only to “consume content.” They attend because the value of the in-person event is the people in the room.
-            {` ${BRAND}`} signals that guests matter—and makes it easier for them to connect with the people other guests want to meet.
+            Guests don’t attend curated events only to hear from speakers. They attend because the room itself is part of the value, the people in the audience are as important as the people on stage.
+            {` ${BRAND}`} signals that guests matter and makes it easier for them to connect with the people other guests want to meet.
           </p>
 
           <div className="triptych">
@@ -103,7 +103,7 @@ export default function Page() {
               <div className="kicker">Before</div>
               <h3 className="h3">Arrive with intent</h3>
               <p className="cardBody">
-                Guests see who is attending and who they should prioritize—based on the host’s goals for the room and the guest’s role.
+                Guests see who is attending and who they should prioritize based on the guest’s goals for the event and the guest’s role.
               </p>
             </div>
 
@@ -111,7 +111,7 @@ export default function Page() {
               <div className="kicker">During</div>
               <h3 className="h3">Meet the right people</h3>
               <p className="cardBody">
-                Guests use a lightweight flow to connect in the moment—without awkward “what do you do?” loops or losing names in a crowded room.
+                Guests use a lightweight flow in our app to connect in the moment without awkward “what do you do?” loops or losing names in a crowded room.
               </p>
             </div>
 
@@ -119,7 +119,7 @@ export default function Page() {
               <div className="kicker">After</div>
               <h3 className="h3">Keep continuity for 30 days</h3>
               <p className="cardBody">
-                For 30 days, guests can follow up with the people they met and connect with the people they did not reach—so the room keeps working after the event.
+                For 30 days, guests can follow up with the people they met and connect with the people they did not reach so the room keeps working after the event.
               </p>
             </div>
           </div>
