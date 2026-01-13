@@ -30,8 +30,7 @@ export default function Page() {
           <h1 className="h1">Make sure the right people meet in the room.</h1>
 
           <p className="subhead">
-            {BRAND} helps hosts run curated professional gatherings where guests meet the people who can materially impact
-            their carreer or business and where those connections continue after the event.
+            {BRAND} helps hosts curate meaningful connections between their guests, ensuring every interaction adds real value during the event and beyond.
           </p>
 
           <div className="ctaRow">
@@ -94,8 +93,8 @@ export default function Page() {
         <div className="container">
           <h2 className="h2 h2OnDark">How {BRAND} adds value to your guests</h2>
           <p className="proseOnDark">
-            Guests don’t attend curated events only to hear from speakers. They attend because the room itself is part of the value, the people in the audience are as important as the people on stage.
-            {` ${BRAND}`} signals that guests matter and makes it easier for them to connect with the people other guests want to meet.
+            Guests don’t attend curated events just to listen to speakers. They come because the room itself creates value with the collective presence, conversations, and potential connections that matter as much as what happens on stage.
+            {` ${BRAND}`} reinforces that every guest counts and makes it easier for people to connect with those they genuinely want to meet.
           </p>
 
           <div className="triptych">
