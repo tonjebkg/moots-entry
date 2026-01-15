@@ -71,7 +71,7 @@ export default function Page() {
             </div>
             <div className="cardLight">
               <p className="cardText">
-                Meaningful onnections depend on luck, timing, or social confidence.
+                Meaningful connections depend on luck, timing, or social confidence.
               </p>
             </div>
             <div className="cardLight">
@@ -134,10 +134,10 @@ export default function Page() {
             <div className="panelLight">
               <div className="panelTitle">Designed for</div>
               <ul className="list">
-                <li>Invite-only breakfasts, luncheons, dinners, salons, and private talks</li>
-                <li>Networking cocktails, demo days, forums and small summits</li>
-                <li>Client and partner events that repeat over time</li>
-                <li>Company offsites and retreats (including larger internal gatherings)</li>
+                <li>Invite-only breakfasts, luncheons, dinners and private talks</li>
+                <li>Networking cocktails, demo days, forums and fundraising events</li>
+                <li>Client, partner and donor events that repeat over time</li>
+                <li>LP meetings, Company offsites and retreats</li>
               </ul>
             </div>
 
