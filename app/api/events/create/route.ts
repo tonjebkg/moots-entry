@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { db } from '@/lib/db';
+import { getDb } from '@/lib/db';
 
 export const runtime = 'nodejs';
 
@@ -45,6 +45,9 @@ export async function POST(req: Request) {
       ? JSON.stringify(event.hosts)
       : null;
     const locationJson = location ? JSON.stringify(location) : null;
+
+    // Get database client (lazy-initialized, dashboard-mode only)
+    const db = getDb();
 
     // Insert event into Neon
     const result = await db`

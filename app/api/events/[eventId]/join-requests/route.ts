@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { db } from '@/lib/db';
+import { getDb } from '@/lib/db';
 
 export const runtime = 'nodejs';
 
@@ -17,6 +17,9 @@ export async function GET(_req: Request, { params }: RouteParams) {
         { status: 400 }
       );
     }
+
+    // Get database client (lazy-initialized, dashboard-mode only)
+    const db = getDb();
 
     // Query join requests with user profile data
     const joinRequests = await db`

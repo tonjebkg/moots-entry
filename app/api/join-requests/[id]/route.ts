@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { db } from '@/lib/db';
+import { getDb } from '@/lib/db';
 
 export const runtime = 'nodejs';
 
@@ -69,6 +69,9 @@ export async function PATCH(req: Request, { params }: RouteParams) {
 
     // Always update the updated_at timestamp
     const now = new Date().toISOString();
+
+    // Get database client (lazy-initialized, dashboard-mode only)
+    const db = getDb();
 
     // Build dynamic update query using conditional updates
     const result = await db`
