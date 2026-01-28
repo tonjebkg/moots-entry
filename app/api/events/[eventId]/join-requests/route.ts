@@ -1,0 +1,95 @@
+import { NextResponse } from 'next/server';
+import { db } from '@/lib/db';
+
+export const runtime = 'nodejs';
+
+type RouteParams = {
+  params: Promise<{ eventId: string }>;
+};
+
+export async function GET(_req: Request, { params }: RouteParams) {
+  try {
+    const { eventId } = await params;
+
+    if (!eventId || isNaN(Number(eventId))) {
+      return NextResponse.json(
+        { error: 'Valid eventId is required' },
+        { status: 400 }
+      );
+    }
+
+    // Query join requests with user profile data
+    const joinRequests = await db`
+      SELECT
+        ejr.id,
+        ejr.event_id,
+        ejr.owner_id,
+        ejr.status,
+        ejr.plus_ones,
+        ejr.comments,
+        ejr.rejection_reason,
+        ejr.rsvp_contact,
+        ejr.created_at,
+        ejr.updated_at,
+        up.first_name,
+        up.last_name,
+        up.emails,
+        up.photo_url
+      FROM event_join_requests ejr
+      LEFT JOIN user_profiles up ON ejr.owner_id = up.owner_id
+      WHERE ejr.event_id = ${Number(eventId)}
+      ORDER BY ejr.created_at DESC
+    `;
+
+    // Calculate counts
+    const approved_count = joinRequests.filter(jr => jr.status === 'APPROVED').length;
+    const pending_count = joinRequests.filter(jr => jr.status === 'PENDING').length;
+    const rejected_count = joinRequests.filter(jr => jr.status === 'REJECTED').length;
+    const cancelled_count = joinRequests.filter(jr => jr.status === 'CANCELLED').length;
+
+    // Map to dashboard-friendly format
+    const mappedRequests = joinRequests.map(jr => {
+      // Extract primary email from emails jsonb array
+      const primaryEmail = Array.isArray(jr.emails) && jr.emails.length > 0
+        ? jr.emails[0].email
+        : jr.rsvp_contact || 'no-email@moots.app';
+
+      // Combine first_name and last_name
+      const full_name = [jr.first_name, jr.last_name]
+        .filter(Boolean)
+        .join(' ')
+        .trim() || 'Unknown User';
+
+      return {
+        id: jr.id,
+        event_id: jr.event_id,
+        owner_id: jr.owner_id,
+        full_name,
+        email: primaryEmail,
+        status: jr.status, // Keep Neon enum values: PENDING, APPROVED, REJECTED, CANCELLED, DRAFT
+        plus_ones: jr.plus_ones ?? 0,
+        comments: jr.comments ?? '',
+        photo_url: jr.photo_url ?? null,
+        created_at: jr.created_at,
+        updated_at: jr.updated_at,
+      };
+    });
+
+    return NextResponse.json({
+      join_requests: mappedRequests,
+      counts: {
+        total: joinRequests.length,
+        approved: approved_count,
+        pending: pending_count,
+        rejected: rejected_count,
+        cancelled: cancelled_count,
+      },
+    });
+  } catch (err: any) {
+    console.error(`[GET /api/events/${(await params).eventId}/join-requests] Error:`, err);
+    return NextResponse.json(
+      { error: err.message || 'Failed to fetch join requests' },
+      { status: 500 }
+    );
+  }
+}

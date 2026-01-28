@@ -1,96 +1,96 @@
-import { NextResponse } from 'next/server'
-import { supabaseAdmin } from '@/lib/supabaseAdmin'
+import { NextResponse } from 'next/server';
+import { db } from '@/lib/db';
 
-export const runtime = 'nodejs'
+export const runtime = 'nodejs';
 
-type Host = { name: string; url?: string | null }
-type NewGuest = {
-  full_name: string
-  email: string
-  status?: 'invite_sent' | 'confirmed' | 'waitlist' | 'cancelled' | 'checked_in'
-  plus_ones?: number
-  priority?: 'normal' | 'vip' | 'vvip'
-  comments?: string | null
-}
+type Host = { name: string; url?: string | null };
+
+type CreateEventPayload = {
+  event: {
+    title: string;
+    city?: string | null;
+    start_date: string; // ISO 8601 timestamp
+    end_date?: string | null; // ISO 8601 timestamp
+    timezone?: string | null;
+    event_url?: string | null;
+    image_url?: string | null;
+    hosts?: Host[];
+  };
+};
 
 export async function POST(req: Request) {
   try {
-    const body = await req.json()
+    const body: CreateEventPayload = await req.json();
+    const { event } = body;
 
-    const event = body.event as {
-      name: string
-      city?: string | null
-      starts_at: string
-      timezone: string
-      capacity?: number | null
-      image_url?: string | null
-      event_url?: string | null
-      hosts?: Host[]
+    // Validate required fields
+    if (!event.title || !event.start_date) {
+      return NextResponse.json(
+        { error: 'title and start_date are required' },
+        { status: 400 }
+      );
     }
 
-    const stagedGuests = (body.guests ?? []) as NewGuest[]
+    // Map city to location jsonb
+    const location = event.city ? { city: event.city } : null;
 
-    const hostName = event.hosts?.[0]?.name ?? '—'
+    // Default end_date to 3 hours after start_date if not provided
+    const startDate = new Date(event.start_date);
+    const endDate = event.end_date
+      ? new Date(event.end_date)
+      : new Date(startDate.getTime() + 3 * 60 * 60 * 1000);
 
-    // 1) create event row
-    const { data: inserted, error: evErr } = await supabaseAdmin
-      .from('events')
-      .insert([{
-        name: event.name,
-        city: event.city ?? null,
-        starts_at: event.starts_at,
-        timezone: event.timezone,
-        capacity: event.capacity ?? null,
-        image_url: event.image_url ?? null,
-        event_url: event.event_url ?? null,
-        hosts: event.hosts ?? [],     // if you have a jsonb column `hosts`
-        host_name: hostName           // legacy NOT NULL column
-      }])
-      .select('id')
-      .single()
+    // Prepare jsonb fields
+    const hostsJson = event.hosts && event.hosts.length > 0
+      ? JSON.stringify(event.hosts)
+      : null;
+    const locationJson = location ? JSON.stringify(location) : null;
 
-    if (evErr) throw evErr
-    const eventId = inserted.id as string
+    // Insert event into Neon
+    const result = await db`
+      INSERT INTO events (
+        title,
+        hosts,
+        location,
+        start_date,
+        end_date,
+        timezone,
+        event_url,
+        image_url,
+        is_private,
+        approve_mode,
+        status
+      ) VALUES (
+        ${event.title},
+        ${hostsJson}::jsonb,
+        ${locationJson}::jsonb,
+        ${startDate.toISOString()},
+        ${endDate.toISOString()},
+        ${event.timezone || 'UTC'},
+        ${event.event_url || null},
+        ${event.image_url || null},
+        ${false},
+        ${'MANUAL'},
+        ${'DRAFT'}
+      ) RETURNING id
+    `;
 
-    // 2) import guests (if any staged)
-    if (stagedGuests.length) {
-      // enforce defaults
-      const rows = stagedGuests.map(g => ({
-        event_id: eventId,
-        full_name: g.full_name,
-        email: g.email,
-        status: normalizeStatus(g.status),
-        plus_ones: Math.max(0, Number(g.plus_ones ?? 0)),
-        priority: normalizePriority(g.priority),
-        comments: g.comments ?? null
-      }))
-
-      // Chunked insert to stay under limits
-      const chunkSize = 500
-      for (let i = 0; i < rows.length; i += chunkSize) {
-        const slice = rows.slice(i, i + chunkSize)
-        const { error: insErr } = await supabaseAdmin.from('guests').insert(slice)
-        if (insErr) throw insErr
-      }
+    if (!result || result.length === 0) {
+      throw new Error('Failed to create event - no ID returned');
     }
 
-    return NextResponse.json({ id: eventId })
+    const eventId = result[0].id;
+
+    return NextResponse.json({
+      event_id: eventId,
+      message: 'Event created successfully'
+    });
+
   } catch (err: any) {
-    console.error('create event error', err)
-    return NextResponse.json({ error: err.message ?? 'Create failed' }, { status: 400 })
+    console.error('[POST /api/events/create] Error:', err);
+    return NextResponse.json(
+      { error: err.message || 'Failed to create event' },
+      { status: 500 }
+    );
   }
-}
-
-// helpers
-function normalizeStatus(s?: string) {
-  const v = (s ?? '').toLowerCase().replace('-', '_')
-  if (['invite_sent', 'confirmed', 'waitlist', 'cancelled', 'checked_in'].includes(v)) return v
-  if (v === 'invited') return 'invite_sent'
-  if (v === 'checkedin') return 'checked_in'
-  return 'invite_sent'
-}
-function normalizePriority(p?: string) {
-  const v = (p ?? '').toLowerCase()
-  if (v === 'vip' || v === 'vvip') return v
-  return 'normal'
 }

@@ -3,20 +3,23 @@
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
-import { supabase } from '@/lib/supabase'
+import { supabase } from '@/lib/supabase' // Still needed for image uploads only
 
-type Status = 'invite_sent' | 'confirmed' | 'waitlist' | 'cancelled' | 'checked_in'
+// Neon status enum values
+type NeonStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'CANCELLED' | 'DRAFT'
 type Priority = 'normal' | 'vip' | 'vvip'
 
 type Guest = {
   id: string
-  event_id: string
+  event_id: string | number
   full_name: string
   email: string
-  status: Status
+  status: NeonStatus
   plus_ones: number | null
   priority?: Priority | null
   comments?: string | null
+  owner_id?: string
+  photo_url?: string | null
 }
 
 type Host = { name: string; url?: string | null }
@@ -34,19 +37,19 @@ type EventRow = {
   edit_token?: string // used by /api/events/update
 }
 
-const STATUS_LABEL: Record<Status, string> = {
-  invite_sent: 'Invite sent',
-  confirmed: 'Confirmed',
-  waitlist: 'Waitlist',
-  cancelled: 'Cancelled',
-  checked_in: 'Checked-in',
+const STATUS_LABEL: Record<NeonStatus, string> = {
+  PENDING: 'Pending',
+  APPROVED: 'Approved',
+  REJECTED: 'Rejected',
+  CANCELLED: 'Cancelled',
+  DRAFT: 'Draft',
 }
-const STATUS_BG: Record<Status, string> = {
-  invite_sent: 'bg-slate-700 text-slate-100',
-  confirmed: 'bg-blue-700 text-white',
-  waitlist: 'bg-amber-700 text-white',
-  cancelled: 'bg-red-700 text-white',
-  checked_in: 'bg-green-700 text-white',
+const STATUS_BG: Record<NeonStatus, string> = {
+  PENDING: 'bg-amber-700 text-white',
+  APPROVED: 'bg-blue-700 text-white',
+  REJECTED: 'bg-red-700 text-white',
+  CANCELLED: 'bg-slate-700 text-slate-100',
+  DRAFT: 'bg-slate-600 text-slate-200',
 }
 const PRIORITY_LABEL: Record<Priority, string> = {
   normal: 'Normal',
@@ -111,57 +114,80 @@ export default function DashboardPage() {
   const [newGuest, setNewGuest] = useState<{
     full_name: string
     email: string
-    status: Status
+    status: NeonStatus
     plus_ones: number
     priority: Priority
     comments: string
-  }>({ full_name: '', email: '', status: 'invite_sent', plus_ones: 0, priority: 'normal', comments: '' })
+  }>({ full_name: '', email: '', status: 'PENDING', plus_ones: 0, priority: 'normal', comments: '' })
 
   useEffect(() => {
     if (!eventId) return
+
+    let cancelled = false
+
     ;(async () => {
-      const { data: ev } = await supabase
-        .from('events')
-        .select('id,name,city,starts_at,timezone,capacity,image_url,event_url,hosts,edit_token')
-        .eq('id', eventId)
-        .single()
-      setEvent(ev as EventRow)
+      try {
+        // Fetch event from Neon API
+        const eventRes = await fetch(`/api/events/${eventId}`)
+        if (!eventRes.ok) {
+          const errorText = await eventRes.text()
+          console.error('Failed to fetch event:', errorText)
+          if (!cancelled) {
+            setMessage(`Failed to load event: ${eventRes.status}`)
+          }
+          return
+        }
 
-      const { data: gs } = await supabase
-        .from('guests')
-        .select('id,event_id,full_name,email,status,plus_ones,priority,comments')
-        .eq('event_id', eventId)
-        .order('full_name', { ascending: true })
+        const eventData = await eventRes.json()
+        if (!cancelled) {
+          setEvent(eventData)
+        }
 
-      setGuests((gs ?? []).map(g => ({
-        ...g,
-        priority: (g.priority as Priority) ?? 'normal',
-        comments: g.comments ?? '',
-        status: (g.status as any) === 'invited' ? 'invite_sent' : g.status,
-      })))
+        // Fetch join requests from Neon API
+        const joinReqRes = await fetch(`/api/events/${eventId}/join-requests`)
+        if (joinReqRes.ok) {
+          const joinReqData = await joinReqRes.json()
+          if (!cancelled) {
+            setGuests(joinReqData.join_requests ?? [])
+          }
+        } else {
+          const errorText = await joinReqRes.text()
+          console.error('Failed to fetch join requests:', errorText)
+          if (!cancelled) {
+            setMessage(`Failed to load join requests: ${joinReqRes.status}`)
+          }
+        }
+      } catch (err: any) {
+        console.error('Error loading dashboard data:', err)
+        if (!cancelled) {
+          setMessage(`Error: ${err.message || 'Failed to load dashboard'}`)
+        }
+      }
     })()
+
+    return () => {
+      cancelled = true
+    }
   }, [eventId])
 
   const totals = useMemo(() => {
-    const base = { invite_sent: 0, confirmed: 0, waitlist: 0, cancelled: 0, checked_in: 0 }
-    let invitedMetric = 0
+    const base = { PENDING: 0, APPROVED: 0, REJECTED: 0, CANCELLED: 0, DRAFT: 0 }
+    let totalHeadcount = 0
     for (const g of guests) {
       const plus = Math.max(0, g.plus_ones ?? 0)
       const hc = 1 + plus
-      invitedMetric += hc
-      base[g.status] += hc
+      totalHeadcount += hc
+      base[g.status] = (base[g.status] || 0) + hc
     }
     return {
       ...base,
-      invitedMetric,
-      confirmedHeadcount: base.confirmed,
-      checkedInHeadcount: base.checked_in,
+      totalHeadcount,
+      confirmedHeadcount: base.APPROVED, // APPROVED = confirmed attendees
     }
   }, [guests])
 
   const capacity = event?.capacity ?? 0
   const confirmedPct = capacity ? Math.min(100, (totals.confirmedHeadcount / capacity) * 100) : 0
-  const checkedPct   = capacity ? Math.min(100, (totals.checkedInHeadcount / capacity) * 100) : 0
 
   const filtered = useMemo(() => {
     const term = q.trim().toLowerCase()
@@ -185,28 +211,51 @@ export default function DashboardPage() {
     return list
   }, [guests, q, sortKey])
 
-  async function handleStatusChange(g: Guest, next: Status) {
-    await supabase.from('guests').update({ status: next }).eq('id', g.id)
-    setGuests(prev => prev.map(x => x.id === g.id ? { ...x, status: next } : x))
+  async function handleStatusChange(g: Guest, next: NeonStatus) {
+    const res = await fetch(`/api/join-requests/${g.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: next })
+    })
+    if (res.ok) {
+      setGuests(prev => prev.map(x => x.id === g.id ? { ...x, status: next } : x))
+    } else {
+      console.error('Failed to update status:', await res.text())
+    }
   }
   async function handlePriorityChange(g: Guest, next: Priority) {
-    await supabase.from('guests').update({ priority: next }).eq('id', g.id)
-    setGuests(prev => prev.map(x => x.id===g.id ? { ...x, priority: next } : x))
+    // Priority is not stored in Neon event_join_requests - this is a no-op for Phase 1
+    console.log('Priority change not supported in Phase 1:', g.id, next)
   }
   async function handlePlusOnes(g: Guest, delta: 1 | -1) {
     const next = Math.max(0, (g.plus_ones ?? 0) + delta)
-    await supabase.from('guests').update({ plus_ones: next }).eq('id', g.id)
-    setGuests(prev => prev.map(x => x.id===g.id ? { ...x, plus_ones: next } : x))
+    const res = await fetch(`/api/join-requests/${g.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ plus_ones: next })
+    })
+    if (res.ok) {
+      setGuests(prev => prev.map(x => x.id===g.id ? { ...x, plus_ones: next } : x))
+    } else {
+      console.error('Failed to update plus_ones:', await res.text())
+    }
   }
 
   // comments modal
-  function openCommentModal(g: Guest) { setCommentGuest(g); setCommentDraft(g.comments ?? '') }
   function closeCommentModal() { setCommentGuest(null); setCommentDraft('') }
   async function saveCommentModal() {
     if (!commentGuest) return
-    await supabase.from('guests').update({ comments: commentDraft }).eq('id', commentGuest.id)
-    setGuests(prev => prev.map(x => x.id === commentGuest.id ? { ...x, comments: commentDraft } : x))
-    closeCommentModal()
+    const res = await fetch(`/api/join-requests/${commentGuest.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ comments: commentDraft })
+    })
+    if (res.ok) {
+      setGuests(prev => prev.map(x => x.id === commentGuest.id ? { ...x, comments: commentDraft } : x))
+      closeCommentModal()
+    } else {
+      console.error('Failed to update comments:', await res.text())
+    }
   }
 
   // add guest
@@ -230,7 +279,7 @@ export default function DashboardPage() {
     if (error) { setMessage(error.message); return }
     setGuests(prev => [...prev, data as Guest].sort((a,b)=>a.full_name.localeCompare(b.full_name)))
     setIsAdding(false)
-    setNewGuest({ full_name:'', email:'', status:'invite_sent', plus_ones:0, priority:'normal', comments:'' })
+    setNewGuest({ full_name:'', email:'', status:'PENDING', plus_ones:0, priority:'normal', comments:'' })
     setMessage('Guest added.')
   }
 
@@ -318,7 +367,22 @@ export default function DashboardPage() {
     }
   }
 
-  if (!event) return <main className="p-6 text-white">Loading…</main>
+  if (!event) {
+    return (
+      <main className="p-6 text-white">
+        {message ? (
+          <div>
+            <p className="text-red-400 mb-4">{message}</p>
+            <Link href="/" className="px-4 py-2 rounded border hover:bg-slate-900 inline-block">
+              ← Back to Home
+            </Link>
+          </div>
+        ) : (
+          <p>Loading…</p>
+        )}
+      </main>
+    )
+  }
 
   return (
     <main className="p-6 max-w-6xl mx-auto space-y-6 text-white">
@@ -369,29 +433,27 @@ export default function DashboardPage() {
       <section className="space-y-2">
         <div className="flex items-center gap-6 text-sm">
           <div>Capacity: <span className="font-medium">{capacity}</span></div>
-          <div>Confirmed headcount: <span className="font-medium">{totals.confirmedHeadcount}</span></div>
-          <div>Checked-in headcount: <span className="font-medium">{totals.checkedInHeadcount}</span></div>
+          <div>Confirmed (Approved) headcount: <span className="font-medium">{totals.confirmedHeadcount}</span></div>
         </div>
         <div className="h-2 w-full bg-slate-800 rounded overflow-hidden">
           <div className="h-full bg-blue-600" style={{ width: `${confirmedPct}%` }} title="Confirmed" />
-          <div className="h-full bg-green-600 -mt-2" style={{ width: `${checkedPct}%` }} title="Checked-in" />
         </div>
         <div className="flex items-center gap-3 text-sm mt-2">
           <span className="text-slate-400">Totals —</span>
-          <span className="px-2 py-1 rounded bg-slate-700 text-slate-100">Invited <b className="ml-1">{totals.invitedMetric}</b></span>
-          {(['confirmed','waitlist','cancelled','checked_in'] as Status[]).map(s => (
+          <span className="px-2 py-1 rounded bg-slate-700 text-slate-100">Total <b className="ml-1">{totals.totalHeadcount}</b></span>
+          {(['APPROVED','PENDING','REJECTED','CANCELLED'] as NeonStatus[]).map(s => (
             <span key={s} className={`px-2 py-1 rounded ${STATUS_BG[s]}`}>
-              {STATUS_LABEL[s]} <b className="ml-1">{(totals as any)[s]}</b>
+              {STATUS_LABEL[s]} <b className="ml-1">{totals[s]}</b>
             </span>
           ))}
           <span className="px-2 py-1 rounded bg-slate-700 text-slate-100">all: <b className="ml-1">{guests.length}</b></span>
         </div>
       </section>
 
-      {/* ADD GUEST */}
+      {/* ADD GUEST - DISABLED FOR PHASE 1: Join requests are created via app, not dashboard */}
       <section className="flex items-center justify-between">
-        <button className="px-3 py-2 rounded border hover:bg-slate-900" onClick={() => setIsAdding(v=>!v)}>
-          {isAdding ? 'Cancel' : 'Add guest'}
+        <button className="px-3 py-2 rounded border opacity-50 cursor-not-allowed" disabled title="Phase 1: Join requests are created by app users">
+          Add guest (disabled)
         </button>
       </section>
 
@@ -402,8 +464,8 @@ export default function DashboardPage() {
           <select value={newGuest.priority} onChange={e=>setNewGuest(s=>({...s,priority:e.target.value as Priority}))} className="p-2 rounded border bg-transparent">
             {(['normal','vip','vvip'] as Priority[]).map(p=> <option key={p} value={p}>{PRIORITY_LABEL[p]}</option>)}
           </select>
-          <select value={newGuest.status} onChange={e=>setNewGuest(s=>({...s,status:e.target.value as Status}))} className="p-2 rounded border bg-transparent">
-            {(Object.keys(STATUS_LABEL) as Status[]).map(s=> <option key={s} value={s}>{STATUS_LABEL[s]}</option>)}
+          <select value={newGuest.status} onChange={e=>setNewGuest(s=>({...s,status:e.target.value as NeonStatus}))} className="p-2 rounded border bg-transparent">
+            {(Object.keys(STATUS_LABEL) as NeonStatus[]).map(s=> <option key={s} value={s}>{STATUS_LABEL[s]}</option>)}
           </select>
           <div className="flex items-center gap-2 md:col-span-2">
             <label className="text-sm text-slate-300">Plus-ones</label>
@@ -456,8 +518,8 @@ export default function DashboardPage() {
                   </select>
                 </td>
                 <td className="p-2">
-                  <select value={g.status} onChange={e=>handleStatusChange(g, e.target.value as Status)} className={`px-2 py-1 rounded border bg-transparent ${STATUS_BG[g.status]}`}>
-                    {(Object.keys(STATUS_LABEL) as Status[]).map(s=><option key={s} value={s}>{STATUS_LABEL[s]}</option>)}
+                  <select value={g.status} onChange={e=>handleStatusChange(g, e.target.value as NeonStatus)} className={`px-2 py-1 rounded border bg-transparent ${STATUS_BG[g.status]}`}>
+                    {(Object.keys(STATUS_LABEL) as NeonStatus[]).map(s=><option key={s} value={s}>{STATUS_LABEL[s]}</option>)}
                   </select>
                 </td>
                 <td className="p-2">
