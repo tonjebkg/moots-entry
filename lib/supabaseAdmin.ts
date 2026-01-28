@@ -1,11 +1,19 @@
 // /lib/supabaseAdmin.ts
 import { createClient } from '@supabase/supabase-js'
 
-if (!process.env.NEXT_PUBLIC_SUPABASE_URL) throw new Error('NEXT_PUBLIC_SUPABASE_URL is required')
-if (!process.env.SUPABASE_SERVICE_ROLE_KEY) throw new Error('SUPABASE_SERVICE_ROLE_KEY is required')
+// Guard: Skip Supabase initialization when building/running dashboard
+const isDashboardMode = process.env.NEXT_PUBLIC_APP_MODE === 'dashboard';
 
-export const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY,
-  { auth: { persistSession: false } }
-)
+// Check if Supabase config is available
+const hasSupabaseUrl = !!process.env.NEXT_PUBLIC_SUPABASE_URL;
+const hasSupabaseKey = !!process.env.SUPABASE_SERVICE_ROLE_KEY;
+const hasFullConfig = hasSupabaseUrl && hasSupabaseKey;
+
+// Only create client if not in dashboard mode AND we have full config
+export const supabaseAdmin = (!isDashboardMode && hasFullConfig)
+  ? createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      { auth: { persistSession: false } }
+    )
+  : null as any; // Dashboard mode or missing config - routes will handle gracefully

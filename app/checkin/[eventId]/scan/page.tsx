@@ -28,6 +28,10 @@ type EventRow = {
 }
 
 export default function ScanPage() {
+  // Guard: Skip Supabase usage when in dashboard mode
+  if (process.env.NEXT_PUBLIC_APP_MODE === 'dashboard') {
+    return <main className="p-6 text-white">QR scan page not available in dashboard mode</main>
+  }
   const { eventId } = useParams<{ eventId: string }>()
   const router = useRouter()
 

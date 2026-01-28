@@ -30,6 +30,11 @@ type EventRow = {
 }
 
 export default function CheckinPage() {
+  // Guard: Skip Supabase usage when in dashboard mode
+  if (process.env.NEXT_PUBLIC_APP_MODE === 'dashboard') {
+    return <main className="p-6 text-white">Check-in page not available in dashboard mode</main>
+  }
+
   const { eventId } = useParams<{ eventId: string }>()
   const [event, setEvent] = useState<EventRow | null>(null)
   const [guests, setGuests] = useState<Guest[]>([])

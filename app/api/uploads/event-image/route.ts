@@ -3,7 +3,17 @@ import { supabaseAdmin } from '@/lib/supabaseAdmin'
 
 export const runtime = 'nodejs' // ensure Node runtime (not edge) for form-data parsing
 
+// Guard: Skip Supabase routes in dashboard mode
+const isDashboardMode = process.env.NEXT_PUBLIC_APP_MODE === 'dashboard';
+
 export async function POST(req: Request) {
+  if (isDashboardMode || !supabaseAdmin) {
+    return NextResponse.json(
+      { error: 'Image upload not available in dashboard mode' },
+      { status: 503 }
+    );
+  }
+
   try {
     const form = await req.formData()
     const file = form.get('file') as File | null

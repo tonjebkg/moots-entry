@@ -4,7 +4,14 @@ import { supabase } from '@/lib/supabase'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 
+// Guard: Prevent execution in dashboard mode
+const isDashboardMode = process.env.NEXT_PUBLIC_APP_MODE === 'dashboard';
+
 export async function listEvents() {
+  if (isDashboardMode) {
+    throw new Error('listEvents not available in dashboard mode');
+  }
+
   const { data, error } = await supabase
     .from('events')
     .select('id, name, city, timezone, starts_at, capacity') // <-- add timezone here
@@ -16,6 +23,9 @@ export async function listEvents() {
 }
 
 export async function createEvent(formData: FormData) {
+  if (isDashboardMode) {
+    throw new Error('createEvent not available in dashboard mode');
+  }
   const payload = {
     name: String(formData.get('name') || '').trim(),
     city: String(formData.get('city') || '').trim() || null,

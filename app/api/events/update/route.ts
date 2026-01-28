@@ -3,6 +3,9 @@ import { supabaseAdmin } from '@/lib/supabaseAdmin'
 
 export const runtime = 'nodejs' // ensure proper server environment
 
+// Guard: Skip Supabase routes in dashboard mode
+const isDashboardMode = process.env.NEXT_PUBLIC_APP_MODE === 'dashboard';
+
 /**
  * PATCH /api/events/update
  * Updates an existing event (name, city, capacity, time, etc.)
@@ -20,6 +23,13 @@ export const runtime = 'nodejs' // ensure proper server environment
  * }
  */
 export async function PATCH(req: Request) {
+  if (isDashboardMode || !supabaseAdmin) {
+    return NextResponse.json(
+      { error: 'Event update not available in dashboard mode' },
+      { status: 503 }
+    );
+  }
+
   try {
     const body = await req.json()
     const { id, ...fields } = body
