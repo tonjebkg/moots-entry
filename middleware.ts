@@ -83,12 +83,27 @@ export function middleware(request: NextRequest) {
 
 /**
  * Matcher configuration - only run middleware on protected routes.
- * Protects dashboard, APIs, and check-in pages.
+ *
+ * Public routes (no auth):
+ * - GET /api/events/[eventId] - Mobile app needs to read events
+ *
+ * Protected routes (Basic Auth required):
+ * - /dashboard/* - Dashboard UI
+ * - /checkin/* - Check-in and QR scan
+ * - POST /api/events/create - Create events
+ * - PATCH /api/events/update - Update events
+ * - /api/events/[eventId]/join-requests - Join request operations
+ * - /api/join-requests/* - Join request updates
+ * - /api/uploads/* - File uploads
  */
 export const config = {
   matcher: [
     '/dashboard/:path*',
-    '/api/:path*',
+    '/api/events/create',
+    '/api/events/update',
+    '/api/events/:path*/join-requests',
+    '/api/join-requests/:path*',
+    '/api/uploads/:path*',
     '/checkin/:path*',
   ],
 };
