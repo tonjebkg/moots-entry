@@ -1,5 +1,8 @@
 'use client'
 
+import { useEffect } from 'react'
+import { useRouter } from 'next/navigation'
+
 const BRAND = 'Moots'
 
 // Update these links:
@@ -7,6 +10,15 @@ const PRIMARY_CTA_HREF = 'https://calendly.com/moots/demo'
 const SECONDARY_CTA_HREF = '#how-it-works'
 
 export default function Page() {
+  const router = useRouter()
+
+  // Guard: Redirect to dashboard home when in dashboard mode
+  useEffect(() => {
+    if (process.env.NEXT_PUBLIC_APP_MODE === 'dashboard') {
+      router.push('/dashboard')
+    }
+  }, [router])
+
   return (
     <main className="page">
       {/* Top nav */}
