@@ -30,6 +30,12 @@ export function middleware(request: NextRequest) {
     return NextResponse.next(); // Allow mobile app to submit join requests
   }
 
+  // Allow GET to /me endpoint without auth (mobile app checking own status)
+  // Pattern: /api/events/[numeric-id]/join-requests/me
+  if (method === 'GET' && /^\/api\/events\/\d+\/join-requests\/me$/.test(pathname)) {
+    return NextResponse.next(); // Allow mobile app to check own join request
+  }
+
   // Fail closed if dashboard mode but credentials not configured
   const expectedUser = process.env.DASHBOARD_AUTH_USER;
   const expectedPass = process.env.DASHBOARD_AUTH_PASS;
@@ -96,6 +102,7 @@ export function middleware(request: NextRequest) {
  * Public routes (no auth):
  * - GET /api/events/[eventId] - Mobile app reads events
  * - POST /api/events/[eventId]/join-requests - Mobile app submits join requests
+ * - GET /api/events/[eventId]/join-requests/me - Mobile app checks own join request status
  *
  * Protected routes (Basic Auth required):
  * - /dashboard/* - Dashboard UI
