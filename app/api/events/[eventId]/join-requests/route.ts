@@ -89,9 +89,122 @@ export async function GET(_req: Request, { params }: RouteParams) {
       },
     });
   } catch (err: any) {
-    console.error(`[GET /api/events/${(await params).eventId}/join-requests] Error:`, err);
+    const { eventId } = await params;
+    console.error(`[GET /api/events/${eventId}/join-requests] Error:`, err);
     return NextResponse.json(
       { error: err.message || 'Failed to fetch join requests' },
+      { status: 500 }
+    );
+  }
+}
+
+type CreateJoinRequestBody = {
+  owner_id: string;
+  plus_ones?: number;
+  comments?: string;
+  rsvp_contact?: string;
+};
+
+/**
+ * POST /api/events/[eventId]/join-requests
+ * Create a new join request for an event (mobile app)
+ * No auth required - mobile guests can submit join requests
+ */
+export async function POST(req: Request, { params }: RouteParams) {
+  try {
+    const { eventId } = await params;
+
+    // Validate eventId
+    if (!eventId || isNaN(Number(eventId))) {
+      return NextResponse.json(
+        { error: 'Valid eventId is required' },
+        { status: 400 }
+      );
+    }
+
+    const body: CreateJoinRequestBody = await req.json();
+
+    // Validate required fields
+    if (!body.owner_id || typeof body.owner_id !== 'string' || body.owner_id.trim() === '') {
+      return NextResponse.json(
+        { error: 'owner_id is required' },
+        { status: 400 }
+      );
+    }
+
+    // Validate optional fields
+    const plusOnes = body.plus_ones !== undefined ? Number(body.plus_ones) : 0;
+    if (!Number.isInteger(plusOnes) || plusOnes < 0) {
+      return NextResponse.json(
+        { error: 'plus_ones must be a non-negative integer' },
+        { status: 400 }
+      );
+    }
+
+    const ownerId = body.owner_id.trim();
+    const comments = body.comments?.trim() || null;
+    const rsvpContact = body.rsvp_contact?.trim() || null;
+
+    // Get database client (lazy-initialized, dashboard-mode only)
+    const db = getDb();
+
+    // Check for existing join request (idempotency)
+    const existing = await db`
+      SELECT id, event_id, owner_id, status, plus_ones, comments,
+             rsvp_contact, created_at, updated_at
+      FROM event_join_requests
+      WHERE event_id = ${Number(eventId)}
+        AND owner_id = ${ownerId}
+      LIMIT 1
+    `;
+
+    // If exists, return existing request instead of creating duplicate
+    if (existing && existing.length > 0) {
+      return NextResponse.json({
+        join_request: existing[0],
+        message: 'Join request already exists for this user'
+      });
+    }
+
+    // Insert new join request
+    const now = new Date().toISOString();
+    const result = await db`
+      INSERT INTO event_join_requests (
+        event_id,
+        owner_id,
+        status,
+        plus_ones,
+        comments,
+        rsvp_contact,
+        created_at,
+        updated_at
+      ) VALUES (
+        ${Number(eventId)},
+        ${ownerId},
+        ${'PENDING'}::eventjoinrequeststatus,
+        ${plusOnes},
+        ${comments},
+        ${rsvpContact},
+        ${now},
+        ${now}
+      ) RETURNING id, event_id, owner_id, status, plus_ones, comments,
+                  rsvp_contact, created_at, updated_at
+    `;
+
+    if (!result || result.length === 0) {
+      throw new Error('Failed to create join request - no record returned');
+    }
+
+    return NextResponse.json({
+      join_request: result[0],
+      message: 'Join request created successfully'
+    });
+
+  } catch (err: any) {
+    const { eventId } = await params;
+    console.error(`[POST /api/events/${eventId}/join-requests] Error:`, err);
+    return NextResponse.json(
+      { error: err.message || 'Failed to create join request' },
       { status: 500 }
     );
   }

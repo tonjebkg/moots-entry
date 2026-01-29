@@ -21,6 +21,15 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
+  // Allow POST to join-requests without auth (mobile app submissions)
+  // Pattern: /api/events/[numeric-id]/join-requests
+  const pathname = request.nextUrl.pathname;
+  const method = request.method;
+
+  if (method === 'POST' && /^\/api\/events\/\d+\/join-requests$/.test(pathname)) {
+    return NextResponse.next(); // Allow mobile app to submit join requests
+  }
+
   // Fail closed if dashboard mode but credentials not configured
   const expectedUser = process.env.DASHBOARD_AUTH_USER;
   const expectedPass = process.env.DASHBOARD_AUTH_PASS;
@@ -85,15 +94,16 @@ export function middleware(request: NextRequest) {
  * Matcher configuration - only run middleware on protected routes.
  *
  * Public routes (no auth):
- * - GET /api/events/[eventId] - Mobile app needs to read events
+ * - GET /api/events/[eventId] - Mobile app reads events
+ * - POST /api/events/[eventId]/join-requests - Mobile app submits join requests
  *
  * Protected routes (Basic Auth required):
  * - /dashboard/* - Dashboard UI
  * - /checkin/* - Check-in and QR scan
  * - POST /api/events/create - Create events
  * - PATCH /api/events/update - Update events
- * - /api/events/[eventId]/join-requests - Join request operations
- * - /api/join-requests/* - Join request updates
+ * - GET /api/events/[eventId]/join-requests - Dashboard lists join requests
+ * - PATCH /api/join-requests/[id] - Update join requests
  * - /api/uploads/* - File uploads
  */
 export const config = {
