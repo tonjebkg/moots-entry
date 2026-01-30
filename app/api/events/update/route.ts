@@ -26,7 +26,6 @@ type UpdateEventPayload = {
   start_date?: string;
   end_date?: string;
   timezone?: string;
-  capacity?: number | null;
   event_url?: string | null;
   image_url?: string | null;
   hosts?: Host[];
@@ -94,9 +93,6 @@ export async function PATCH(req: Request) {
     }
     if (fields.timezone !== undefined) {
       await db`UPDATE events SET timezone = ${fields.timezone}, updated_at = ${now} WHERE id = ${eventId}`;
-    }
-    if (fields.capacity !== undefined) {
-      await db`UPDATE events SET capacity = ${fields.capacity}, updated_at = ${now} WHERE id = ${eventId}`;
     }
     if (fields.event_url !== undefined) {
       await db`UPDATE events SET event_url = ${fields.event_url}, updated_at = ${now} WHERE id = ${eventId}`;

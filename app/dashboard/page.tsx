@@ -29,7 +29,6 @@ type EventRow = {
   start_date: string
   end_date?: string
   timezone: string | null
-  capacity: number | null
   image_url?: string | null
   event_url?: string | null
   hosts?: Host[] | null
@@ -155,7 +154,6 @@ export default function DashboardHomePage() {
                 <th className="text-left p-2">Location</th>
                 <th className="text-left p-2">Hosts</th>
                 <th className="text-left p-2">Sponsors</th>
-                <th className="text-left p-2">Capacity</th>
                 <th className="text-left p-2">Created</th>
                 <th className="text-left p-2">Actions</th>
               </tr>
@@ -163,7 +161,7 @@ export default function DashboardHomePage() {
             <tbody>
               {filtered.length === 0 && (
                 <tr>
-                  <td colSpan={13} className="p-4 text-center text-slate-400">
+                  <td colSpan={12} className="p-4 text-center text-slate-400">
                     {q.trim() ? 'No events match your search.' : 'No events yet.'}
                   </td>
                 </tr>
@@ -218,7 +216,6 @@ export default function DashboardHomePage() {
                     <td className="p-2 text-slate-300 max-w-xs truncate" title={sponsorsDisplay}>
                       {sponsorsDisplay}
                     </td>
-                    <td className="p-2 text-slate-300">{event.capacity ?? '—'}</td>
                     <td className="p-2 text-slate-400 text-xs">
                       {event.created_at ? new Date(event.created_at).toLocaleString() : '—'}
                     </td>

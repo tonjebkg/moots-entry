@@ -25,7 +25,6 @@ type CreateEventPayload = {
     start_date: string; // ISO 8601 timestamp
     end_date?: string | null; // ISO 8601 timestamp
     timezone?: string | null;
-    capacity?: number | null;
     event_url?: string | null;
     image_url?: string | null;
     hosts?: Host[];
@@ -96,7 +95,6 @@ export async function POST(req: Request) {
         start_date,
         end_date,
         timezone,
-        capacity,
         event_url,
         image_url,
         is_private,
@@ -110,7 +108,6 @@ export async function POST(req: Request) {
         ${startDate.toISOString()},
         ${endDate.toISOString()},
         ${event.timezone || 'UTC'},
-        ${event.capacity ?? null},
         ${event.event_url || null},
         ${event.image_url || null},
         ${event.is_private ?? false},

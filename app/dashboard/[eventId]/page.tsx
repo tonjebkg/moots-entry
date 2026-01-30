@@ -52,7 +52,6 @@ type EventRow = {
   start_date: string // Neon uses "start_date" not "starts_at"
   end_date?: string
   timezone: string | null
-  capacity: number | null
   image_url?: string | null
   event_url?: string | null
   hosts?: Host[] | null
@@ -127,7 +126,6 @@ export default function DashboardPage() {
   const [evTimezone, setEvTimezone] = useState('')
   const [evStartsAtInput, setEvStartsAtInput] = useState('')
   const [evEndsAtInput, setEvEndsAtInput] = useState('')
-  const [evCapacity, setEvCapacity] = useState<number>(0)
   const [evEventUrl, setEvEventUrl] = useState('')
   const [evImageUrl, setEvImageUrl] = useState<string>('')
   const [newImageFile, setNewImageFile] = useState<File | null>(null)
@@ -222,9 +220,6 @@ export default function DashboardPage() {
       confirmedHeadcount: base.APPROVED, // APPROVED = confirmed attendees
     }
   }, [guests])
-
-  const capacity = event?.capacity ?? 0
-  const confirmedPct = capacity ? Math.min(100, (totals.confirmedHeadcount / capacity) * 100) : 0
 
   const filtered = useMemo(() => {
     const term = q.trim().toLowerCase()
@@ -322,7 +317,6 @@ export default function DashboardPage() {
     setEvStartsAtInput(formatLocalDDMMYYYYHHMM(startDate))
     const endDate = event.end_date ?? ''
     setEvEndsAtInput(endDate ? formatLocalDDMMYYYYHHMM(endDate) : '')
-    setEvCapacity(event.capacity ?? 0)
     setEvEventUrl(event.event_url ?? '')
     setEvImageUrl(event.image_url ?? '')
     setNewImageFile(null)
@@ -404,7 +398,6 @@ export default function DashboardPage() {
         start_date: startIso,
         end_date: endIso,
         timezone: evTimezone.trim() || null,
-        capacity: Number.isFinite(evCapacity) ? evCapacity : null,
         image_url: nextImageUrl || null,
         event_url: evEventUrl.trim() || null,
         hosts: hosts
@@ -508,14 +501,10 @@ export default function DashboardPage() {
         </div>
       </header>
 
-      {/* CAPACITY BAR */}
+      {/* CONFIRMED HEADCOUNT */}
       <section className="space-y-2">
         <div className="flex items-center gap-6 text-sm">
-          <div>Capacity: <span className="font-medium">{capacity}</span></div>
           <div>Confirmed (Approved) headcount: <span className="font-medium">{totals.confirmedHeadcount}</span></div>
-        </div>
-        <div className="h-2 w-full bg-slate-800 rounded overflow-hidden">
-          <div className="h-full bg-blue-600" style={{ width: `${confirmedPct}%` }} title="Confirmed" />
         </div>
         <div className="flex items-center gap-3 text-sm mt-2">
           <span className="text-slate-400">Totals —</span>
@@ -680,13 +669,9 @@ export default function DashboardPage() {
                 </select>
               </label>
 
-              <label className="text-sm flex items-center gap-2 mt-6">
+              <label className="text-sm flex items-center gap-2 mt-6 md:col-span-2">
                 <input type="checkbox" checked={evIsPrivate} onChange={e=>setEvIsPrivate(e.target.checked)} className="w-4 h-4" />
                 <span>Private event</span>
-              </label>
-
-              <label className="text-sm">Capacity
-                <input type="number" min={0} value={evCapacity} onChange={e=>setEvCapacity(Number(e.target.value))} className="mt-1 w-full p-2 rounded border bg-transparent" />
               </label>
 
               <label className="text-sm">Start date & time
