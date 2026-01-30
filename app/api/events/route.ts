@@ -3,26 +3,18 @@ import { getDb } from '@/lib/db';
 
 export const runtime = 'nodejs';
 
-type RouteParams = {
-  params: Promise<{ eventId: string }>;
-};
-
-export async function GET(_req: Request, { params }: RouteParams) {
+/**
+ * GET /api/events
+ * List all events (dashboard mode only)
+ * Returns events with both Neon schema fields and legacy field names for backward compatibility
+ */
+export async function GET(_req: Request) {
   try {
-    const { eventId } = await params;
-
-    if (!eventId || isNaN(Number(eventId))) {
-      return NextResponse.json(
-        { error: 'Valid eventId is required' },
-        { status: 400 }
-      );
-    }
-
     // Get database client (lazy-initialized, dashboard-mode only)
     const db = getDb();
 
-    // Query event from Neon
-    const result = await db`
+    // Query all events from Neon
+    const events = await db`
       SELECT
         id,
         title,
@@ -41,22 +33,11 @@ export async function GET(_req: Request, { params }: RouteParams) {
         created_at,
         updated_at
       FROM events
-      WHERE id = ${Number(eventId)}
-      LIMIT 1
+      ORDER BY start_date DESC
     `;
 
-    if (!result || result.length === 0) {
-      return NextResponse.json(
-        { error: 'Event not found' },
-        { status: 404 }
-      );
-    }
-
-    const event = result[0];
-
-    // Map Neon schema to dashboard-expected format
-    // (Dashboard expects both Neon and legacy field names for backward compatibility)
-    const mappedEvent = {
+    // Map Neon schema to include both new and legacy field names
+    const mappedEvents = events.map(event => ({
       // Neon fields (new schema)
       id: event.id,
       title: event.title,
@@ -78,14 +59,16 @@ export async function GET(_req: Request, { params }: RouteParams) {
       name: event.title, // title → name
       city: event.location?.city || null, // extract city from location jsonb
       starts_at: event.start_date, // start_date → starts_at
-      edit_token: null, // Not in Neon schema (auth not implemented)
-    };
+    }));
 
-    return NextResponse.json(mappedEvent);
+    return NextResponse.json({
+      events: mappedEvents,
+      total: events.length,
+    });
   } catch (err: any) {
-    console.error(`[GET /api/events/${(await params).eventId}] Error:`, err);
+    console.error('[GET /api/events] Error:', err);
     return NextResponse.json(
-      { error: err.message || 'Failed to fetch event' },
+      { error: err.message || 'Failed to fetch events' },
       { status: 500 }
     );
   }

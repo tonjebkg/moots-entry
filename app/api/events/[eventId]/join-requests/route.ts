@@ -32,6 +32,11 @@ export async function GET(_req: Request, { params }: RouteParams) {
         ejr.comments,
         ejr.rejection_reason,
         ejr.rsvp_contact,
+        ejr.company_website,
+        ejr.goals,
+        ejr.looking_for,
+        ejr.visibility_enabled,
+        ejr.notifications_enabled,
         ejr.created_at,
         ejr.updated_at,
         up.first_name,
@@ -73,6 +78,11 @@ export async function GET(_req: Request, { params }: RouteParams) {
         plus_ones: jr.plus_ones ?? 0,
         comments: jr.comments ?? '',
         photo_url: jr.photo_url ?? null,
+        company_website: jr.company_website ?? null,
+        goals: jr.goals ?? null,
+        looking_for: jr.looking_for ?? null,
+        visibility_enabled: jr.visibility_enabled ?? true,
+        notifications_enabled: jr.notifications_enabled ?? true,
         created_at: jr.created_at,
         updated_at: jr.updated_at,
       };
@@ -167,6 +177,7 @@ export async function POST(req: Request, { params }: RouteParams) {
     }
 
     // Insert new join request
+    // Note: visibility_enabled and notifications_enabled have DB defaults (true)
     const now = new Date().toISOString();
     const result = await db`
       INSERT INTO event_join_requests (
@@ -188,7 +199,8 @@ export async function POST(req: Request, { params }: RouteParams) {
         ${now},
         ${now}
       ) RETURNING id, event_id, owner_id, status, plus_ones, comments,
-                  rsvp_contact, created_at, updated_at
+                  rsvp_contact, visibility_enabled, notifications_enabled,
+                  created_at, updated_at
     `;
 
     if (!result || result.length === 0) {

@@ -107,6 +107,7 @@ export function middleware(request: NextRequest) {
  * Protected routes (Basic Auth required):
  * - /dashboard/* - Dashboard UI
  * - /checkin/* - Check-in and QR scan
+ * - GET /api/events - Dashboard lists all events
  * - POST /api/events/create - Create events
  * - PATCH /api/events/update - Update events
  * - GET /api/events/[eventId]/join-requests - Dashboard lists join requests
@@ -116,6 +117,7 @@ export function middleware(request: NextRequest) {
 export const config = {
   matcher: [
     '/dashboard/:path*',
+    '/api/events$',
     '/api/events/create',
     '/api/events/update',
     '/api/events/:path*/join-requests',

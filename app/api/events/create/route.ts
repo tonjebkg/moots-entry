@@ -4,17 +4,39 @@ import { getDb } from '@/lib/db';
 export const runtime = 'nodejs';
 
 type Host = { name: string; url?: string | null };
+type Sponsor = {
+  title: string;
+  subtitle?: string;
+  logo_url?: string;
+  description?: string;
+};
+type Location = {
+  venue_name?: string;
+  street_address?: string;
+  city?: string;
+  state_province?: string;
+  country?: string;
+};
 
 type CreateEventPayload = {
   event: {
     title: string;
-    city?: string | null;
+    location?: Location | string | null; // Support both object and legacy string
     start_date: string; // ISO 8601 timestamp
     end_date?: string | null; // ISO 8601 timestamp
     timezone?: string | null;
+    capacity?: number | null;
     event_url?: string | null;
     image_url?: string | null;
     hosts?: Host[];
+    sponsors?: Sponsor[];
+    is_private?: boolean;
+    approve_mode?: 'MANUAL' | 'AUTO';
+    status?: 'DRAFT' | 'PUBLISHED' | 'COMPLETE' | 'CANCELLED';
+    // Legacy field names (backward compatibility)
+    name?: string; // Maps to title
+    city?: string; // Maps to location.city
+    starts_at?: string; // Maps to start_date
   };
 };
 
@@ -23,19 +45,31 @@ export async function POST(req: Request) {
     const body: CreateEventPayload = await req.json();
     const { event } = body;
 
+    // Map legacy field names to Neon schema
+    const title = event.title ?? event.name;
+    const start_date = event.start_date ?? event.starts_at;
+
     // Validate required fields
-    if (!event.title || !event.start_date) {
+    if (!title || !start_date) {
       return NextResponse.json(
         { error: 'title and start_date are required' },
         { status: 400 }
       );
     }
 
-    // Map city to location jsonb
-    const location = event.city ? { city: event.city } : null;
+    // Handle location mapping:
+    // - If location is provided as object, use it
+    // - If city is provided (legacy), map to { city: "..." }
+    // - If location is string (legacy), map to { city: location }
+    let location = event.location;
+    if (typeof location === 'string') {
+      location = { city: location };
+    } else if (event.city && !location) {
+      location = { city: event.city };
+    }
 
     // Default end_date to 3 hours after start_date if not provided
-    const startDate = new Date(event.start_date);
+    const startDate = new Date(start_date);
     const endDate = event.end_date
       ? new Date(event.end_date)
       : new Date(startDate.getTime() + 3 * 60 * 60 * 1000);
@@ -43,6 +77,9 @@ export async function POST(req: Request) {
     // Prepare jsonb fields
     const hostsJson = event.hosts && event.hosts.length > 0
       ? JSON.stringify(event.hosts)
+      : null;
+    const sponsorsJson = event.sponsors && event.sponsors.length > 0
+      ? JSON.stringify(event.sponsors)
       : null;
     const locationJson = location ? JSON.stringify(location) : null;
 
@@ -54,27 +91,31 @@ export async function POST(req: Request) {
       INSERT INTO events (
         title,
         hosts,
+        sponsors,
         location,
         start_date,
         end_date,
         timezone,
+        capacity,
         event_url,
         image_url,
         is_private,
         approve_mode,
         status
       ) VALUES (
-        ${event.title},
+        ${title},
         ${hostsJson}::jsonb,
+        ${sponsorsJson}::jsonb,
         ${locationJson}::jsonb,
         ${startDate.toISOString()},
         ${endDate.toISOString()},
         ${event.timezone || 'UTC'},
+        ${event.capacity ?? null},
         ${event.event_url || null},
         ${event.image_url || null},
-        ${false},
-        ${'MANUAL'},
-        ${'DRAFT'}
+        ${event.is_private ?? false},
+        ${event.approve_mode || 'MANUAL'}::approvemode,
+        ${event.status || 'DRAFT'}::eventstatus
       ) RETURNING id
     `;
 

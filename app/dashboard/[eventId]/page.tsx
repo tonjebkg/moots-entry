@@ -7,34 +7,67 @@ import { supabase } from '@/lib/supabase' // Still needed for image uploads only
 
 // Neon status enum values
 type NeonStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'CANCELLED' | 'DRAFT'
-type Priority = 'normal' | 'vip' | 'vvip'
+type ApproveMode = 'MANUAL' | 'AUTO'
+type EventStatus = 'DRAFT' | 'PUBLISHED' | 'COMPLETE' | 'CANCELLED'
+
+type Sponsor = {
+  title: string
+  subtitle?: string
+  logo_url?: string
+  description?: string
+}
+
+type Location = {
+  venue_name?: string
+  street_address?: string
+  city?: string
+  state_province?: string
+  country?: string
+}
 
 type Guest = {
   id: string
   event_id: string | number
+  owner_id: string
   full_name: string
   email: string
   status: NeonStatus
   plus_ones: number | null
-  priority?: Priority | null
   comments?: string | null
-  owner_id?: string
+  company_website?: string | null
+  goals?: string | null
+  looking_for?: string | null
+  visibility_enabled?: boolean
+  notifications_enabled?: boolean
+  created_at?: string
+  updated_at?: string
   photo_url?: string | null
 }
 
 type Host = { name: string; url?: string | null }
 
 type EventRow = {
-  id: string
-  name: string
-  city: string | null
-  starts_at: string
+  id: string | number
+  title: string // Neon uses "title" not "name"
+  start_date: string // Neon uses "start_date" not "starts_at"
+  end_date?: string
   timezone: string | null
   capacity: number | null
   image_url?: string | null
   event_url?: string | null
   hosts?: Host[] | null
+  sponsors?: Sponsor[] | null
+  location?: Location | string | null // Support both object and legacy string
+  is_private?: boolean
+  approve_mode?: ApproveMode
+  status?: EventStatus
+  created_at?: string
+  updated_at?: string
   edit_token?: string // used by /api/events/update
+  // Legacy field for backward compatibility:
+  name?: string // Will map to title
+  city?: string | null // Will map to location.city
+  starts_at?: string // Will map to start_date
 }
 
 const STATUS_LABEL: Record<NeonStatus, string> = {
@@ -50,11 +83,6 @@ const STATUS_BG: Record<NeonStatus, string> = {
   REJECTED: 'bg-red-700 text-white',
   CANCELLED: 'bg-slate-700 text-slate-100',
   DRAFT: 'bg-slate-600 text-slate-200',
-}
-const PRIORITY_LABEL: Record<Priority, string> = {
-  normal: 'Normal',
-  vip: 'VIP',
-  vvip: 'VVIP',
 }
 
 function formatLocalDDMMYYYYHHMM(iso: string) {
@@ -89,21 +117,31 @@ export default function DashboardPage() {
   const [event, setEvent] = useState<EventRow | null>(null)
   const [guests, setGuests] = useState<Guest[]>([])
   const [q, setQ] = useState('')
-  const [sortKey, setSortKey] = useState<'name' | 'status' | 'priority' | 'plus_ones'>('name')
+  const [sortKey, setSortKey] = useState<'name' | 'status' | 'plus_ones'>('name')
   const [isAdding, setIsAdding] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
 
   // Edit event modal state
   const [isEditingEvent, setIsEditingEvent] = useState(false)
   const [evName, setEvName] = useState('')
-  const [evCity, setEvCity] = useState('')
   const [evTimezone, setEvTimezone] = useState('')
   const [evStartsAtInput, setEvStartsAtInput] = useState('')
+  const [evEndsAtInput, setEvEndsAtInput] = useState('')
   const [evCapacity, setEvCapacity] = useState<number>(0)
   const [evEventUrl, setEvEventUrl] = useState('')
   const [evImageUrl, setEvImageUrl] = useState<string>('')
   const [newImageFile, setNewImageFile] = useState<File | null>(null)
   const [hosts, setHosts] = useState<Host[]>([])
+  const [sponsors, setSponsors] = useState<Sponsor[]>([])
+  const [evIsPrivate, setEvIsPrivate] = useState(false)
+  const [evApproveMode, setEvApproveMode] = useState<ApproveMode>('MANUAL')
+  const [evStatus, setEvStatus] = useState<EventStatus>('DRAFT')
+  // Location fields (replacing evCity)
+  const [evLocationVenue, setEvLocationVenue] = useState('')
+  const [evLocationStreet, setEvLocationStreet] = useState('')
+  const [evLocationCity, setEvLocationCity] = useState('')
+  const [evLocationState, setEvLocationState] = useState('')
+  const [evLocationCountry, setEvLocationCountry] = useState('')
   const [saving, setSaving] = useState(false)
   const [modalError, setModalError] = useState<string | null>(null)
 
@@ -116,9 +154,8 @@ export default function DashboardPage() {
     email: string
     status: NeonStatus
     plus_ones: number
-    priority: Priority
     comments: string
-  }>({ full_name: '', email: '', status: 'PENDING', plus_ones: 0, priority: 'normal', comments: '' })
+  }>({ full_name: '', email: '', status: 'PENDING', plus_ones: 0, comments: '' })
 
   useEffect(() => {
     if (!eventId) return
@@ -200,11 +237,6 @@ export default function DashboardPage() {
     switch (sortKey) {
       case 'status':
         list.sort((a,b)=>STATUS_LABEL[a.status].localeCompare(STATUS_LABEL[b.status])); break
-      case 'priority': {
-        const order: Record<Priority,number> = { vvip:0, vip:1, normal:2 }
-        list.sort((a,b)=> (order[(a.priority??'normal')] - order[(b.priority??'normal')]) || a.full_name.localeCompare(b.full_name))
-        break
-      }
       case 'plus_ones': list.sort((a,b)=>(b.plus_ones??0)-(a.plus_ones??0)); break
       default: list.sort((a,b)=>a.full_name.localeCompare(b.full_name))
     }
@@ -222,10 +254,6 @@ export default function DashboardPage() {
     } else {
       console.error('Failed to update status:', await res.text())
     }
-  }
-  async function handlePriorityChange(g: Guest, next: Priority) {
-    // Priority is not stored in Neon event_join_requests - this is a no-op for Phase 1
-    console.log('Priority change not supported in Phase 1:', g.id, next)
   }
   async function handlePlusOnes(g: Guest, delta: 1 | -1) {
     const next = Math.max(0, (g.plus_ones ?? 0) + delta)
@@ -268,18 +296,17 @@ export default function DashboardPage() {
       email: newGuest.email.trim(),
       status: newGuest.status,
       plus_ones: Math.max(0, newGuest.plus_ones),
-      priority: newGuest.priority,
       comments: newGuest.comments.trim(),
     }
     const { data, error } = await supabase
       .from('guests')
       .insert([payload])
-      .select('id,event_id,full_name,email,status,plus_ones,priority,comments')
+      .select('id,event_id,full_name,email,status,plus_ones,comments')
       .single()
     if (error) { setMessage(error.message); return }
     setGuests(prev => [...prev, data as Guest].sort((a,b)=>a.full_name.localeCompare(b.full_name)))
     setIsAdding(false)
-    setNewGuest({ full_name:'', email:'', status:'PENDING', plus_ones:0, priority:'normal', comments:'' })
+    setNewGuest({ full_name:'', email:'', status:'PENDING', plus_ones:0, comments:'' })
     setMessage('Guest added.')
   }
 
@@ -287,15 +314,30 @@ export default function DashboardPage() {
   function openEditEvent() {
     if (!event) return
     setModalError(null)
-    setEvName(event.name ?? '')
-    setEvCity(event.city ?? '')
+    // Support both legacy (name) and new (title) field names
+    setEvName(event.title ?? event.name ?? '')
     setEvTimezone(event.timezone ?? '')
-    setEvStartsAtInput(formatLocalDDMMYYYYHHMM(event.starts_at))
+    // Support both legacy (starts_at) and new (start_date) field names
+    const startDate = event.start_date ?? event.starts_at ?? ''
+    setEvStartsAtInput(formatLocalDDMMYYYYHHMM(startDate))
+    const endDate = event.end_date ?? ''
+    setEvEndsAtInput(endDate ? formatLocalDDMMYYYYHHMM(endDate) : '')
     setEvCapacity(event.capacity ?? 0)
     setEvEventUrl(event.event_url ?? '')
     setEvImageUrl(event.image_url ?? '')
     setNewImageFile(null)
     setHosts(Array.isArray(event.hosts) ? [...event.hosts] : [])
+    setSponsors(Array.isArray(event.sponsors) ? [...event.sponsors] : [])
+    setEvIsPrivate(event.is_private ?? false)
+    setEvApproveMode(event.approve_mode ?? 'MANUAL')
+    setEvStatus(event.status ?? 'DRAFT')
+    // Handle location - support both object and legacy string/city
+    const loc = typeof event.location === 'object' ? event.location : null
+    setEvLocationVenue(loc?.venue_name ?? '')
+    setEvLocationStreet(loc?.street_address ?? '')
+    setEvLocationCity(loc?.city ?? event.city ?? (typeof event.location === 'string' ? event.location : '') ?? '')
+    setEvLocationState(loc?.state_province ?? '')
+    setEvLocationCountry(loc?.country ?? '')
     setIsEditingEvent(true)
   }
   function closeEditEvent() { setIsEditingEvent(false) }
@@ -305,7 +347,13 @@ export default function DashboardPage() {
   function addHost() { setHosts(prev => [...prev, { name: '', url: '' }]) }
   function removeHost(idx: number) { setHosts(prev => prev.filter((_,i)=> i!==idx)) }
 
-  async function uploadEventImageIfNeeded(evId: string): Promise<string | null> {
+  function updateSponsor(idx: number, patch: Partial<Sponsor>) {
+    setSponsors(prev => prev.map((s,i)=> i===idx ? { ...s, ...patch } : s))
+  }
+  function addSponsor() { setSponsors(prev => [...prev, { title: '', subtitle: '', logo_url: '', description: '' }]) }
+  function removeSponsor(idx: number) { setSponsors(prev => prev.filter((_,i)=> i!==idx)) }
+
+  async function uploadEventImageIfNeeded(evId: string | number): Promise<string | null> {
     if (!newImageFile) return null
     const ext = newImageFile.name.split('.').pop() || 'jpg'
     const path = `images/${evId}-${Date.now()}.${ext}`
@@ -320,9 +368,16 @@ export default function DashboardPage() {
     setSaving(true)
     setModalError(null)
     try {
-      const iso = parseFlexibleToISO(evStartsAtInput)
-      if (!iso) {
-        setModalError('Invalid date/time. Use "DD/MM/YYYY, HH:mm" or pick a valid value.')
+      const startIso = parseFlexibleToISO(evStartsAtInput)
+      if (!startIso) {
+        setModalError('Invalid start date/time. Use "DD/MM/YYYY, HH:mm" or pick a valid value.')
+        setSaving(false)
+        return
+      }
+
+      const endIso = evEndsAtInput.trim() ? parseFlexibleToISO(evEndsAtInput) : null
+      if (evEndsAtInput.trim() && !endIso) {
+        setModalError('Invalid end date/time. Use "DD/MM/YYYY, HH:mm" or pick a valid value.')
         setSaving(false)
         return
       }
@@ -331,33 +386,57 @@ export default function DashboardPage() {
       const uploaded = await uploadEventImageIfNeeded(event.id)
       if (uploaded) nextImageUrl = uploaded
 
-      const patch = {
-        name: evName.trim(),
-        city: evCity.trim() || null,
+      // Build location object from individual fields
+      const locationObj = {
+        venue_name: evLocationVenue.trim() || undefined,
+        street_address: evLocationStreet.trim() || undefined,
+        city: evLocationCity.trim() || undefined,
+        state_province: evLocationState.trim() || undefined,
+        country: evLocationCountry.trim() || undefined,
+      }
+      // Only include location if at least one field is set
+      const hasLocation = Object.values(locationObj).some(v => v)
+
+      const payload = {
+        id: event.id,
+        title: evName.trim(),
+        location: hasLocation ? locationObj : null,
+        start_date: startIso,
+        end_date: endIso,
         timezone: evTimezone.trim() || null,
-        starts_at: iso,
         capacity: Number.isFinite(evCapacity) ? evCapacity : null,
         image_url: nextImageUrl || null,
         event_url: evEventUrl.trim() || null,
         hosts: hosts
           .map(h => ({ name: (h.name ?? '').trim(), url: (h.url ?? '').trim() || null }))
           .filter(h => h.name.length > 0),
+        sponsors: sponsors
+          .map(s => ({
+            title: (s.title ?? '').trim(),
+            subtitle: (s.subtitle ?? '').trim() || undefined,
+            logo_url: (s.logo_url ?? '').trim() || undefined,
+            description: (s.description ?? '').trim() || undefined,
+          }))
+          .filter(s => s.title.length > 0),
+        is_private: evIsPrivate,
+        approve_mode: evApproveMode,
+        status: evStatus,
       }
 
-      // >>> CALL our API with the edit token (no auth session required)
       const res = await fetch('/api/events/update', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          eventId: event.id,
-          editToken: event.edit_token, // included in initial select
-          patch
-        })
+        body: JSON.stringify(payload)
       })
       const json = await res.json()
       if (!res.ok) throw new Error(json.error || 'Failed to update event')
 
-      setEvent(json.event as EventRow)
+      // Refetch the event to get updated data
+      const refetchRes = await fetch(`/api/events/${event.id}`)
+      if (refetchRes.ok) {
+        const refetchData = await refetchRes.json()
+        setEvent(refetchData as EventRow)
+      }
       setMessage('Event updated.')
       closeEditEvent()
     } catch (err: any) {
@@ -395,9 +474,9 @@ export default function DashboardPage() {
             <div className="w-14 h-14 rounded-lg border border-dashed border-slate-700 shrink-0 flex items-center justify-center text-slate-500 text-xs">No image</div>
           )}
           <div className="min-w-0">
-            <h1 className="text-2xl font-semibold leading-tight truncate" title={event.name}>{event.name}</h1>
+            <h1 className="text-2xl font-semibold leading-tight truncate" title={event.title ?? event.name}>{event.title ?? event.name}</h1>
             <p className="text-sm text-slate-400 truncate">
-              {event.city ?? '—'} · {new Date(event.starts_at).toLocaleString()} · {event.timezone ?? '—'}
+              {event.city ?? (typeof event.location === 'object' ? event.location?.city : event.location) ?? '—'} · {new Date(event.start_date ?? event.starts_at ?? '').toLocaleString()} · {event.timezone ?? '—'}
             </p>
             <div className="text-xs text-slate-300 mt-1 flex flex-wrap gap-2">
               {Array.isArray(event.hosts) && event.hosts.length > 0 && (
@@ -461,10 +540,7 @@ export default function DashboardPage() {
         <form onSubmit={handleCreateGuest} className="mt-3 grid grid-cols-1 md:grid-cols-6 gap-3 p-3 border rounded bg-slate-900/30">
           <input required value={newGuest.full_name} onChange={e=>setNewGuest(s=>({...s,full_name:e.target.value}))} placeholder="Full name" className="p-2 rounded border bg-transparent md:col-span-2" />
           <input required type="email" value={newGuest.email} onChange={e=>setNewGuest(s=>({...s,email:e.target.value}))} placeholder="Email" className="p-2 rounded border bg-transparent md:col-span-2" />
-          <select value={newGuest.priority} onChange={e=>setNewGuest(s=>({...s,priority:e.target.value as Priority}))} className="p-2 rounded border bg-transparent">
-            {(['normal','vip','vvip'] as Priority[]).map(p=> <option key={p} value={p}>{PRIORITY_LABEL[p]}</option>)}
-          </select>
-          <select value={newGuest.status} onChange={e=>setNewGuest(s=>({...s,status:e.target.value as NeonStatus}))} className="p-2 rounded border bg-transparent">
+          <select value={newGuest.status} onChange={e=>setNewGuest(s=>({...s,status:e.target.value as NeonStatus}))} className="p-2 rounded border bg-transparent md:col-span-2">
             {(Object.keys(STATUS_LABEL) as NeonStatus[]).map(s=> <option key={s} value={s}>{STATUS_LABEL[s]}</option>)}
           </select>
           <div className="flex items-center gap-2 md:col-span-2">
@@ -486,37 +562,38 @@ export default function DashboardPage() {
         <select value={sortKey} onChange={e=>setSortKey(e.target.value as any)} className="p-2 rounded border bg-transparent">
           <option value="name">Sort: name</option>
           <option value="status">Sort: status</option>
-          <option value="priority">Sort: priority</option>
           <option value="plus_ones">Sort: plus-ones</option>
         </select>
       </section>
 
       {/* TABLE */}
-      <section className="border rounded overflow-hidden">
+      <section className="border rounded overflow-hidden overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="bg-slate-900 text-slate-200">
             <tr>
               <th className="text-left p-2">Name</th>
               <th className="text-left p-2">Email</th>
-              <th className="text-left p-2">Priority</th>
               <th className="text-left p-2">Status</th>
               <th className="text-left p-2">Plus-ones</th>
               <th className="text-left p-2">Comments</th>
+              <th className="text-left p-2">Owner ID</th>
+              <th className="text-left p-2">Company Website</th>
+              <th className="text-left p-2">Goals</th>
+              <th className="text-left p-2">Looking For</th>
+              <th className="text-left p-2">Visibility</th>
+              <th className="text-left p-2">Notifications</th>
+              <th className="text-left p-2">Created At</th>
+              <th className="text-left p-2">Updated At</th>
             </tr>
           </thead>
           <tbody>
             {filtered.length===0 && (
-              <tr><td colSpan={6} className="p-4 text-center text-slate-400">No guests found.</td></tr>
+              <tr><td colSpan={13} className="p-4 text-center text-slate-400">No guests found.</td></tr>
             )}
             {filtered.map(g=>(
               <tr key={g.id} className="border-t border-slate-800">
                 <td className="p-2">{g.full_name}</td>
                 <td className="p-2">{g.email}</td>
-                <td className="p-2">
-                  <select value={(g.priority??'normal') as Priority} onChange={e=>handlePriorityChange(g, e.target.value as Priority)} className="px-2 py-1 rounded border bg-transparent">
-                    {(['normal','vip','vvip'] as Priority[]).map(p=><option key={p} value={p}>{PRIORITY_LABEL[p]}</option>)}
-                  </select>
-                </td>
                 <td className="p-2">
                   <select value={g.status} onChange={e=>handleStatusChange(g, e.target.value as NeonStatus)} className={`px-2 py-1 rounded border bg-transparent ${STATUS_BG[g.status]}`}>
                     {(Object.keys(STATUS_LABEL) as NeonStatus[]).map(s=><option key={s} value={s}>{STATUS_LABEL[s]}</option>)}
@@ -539,6 +616,14 @@ export default function DashboardPage() {
                     title={g.comments ?? ''}
                   />
                 </td>
+                <td className="p-2 text-slate-400 text-xs font-mono">{g.owner_id}</td>
+                <td className="p-2 text-slate-300">{g.company_website ? <a href={g.company_website} target="_blank" rel="noreferrer" className="underline hover:text-slate-100">{g.company_website}</a> : '—'}</td>
+                <td className="p-2 text-slate-300 max-w-xs truncate" title={g.goals ?? ''}>{g.goals ?? '—'}</td>
+                <td className="p-2 text-slate-300 max-w-xs truncate" title={g.looking_for ?? ''}>{g.looking_for ?? '—'}</td>
+                <td className="p-2 text-center">{g.visibility_enabled ? <span className="text-green-400">✓</span> : <span className="text-slate-600">✗</span>}</td>
+                <td className="p-2 text-center">{g.notifications_enabled ? <span className="text-green-400">✓</span> : <span className="text-slate-600">✗</span>}</td>
+                <td className="p-2 text-slate-400 text-xs">{g.created_at ? new Date(g.created_at).toLocaleString() : '—'}</td>
+                <td className="p-2 text-slate-400 text-xs">{g.updated_at ? new Date(g.updated_at).toLocaleString() : '—'}</td>
               </tr>
             ))}
           </tbody>
@@ -575,24 +660,72 @@ export default function DashboardPage() {
             {modalError && <div className="text-sm text-red-300 border border-red-500/40 bg-red-900/20 rounded p-2">{modalError}</div>}
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <label className="text-sm">Event name
+              <label className="text-sm md:col-span-2">Event title
                 <input value={evName} onChange={e=>setEvName(e.target.value)} className="mt-1 w-full p-2 rounded border bg-transparent" />
               </label>
-              <label className="text-sm">City
-                <input value={evCity} onChange={e=>setEvCity(e.target.value)} className="mt-1 w-full p-2 rounded border bg-transparent" />
+
+              <label className="text-sm">Status
+                <select value={evStatus} onChange={e=>setEvStatus(e.target.value as EventStatus)} className="mt-1 w-full p-2 rounded border bg-transparent">
+                  <option value="DRAFT">Draft</option>
+                  <option value="PUBLISHED">Published</option>
+                  <option value="COMPLETE">Complete</option>
+                  <option value="CANCELLED">Cancelled</option>
+                </select>
               </label>
-              <label className="text-sm">Starts at
-                <input value={evStartsAtInput} onChange={e=>setEvStartsAtInput(e.target.value)} className="mt-1 w-full p-2 rounded border bg-transparent" placeholder="dd/mm/yyyy, hh:mm" />
+
+              <label className="text-sm">Approve Mode
+                <select value={evApproveMode} onChange={e=>setEvApproveMode(e.target.value as ApproveMode)} className="mt-1 w-full p-2 rounded border bg-transparent">
+                  <option value="MANUAL">Manual</option>
+                  <option value="AUTO">Auto</option>
+                </select>
               </label>
-              <label className="text-sm">Timezone
-                <input value={evTimezone} onChange={e=>setEvTimezone(e.target.value)} className="mt-1 w-full p-2 rounded border bg-transparent" />
+
+              <label className="text-sm flex items-center gap-2 mt-6">
+                <input type="checkbox" checked={evIsPrivate} onChange={e=>setEvIsPrivate(e.target.checked)} className="w-4 h-4" />
+                <span>Private event</span>
               </label>
+
               <label className="text-sm">Capacity
                 <input type="number" min={0} value={evCapacity} onChange={e=>setEvCapacity(Number(e.target.value))} className="mt-1 w-full p-2 rounded border bg-transparent" />
               </label>
-              <label className="text-sm">Event link (Luma / Eventbrite / site)
+
+              <label className="text-sm">Start date & time
+                <input value={evStartsAtInput} onChange={e=>setEvStartsAtInput(e.target.value)} className="mt-1 w-full p-2 rounded border bg-transparent" placeholder="dd/mm/yyyy, hh:mm" />
+              </label>
+
+              <label className="text-sm">End date & time
+                <input value={evEndsAtInput} onChange={e=>setEvEndsAtInput(e.target.value)} className="mt-1 w-full p-2 rounded border bg-transparent" placeholder="dd/mm/yyyy, hh:mm" />
+              </label>
+
+              <label className="text-sm">Timezone
+                <input value={evTimezone} onChange={e=>setEvTimezone(e.target.value)} className="mt-1 w-full p-2 rounded border bg-transparent" placeholder="UTC, America/Los_Angeles, etc." />
+              </label>
+
+              <label className="text-sm md:col-span-2">Event link (Luma / Eventbrite / site)
                 <input value={evEventUrl} onChange={e=>setEvEventUrl(e.target.value)} className="mt-1 w-full p-2 rounded border bg-transparent" placeholder="https://…" />
               </label>
+
+              {/* Location */}
+              <div className="md:col-span-2">
+                <div className="text-sm font-medium mb-2">Location</div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <label className="text-sm">Venue name
+                    <input value={evLocationVenue} onChange={e=>setEvLocationVenue(e.target.value)} className="mt-1 w-full p-2 rounded border bg-transparent" placeholder="Conference center, hotel, etc." />
+                  </label>
+                  <label className="text-sm">Street address
+                    <input value={evLocationStreet} onChange={e=>setEvLocationStreet(e.target.value)} className="mt-1 w-full p-2 rounded border bg-transparent" placeholder="123 Main St" />
+                  </label>
+                  <label className="text-sm">City
+                    <input value={evLocationCity} onChange={e=>setEvLocationCity(e.target.value)} className="mt-1 w-full p-2 rounded border bg-transparent" placeholder="San Francisco" />
+                  </label>
+                  <label className="text-sm">State / Province
+                    <input value={evLocationState} onChange={e=>setEvLocationState(e.target.value)} className="mt-1 w-full p-2 rounded border bg-transparent" placeholder="CA" />
+                  </label>
+                  <label className="text-sm md:col-span-2">Country
+                    <input value={evLocationCountry} onChange={e=>setEvLocationCountry(e.target.value)} className="mt-1 w-full p-2 rounded border bg-transparent" placeholder="USA" />
+                  </label>
+                </div>
+              </div>
 
               {/* Image upload */}
               <div className="md:col-span-2">
@@ -635,6 +768,25 @@ export default function DashboardPage() {
                     </div>
                   ))}
                   <button type="button" className="px-3 py-2 rounded border hover:bg-slate-800" onClick={addHost}>+ Add host</button>
+                </div>
+              </div>
+
+              {/* Sponsors */}
+              <div className="md:col-span-2">
+                <div className="text-sm mb-2">Sponsors</div>
+                <div className="space-y-3">
+                  {sponsors.map((s, idx) => (
+                    <div key={idx} className="grid grid-cols-1 md:grid-cols-6 gap-2 p-3 border border-slate-700 rounded">
+                      <input value={s.title ?? ''} onChange={e=>updateSponsor(idx,{title:e.target.value})} placeholder="Sponsor name" className="p-2 rounded border bg-transparent md:col-span-2" />
+                      <input value={s.subtitle ?? ''} onChange={e=>updateSponsor(idx,{subtitle:e.target.value})} placeholder="Subtitle (optional)" className="p-2 rounded border bg-transparent md:col-span-2" />
+                      <input value={s.logo_url ?? ''} onChange={e=>updateSponsor(idx,{logo_url:e.target.value})} placeholder="Logo URL (optional)" className="p-2 rounded border bg-transparent md:col-span-2" />
+                      <textarea value={s.description ?? ''} onChange={e=>updateSponsor(idx,{description:e.target.value})} placeholder="Description (optional)" rows={2} className="p-2 rounded border bg-transparent md:col-span-5 resize-y" />
+                      <div className="md:col-span-1 flex justify-end items-start">
+                        <button type="button" className="px-3 py-2 rounded border hover:bg-slate-800" onClick={()=>removeSponsor(idx)}>Remove</button>
+                      </div>
+                    </div>
+                  ))}
+                  <button type="button" className="px-3 py-2 rounded border hover:bg-slate-800" onClick={addSponsor}>+ Add sponsor</button>
                 </div>
               </div>
             </div>
