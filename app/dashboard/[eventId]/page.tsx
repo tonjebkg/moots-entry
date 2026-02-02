@@ -120,8 +120,9 @@ export default function DashboardPage() {
   const [isAdding, setIsAdding] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
 
-  // Edit event modal state
+  // Edit/Create event modal state
   const [isEditingEvent, setIsEditingEvent] = useState(false)
+  const [isCreatingEvent, setIsCreatingEvent] = useState(false)
   const [evName, setEvName] = useState('')
   const [evTimezone, setEvTimezone] = useState('')
   const [evStartsAtInput, setEvStartsAtInput] = useState('')
@@ -335,6 +336,116 @@ export default function DashboardPage() {
     setIsEditingEvent(true)
   }
   function closeEditEvent() { setIsEditingEvent(false) }
+
+  function openCreateEvent() {
+    setModalError(null)
+    setEvName('')
+    setEvTimezone('UTC')
+    setEvStartsAtInput('')
+    setEvEndsAtInput('')
+    setEvEventUrl('')
+    setEvImageUrl('')
+    setNewImageFile(null)
+    setHosts([])
+    setSponsors([])
+    setEvIsPrivate(false)
+    setEvApproveMode('MANUAL')
+    setEvStatus('DRAFT')
+    setEvLocationVenue('')
+    setEvLocationStreet('')
+    setEvLocationCity('')
+    setEvLocationState('')
+    setEvLocationCountry('')
+    setIsCreatingEvent(true)
+  }
+
+  function closeCreateEvent() { setIsCreatingEvent(false) }
+
+  async function createEvent() {
+    setSaving(true)
+    setModalError(null)
+    try {
+      // Validate required fields
+      if (!evName.trim()) {
+        setModalError('Event title is required')
+        setSaving(false)
+        return
+      }
+
+      const startIso = parseFlexibleToISO(evStartsAtInput)
+      if (!startIso) {
+        setModalError('Start date & time is required (use "DD/MM/YYYY, HH:mm")')
+        setSaving(false)
+        return
+      }
+
+      const endIso = evEndsAtInput.trim() ? parseFlexibleToISO(evEndsAtInput) : null
+      if (evEndsAtInput.trim() && !endIso) {
+        setModalError('Invalid end date/time. Use "DD/MM/YYYY, HH:mm"')
+        setSaving(false)
+        return
+      }
+
+      let nextImageUrl = evImageUrl
+      const uploaded = await uploadEventImageIfNeeded(0)
+      if (uploaded) nextImageUrl = uploaded
+
+      const locationObj = {
+        venue_name: evLocationVenue.trim() || undefined,
+        street_address: evLocationStreet.trim() || undefined,
+        city: evLocationCity.trim() || undefined,
+        state_province: evLocationState.trim() || undefined,
+        country: evLocationCountry.trim() || undefined,
+      }
+      const hasLocation = Object.values(locationObj).some(v => v)
+
+      const payload = {
+        event: {
+          title: evName.trim(),
+          location: hasLocation ? locationObj : null,
+          start_date: startIso,
+          end_date: endIso,
+          timezone: evTimezone.trim() || 'UTC',
+          image_url: nextImageUrl || null,
+          event_url: evEventUrl.trim() || null,
+          hosts: hosts
+            .map(h => ({ name: (h.name ?? '').trim(), url: (h.url ?? '').trim() || null }))
+            .filter(h => h.name.length > 0),
+          sponsors: sponsors
+            .map(s => ({
+              title: (s.title ?? '').trim(),
+              subtitle: (s.subtitle ?? '').trim() || undefined,
+              logo_url: (s.logo_url ?? '').trim() || undefined,
+              description: (s.description ?? '').trim() || undefined,
+            }))
+            .filter(s => s.title.length > 0),
+          is_private: evIsPrivate,
+          approve_mode: evApproveMode,
+          status: evStatus,
+        }
+      }
+
+      const res = await fetch('/api/events/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error || 'Failed to create event')
+
+      // Navigate to the new event or refresh
+      if (json.event_id) {
+        window.location.href = `/dashboard/${json.event_id}`
+      } else {
+        closeCreateEvent()
+      }
+    } catch (err: any) {
+      setModalError(err?.message ?? 'Failed to create event')
+    } finally {
+      setSaving(false)
+    }
+  }
+
   function updateHost(idx: number, patch: Partial<Host>) {
     setHosts(prev => prev.map((h,i)=> i===idx ? { ...h, ...patch } : h))
   }
@@ -457,7 +568,7 @@ export default function DashboardPage() {
   }
 
   return (
-    <main className="p-6 max-w-6xl mx-auto space-y-6 text-white">
+    <main className="p-6 w-full space-y-6 text-white">
       {/* HEADER */}
       <header className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div className="flex items-start gap-3 min-w-0 flex-1">
@@ -491,8 +602,9 @@ export default function DashboardPage() {
         </div>
 
         <div className="flex items-center gap-3 shrink-0">
+          <Link href="/dashboard" className="whitespace-nowrap px-4 py-2 rounded border hover:bg-slate-900">← Back to Events</Link>
           <button onClick={openEditEvent} className="whitespace-nowrap px-4 py-2 rounded border hover:bg-slate-900">Edit event</button>
-          <Link href="/" className="whitespace-nowrap px-4 py-2 rounded border hover:bg-slate-900">New Event</Link>
+          <button onClick={openCreateEvent} className="whitespace-nowrap px-4 py-2 rounded border hover:bg-slate-900">New Event</button>
           <label className="whitespace-nowrap px-4 py-2 rounded border cursor-pointer hover:bg-slate-900">
             Re-upload CSV
             <input type="file" accept=".csv,.txt" className="hidden" />
@@ -557,18 +669,18 @@ export default function DashboardPage() {
 
       {/* TABLE */}
       <section className="border rounded overflow-hidden overflow-x-auto">
-        <table className="w-full text-sm">
+        <table className="w-full text-sm min-w-[1800px]">
           <thead className="bg-slate-900 text-slate-200">
             <tr>
-              <th className="text-left p-2">Name</th>
-              <th className="text-left p-2">Email</th>
+              <th className="text-left p-2 w-48">Name</th>
+              <th className="text-left p-2 w-56">Email</th>
+              <th className="text-left p-2 w-56">Company Website</th>
               <th className="text-left p-2">Status</th>
               <th className="text-left p-2">Plus-ones</th>
-              <th className="text-left p-2">Comments</th>
-              <th className="text-left p-2">Owner ID</th>
-              <th className="text-left p-2">Company Website</th>
-              <th className="text-left p-2">Goals</th>
-              <th className="text-left p-2">Looking For</th>
+              <th className="text-left p-2 w-72">Comments</th>
+              <th className="text-left p-2 w-64">Goals</th>
+              <th className="text-left p-2 w-64">Looking For</th>
+              <th className="text-left p-2 w-32">Owner ID</th>
               <th className="text-left p-2">Visibility</th>
               <th className="text-left p-2">Notifications</th>
               <th className="text-left p-2">Created At</th>
@@ -581,8 +693,11 @@ export default function DashboardPage() {
             )}
             {filtered.map(g=>(
               <tr key={g.id} className="border-t border-slate-800">
-                <td className="p-2">{g.full_name}</td>
-                <td className="p-2">{g.email}</td>
+                <td className="p-2 w-48 truncate" title={g.full_name}>{g.full_name}</td>
+                <td className="p-2 w-56 truncate">{g.email}</td>
+                <td className="p-2 w-56 text-slate-300 truncate" title={g.company_website ?? '—'}>
+                  {g.company_website ? <a href={g.company_website} target="_blank" rel="noreferrer" className="underline hover:text-slate-100">{g.company_website}</a> : '—'}
+                </td>
                 <td className="p-2">
                   <select value={g.status} onChange={e=>handleStatusChange(g, e.target.value as NeonStatus)} className={`px-2 py-1 rounded border bg-transparent ${STATUS_BG[g.status]}`}>
                     {(Object.keys(STATUS_LABEL) as NeonStatus[]).map(s=><option key={s} value={s}>{STATUS_LABEL[s]}</option>)}
@@ -595,7 +710,7 @@ export default function DashboardPage() {
                     <button className="px-2 py-1 rounded border hover:bg-slate-900" onClick={()=>handlePlusOnes(g, +1)}>＋</button>
                   </div>
                 </td>
-                <td className="p-2">
+                <td className="p-2 w-72">
                   <input
                     value={g.comments ?? ''}
                     readOnly
@@ -605,10 +720,9 @@ export default function DashboardPage() {
                     title={g.comments ?? ''}
                   />
                 </td>
-                <td className="p-2 text-slate-400 text-xs font-mono">{g.owner_id}</td>
-                <td className="p-2 text-slate-300">{g.company_website ? <a href={g.company_website} target="_blank" rel="noreferrer" className="underline hover:text-slate-100">{g.company_website}</a> : '—'}</td>
-                <td className="p-2 text-slate-300 max-w-xs truncate" title={g.goals ?? ''}>{g.goals ?? '—'}</td>
-                <td className="p-2 text-slate-300 max-w-xs truncate" title={g.looking_for ?? ''}>{g.looking_for ?? '—'}</td>
+                <td className="p-2 w-64 text-slate-300 truncate" title={g.goals ?? ''}>{g.goals ?? '—'}</td>
+                <td className="p-2 w-64 text-slate-300 truncate" title={g.looking_for ?? ''}>{g.looking_for ?? '—'}</td>
+                <td className="p-2 w-32 text-slate-400 text-xs font-mono truncate" title={g.owner_id}>{g.owner_id}</td>
                 <td className="p-2 text-center">{g.visibility_enabled ? <span className="text-green-400">✓</span> : <span className="text-slate-600">✗</span>}</td>
                 <td className="p-2 text-center">{g.notifications_enabled ? <span className="text-green-400">✓</span> : <span className="text-slate-600">✗</span>}</td>
                 <td className="p-2 text-slate-400 text-xs">{g.created_at ? new Date(g.created_at).toLocaleString() : '—'}</td>
@@ -649,8 +763,9 @@ export default function DashboardPage() {
             {modalError && <div className="text-sm text-red-300 border border-red-500/40 bg-red-900/20 rounded p-2">{modalError}</div>}
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <label className="text-sm md:col-span-2">Event title
-                <input value={evName} onChange={e=>setEvName(e.target.value)} className="mt-1 w-full p-2 rounded border bg-transparent" />
+              <label className="text-sm md:col-span-2">
+                Event title <span className="text-red-400">*</span>
+                <input value={evName} onChange={e=>setEvName(e.target.value)} className="mt-1 w-full p-2 rounded border bg-transparent" required />
               </label>
 
               <label className="text-sm">Status
@@ -674,8 +789,9 @@ export default function DashboardPage() {
                 <span>Private event</span>
               </label>
 
-              <label className="text-sm">Start date & time
-                <input value={evStartsAtInput} onChange={e=>setEvStartsAtInput(e.target.value)} className="mt-1 w-full p-2 rounded border bg-transparent" placeholder="dd/mm/yyyy, hh:mm" />
+              <label className="text-sm">
+                Start date & time <span className="text-red-400">*</span>
+                <input value={evStartsAtInput} onChange={e=>setEvStartsAtInput(e.target.value)} className="mt-1 w-full p-2 rounded border bg-transparent" placeholder="dd/mm/yyyy, hh:mm" required />
               </label>
 
               <label className="text-sm">End date & time
@@ -779,6 +895,152 @@ export default function DashboardPage() {
             <div className="flex items-center justify-end gap-2">
               <button className="px-3 py-2 rounded border hover:bg-slate-800" onClick={saveEvent} disabled={saving}>
                 {saving ? 'Saving…' : 'Save changes'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Create Event Modal */}
+      {isCreatingEvent && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-6 overflow-y-auto">
+          <div className="bg-slate-900 border border-slate-700 rounded-lg p-6 w-full max-w-3xl space-y-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-semibold">Create event</h2>
+              <button className="px-3 py-1 rounded border hover:bg-slate-800" onClick={closeCreateEvent}>Close</button>
+            </div>
+
+            {modalError && <div className="text-sm text-red-300 border border-red-500/40 bg-red-900/20 rounded p-2">{modalError}</div>}
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <label className="text-sm md:col-span-2">
+                Event title <span className="text-red-400">*</span>
+                <input value={evName} onChange={e=>setEvName(e.target.value)} className="mt-1 w-full p-2 rounded border bg-transparent" required />
+              </label>
+
+              <label className="text-sm">Status
+                <select value={evStatus} onChange={e=>setEvStatus(e.target.value as EventStatus)} className="mt-1 w-full p-2 rounded border bg-transparent">
+                  <option value="DRAFT">Draft</option>
+                  <option value="PUBLISHED">Published</option>
+                  <option value="COMPLETE">Complete</option>
+                  <option value="CANCELLED">Cancelled</option>
+                </select>
+              </label>
+
+              <label className="text-sm">Approve Mode
+                <select value={evApproveMode} onChange={e=>setEvApproveMode(e.target.value as ApproveMode)} className="mt-1 w-full p-2 rounded border bg-transparent">
+                  <option value="MANUAL">Manual</option>
+                  <option value="AUTO">Auto</option>
+                </select>
+              </label>
+
+              <label className="text-sm flex items-center gap-2 mt-6 md:col-span-2">
+                <input type="checkbox" checked={evIsPrivate} onChange={e=>setEvIsPrivate(e.target.checked)} className="w-4 h-4" />
+                <span>Private event</span>
+              </label>
+
+              <label className="text-sm">
+                Start date & time <span className="text-red-400">*</span>
+                <input value={evStartsAtInput} onChange={e=>setEvStartsAtInput(e.target.value)} className="mt-1 w-full p-2 rounded border bg-transparent" placeholder="dd/mm/yyyy, hh:mm" required />
+              </label>
+
+              <label className="text-sm">End date & time
+                <input value={evEndsAtInput} onChange={e=>setEvEndsAtInput(e.target.value)} className="mt-1 w-full p-2 rounded border bg-transparent" placeholder="dd/mm/yyyy, hh:mm" />
+              </label>
+
+              <label className="text-sm md:col-span-2">Timezone
+                <input value={evTimezone} onChange={e=>setEvTimezone(e.target.value)} className="mt-1 w-full p-2 rounded border bg-transparent" placeholder="UTC, America/Los_Angeles, etc." />
+              </label>
+
+              <label className="text-sm md:col-span-2">Event link (Luma / Eventbrite / site)
+                <input value={evEventUrl} onChange={e=>setEvEventUrl(e.target.value)} className="mt-1 w-full p-2 rounded border bg-transparent" placeholder="https://…" />
+              </label>
+
+              {/* Location */}
+              <div className="md:col-span-2">
+                <div className="text-sm font-medium mb-2">Location</div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <label className="text-sm">Venue name
+                    <input value={evLocationVenue} onChange={e=>setEvLocationVenue(e.target.value)} className="mt-1 w-full p-2 rounded border bg-transparent" placeholder="Conference center, hotel, etc." />
+                  </label>
+                  <label className="text-sm">Street address
+                    <input value={evLocationStreet} onChange={e=>setEvLocationStreet(e.target.value)} className="mt-1 w-full p-2 rounded border bg-transparent" placeholder="123 Main St" />
+                  </label>
+                  <label className="text-sm">City
+                    <input value={evLocationCity} onChange={e=>setEvLocationCity(e.target.value)} className="mt-1 w-full p-2 rounded border bg-transparent" placeholder="San Francisco" />
+                  </label>
+                  <label className="text-sm">State / Province
+                    <input value={evLocationState} onChange={e=>setEvLocationState(e.target.value)} className="mt-1 w-full p-2 rounded border bg-transparent" placeholder="CA" />
+                  </label>
+                  <label className="text-sm md:col-span-2">Country
+                    <input value={evLocationCountry} onChange={e=>setEvLocationCountry(e.target.value)} className="mt-1 w-full p-2 rounded border bg-transparent" placeholder="USA" />
+                  </label>
+                </div>
+              </div>
+
+              {/* Image upload */}
+              <div className="md:col-span-2">
+                <div className="text-sm mb-1">Event image (optional)</div>
+                <div className="flex items-center gap-4">
+                  <div className="w-24 h-24 rounded-lg border border-slate-700 overflow-hidden bg-slate-800 flex items-center justify-center">
+                    {newImageFile ? (
+                      <img src={URL.createObjectURL(newImageFile)} className="w-full h-full object-cover" alt="Preview" />
+                    ) : evImageUrl ? (
+                      <img src={evImageUrl} className="w-full h-full object-cover" alt="Event" />
+                    ) : (
+                      <div className="text-xs text-slate-500">No image</div>
+                    )}
+                  </div>
+                  <label className="px-3 py-2 rounded border hover:bg-slate-800 cursor-pointer">
+                    Choose file
+                    <input type="file" accept="image/*" className="hidden" onChange={e => setNewImageFile(e.target.files?.[0] || null)} />
+                  </label>
+                  {(newImageFile || evImageUrl) && (
+                    <button className="px-3 py-2 rounded border hover:bg-slate-800" onClick={() => { setNewImageFile(null); setEvImageUrl('') }}>Remove</button>
+                  )}
+                </div>
+              </div>
+
+              {/* Hosts */}
+              <div className="md:col-span-2">
+                <div className="text-sm mb-2">Hosts</div>
+                <div className="space-y-3">
+                  {hosts.map((h, idx) => (
+                    <div key={idx} className="grid grid-cols-1 md:grid-cols-5 gap-2 p-3 border border-slate-700 rounded">
+                      <input value={h.name ?? ''} onChange={e=>updateHost(idx,{name:e.target.value})} placeholder="Host name" className="p-2 rounded border bg-transparent md:col-span-2" />
+                      <input value={h.url ?? ''} onChange={e=>updateHost(idx,{url:e.target.value})} placeholder="Profile URL (optional)" className="p-2 rounded border bg-transparent md:col-span-2" />
+                      <div className="md:col-span-1 flex justify-end">
+                        <button type="button" className="px-3 py-2 rounded border hover:bg-slate-800" onClick={()=>removeHost(idx)}>Remove</button>
+                      </div>
+                    </div>
+                  ))}
+                  <button type="button" className="px-3 py-2 rounded border hover:bg-slate-800" onClick={addHost}>+ Add host</button>
+                </div>
+              </div>
+
+              {/* Sponsors */}
+              <div className="md:col-span-2">
+                <div className="text-sm mb-2">Sponsors</div>
+                <div className="space-y-3">
+                  {sponsors.map((s, idx) => (
+                    <div key={idx} className="grid grid-cols-1 md:grid-cols-6 gap-2 p-3 border border-slate-700 rounded">
+                      <input value={s.title ?? ''} onChange={e=>updateSponsor(idx,{title:e.target.value})} placeholder="Sponsor name" className="p-2 rounded border bg-transparent md:col-span-2" />
+                      <input value={s.subtitle ?? ''} onChange={e=>updateSponsor(idx,{subtitle:e.target.value})} placeholder="Subtitle (optional)" className="p-2 rounded border bg-transparent md:col-span-2" />
+                      <input value={s.logo_url ?? ''} onChange={e=>updateSponsor(idx,{logo_url:e.target.value})} placeholder="Logo URL (optional)" className="p-2 rounded border bg-transparent md:col-span-2" />
+                      <textarea value={s.description ?? ''} onChange={e=>updateSponsor(idx,{description:e.target.value})} placeholder="Description (optional)" rows={2} className="p-2 rounded border bg-transparent md:col-span-5 resize-y" />
+                      <div className="md:col-span-1 flex justify-end items-start">
+                        <button type="button" className="px-3 py-2 rounded border hover:bg-slate-800" onClick={()=>removeSponsor(idx)}>Remove</button>
+                      </div>
+                    </div>
+                  ))}
+                  <button type="button" className="px-3 py-2 rounded border hover:bg-slate-800" onClick={addSponsor}>+ Add sponsor</button>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-4">
+              <button className="px-3 py-2 rounded border hover:bg-slate-800" onClick={createEvent} disabled={saving}>
+                {saving ? 'Creating…' : 'Create event'}
               </button>
             </div>
           </div>
