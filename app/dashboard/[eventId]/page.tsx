@@ -370,8 +370,11 @@ export default function DashboardPage() {
     })
     if (res.ok) {
       setGuests(prev => prev.map(x => x.id === g.id ? { ...x, status: next } : x))
+      setMessage(`Status updated to ${STATUS_LABEL[next]}`)
     } else {
-      console.error('Failed to update status:', await res.text())
+      const errorText = await res.text()
+      console.error('Failed to update status:', errorText)
+      setMessage(`Failed to update status: ${errorText}`)
     }
   }
   async function handlePlusOnes(g: Guest, delta: 1 | -1) {
