@@ -92,8 +92,37 @@ export async function PATCH(req: Request, { params }: RouteParams) {
       );
     }
 
+    const updatedJoinRequest = result[0];
+
+    // If status was changed to APPROVED, materialize attendee in event_attendees
+    if (updates.status === 'APPROVED') {
+      await db`
+        INSERT INTO event_attendees (
+          event_id,
+          user_profile_id,
+          join_request_id,
+          visibility_enabled,
+          notifications_enabled,
+          created_at,
+          updated_at
+        )
+        SELECT
+          ${updatedJoinRequest.event_id},
+          ${updatedJoinRequest.user_profile_id},
+          ${updatedJoinRequest.id},
+          true,
+          true,
+          ${now},
+          ${now}
+        WHERE NOT EXISTS (
+          SELECT 1 FROM event_attendees
+          WHERE join_request_id = ${updatedJoinRequest.id}
+        )
+      `;
+    }
+
     return NextResponse.json({
-      join_request: result[0],
+      join_request: updatedJoinRequest,
       message: 'Join request updated successfully',
     });
   } catch (err: any) {
