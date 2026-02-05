@@ -6,9 +6,10 @@ export const runtime = 'nodejs';
 type Host = { name: string; url?: string | null };
 type Sponsor = {
   title: string;
-  subtitle?: string;
-  logo_url?: string;
-  description?: string;
+  subtitle?: string | null;
+  url?: string | null;
+  logo_url?: string | null;
+  description?: string | null;
 };
 type Location = {
   venue_name?: string;
@@ -43,6 +44,18 @@ export async function POST(req: Request) {
   try {
     const body: CreateEventPayload = await req.json();
     const { event } = body;
+
+    // DEBUG: Log incoming sponsors
+    console.log('[CREATE] Received sponsors:', JSON.stringify(event.sponsors, null, 2));
+
+    // Verify url field is present (even if null)
+    if (event.sponsors) {
+      event.sponsors.forEach((s, i) => {
+        if (!('url' in s)) {
+          console.error(`[CREATE] ⚠️ Sponsor ${i} missing 'url' field:`, s);
+        }
+      });
+    }
 
     // Map legacy field names to Neon schema
     const title = event.title ?? event.name;
@@ -82,8 +95,24 @@ export async function POST(req: Request) {
       : null;
     const locationJson = location ? JSON.stringify(location) : null;
 
+    // DEBUG: Log what will be written to DB
+    console.log('[CREATE] Sponsors JSON for DB:', sponsorsJson);
+    console.log('[CREATE] Hosts JSON for DB:', hostsJson);
+
     // Get database client (lazy-initialized, dashboard-mode only)
     const db = getDb();
+
+    // Validate approve_mode and status at application layer
+    const approveMode = event.approve_mode || 'MANUAL';
+    if (approveMode !== 'MANUAL' && approveMode !== 'AUTO') {
+      throw new Error('approve_mode must be MANUAL or AUTO');
+    }
+
+    const status = event.status || 'DRAFT';
+    const validStatuses = ['DRAFT', 'PUBLISHED', 'COMPLETE', 'CANCELLED'];
+    if (!validStatuses.includes(status)) {
+      throw new Error('status must be DRAFT, PUBLISHED, COMPLETE, or CANCELLED');
+    }
 
     // Insert event into Neon
     const result = await db`
@@ -111,8 +140,8 @@ export async function POST(req: Request) {
         ${event.event_url || null},
         ${event.image_url || null},
         ${event.is_private ?? false},
-        ${event.approve_mode || 'MANUAL'}::approvemode,
-        ${event.status || 'DRAFT'}::eventstatus
+        ${approveMode},
+        ${status}
       ) RETURNING id
     `;
 

@@ -1,40 +1,79 @@
 import { NextResponse } from 'next/server'
-import { supabaseAdmin } from '@/lib/supabaseAdmin'
+import { BlobServiceClient } from '@azure/storage-blob'
 
-export const runtime = 'nodejs' // ensure Node runtime (not edge) for form-data parsing
+export const runtime = 'nodejs'
 
-// Guard: Skip Supabase routes in dashboard mode
-const isDashboardMode = process.env.NEXT_PUBLIC_APP_MODE === 'dashboard';
-
+/**
+ * POST /api/uploads/event-image
+ * Uploads an event image to Azure Blob Storage
+ * Protected by Basic Auth / dashboard mode checks (handled by middleware or caller)
+ */
 export async function POST(req: Request) {
-  if (isDashboardMode || !supabaseAdmin) {
-    return NextResponse.json(
-      { error: 'Image upload not available in dashboard mode' },
-      { status: 503 }
-    );
-  }
-
   try {
-    const form = await req.formData()
-    const file = form.get('file') as File | null
-    if (!file) {
-      return NextResponse.json({ error: 'No file' }, { status: 400 })
+    // Check Azure credentials
+    const connectionString = process.env.AZURE_STORAGE_CONNECTION_STRING
+    const containerName = process.env.AZURE_STORAGE_CONTAINER_NAME || 'public'
+
+    if (!connectionString) {
+      return NextResponse.json(
+        { error: 'Azure Storage not configured (missing AZURE_STORAGE_CONNECTION_STRING)' },
+        { status: 503 }
+      )
     }
 
-    const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg'
-    const pathname = `event-images/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
+    // Parse form data
+    const form = await req.formData()
+    const file = form.get('file') as File | null
+    const eventId = form.get('eventId') as string | null
+
+    if (!file) {
+      return NextResponse.json({ error: 'No file provided' }, { status: 400 })
+    }
+
+const conn = process.env.AZURE_STORAGE_CONNECTION_STRING;
+
+if (!conn) {
+  throw new Error("AZURE_STORAGE_CONNECTION_STRING is missing");
+}
+
+if (!conn.startsWith("DefaultEndpointsProtocol=")) {
+  throw new Error("Invalid Azure connection string format");
+}
+
+    // Generate blob path: events/{eventId}/{timestamp}-{filename}
+    const timestamp = Date.now()
+    const sanitizedFilename = file.name.replace(/[^a-zA-Z0-9._-]/g, '_')
+    const blobPath = eventId
+      ? `events/${eventId}/${timestamp}-${sanitizedFilename}`
+      : `events/${timestamp}-${sanitizedFilename}`
+
+    // Upload to Azure
+    const blobServiceClient = BlobServiceClient.fromConnectionString(connectionString)
+    const containerClient = blobServiceClient.getContainerClient(containerName)
+    const blockBlobClient = containerClient.getBlockBlobClient(blobPath)
 
     const arrayBuffer = await file.arrayBuffer()
-    const { error: uploadErr } = await supabaseAdmin.storage
-      .from('events')            // bucket name: events
-      .upload(pathname, Buffer.from(arrayBuffer), { upsert: false, contentType: file.type || 'image/jpeg' })
+    const buffer = Buffer.from(arrayBuffer)
 
-    if (uploadErr) throw uploadErr
+    await blockBlobClient.uploadData(buffer, {
+      blobHTTPHeaders: {
+        blobContentType: file.type || 'image/jpeg',
+      },
+    })
 
-    const { data: pub } = supabaseAdmin.storage.from('events').getPublicUrl(pathname)
-    return NextResponse.json({ path: pathname, url: pub.publicUrl })
+    // Construct public URL
+    const publicUrl = blockBlobClient.url
+
+    return NextResponse.json({
+      url: publicUrl,
+      path: blobPath,
+      message: 'Image uploaded successfully',
+    })
   } catch (err: any) {
-    console.error('upload error', err)
-    return NextResponse.json({ error: err.message ?? 'Upload failed' }, { status: 500 })
+    console.error('[POST /api/uploads/event-image] Error:', err)
+    return NextResponse.json(
+      { error: err.message ?? 'Upload failed' },
+      { status: 500 }
+    )
   }
 }

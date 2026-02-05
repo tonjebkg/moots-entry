@@ -6,9 +6,10 @@ export const runtime = 'nodejs';
 type Host = { name: string; url?: string | null };
 type Sponsor = {
   title: string;
-  subtitle?: string;
-  logo_url?: string;
-  description?: string;
+  subtitle?: string | null;
+  url?: string | null;
+  logo_url?: string | null;
+  description?: string | null;
 };
 type Location = {
   venue_name?: string;
@@ -48,6 +49,20 @@ export async function PATCH(req: Request) {
   try {
     const body: UpdateEventPayload = await req.json();
     const { id, ...fields } = body;
+
+    // DEBUG: Log incoming payload
+    console.log('[UPDATE] Event ID:', id);
+    console.log('[UPDATE] Received sponsors:', JSON.stringify(fields.sponsors, null, 2));
+    console.log('[UPDATE] Received hosts:', JSON.stringify(fields.hosts, null, 2));
+
+    // Verify url field is present (even if null)
+    if (fields.sponsors) {
+      fields.sponsors.forEach((s, i) => {
+        if (!('url' in s)) {
+          console.error(`[UPDATE] ⚠️ Sponsor ${i} missing 'url' field:`, s);
+        }
+      });
+    }
 
     if (!id) {
       return NextResponse.json(
@@ -102,20 +117,31 @@ export async function PATCH(req: Request) {
     }
     if (fields.hosts !== undefined) {
       const hostsJson = fields.hosts ? JSON.stringify(fields.hosts) : null;
+      console.log('[UPDATE] Writing hosts to DB:', hostsJson);
       await db`UPDATE events SET hosts = ${hostsJson}::jsonb, updated_at = ${now} WHERE id = ${eventId}`;
     }
     if (fields.sponsors !== undefined) {
       const sponsorsJson = fields.sponsors ? JSON.stringify(fields.sponsors) : null;
+      console.log('[UPDATE] Writing sponsors to DB:', sponsorsJson);
       await db`UPDATE events SET sponsors = ${sponsorsJson}::jsonb, updated_at = ${now} WHERE id = ${eventId}`;
     }
     if (fields.is_private !== undefined) {
       await db`UPDATE events SET is_private = ${fields.is_private}, updated_at = ${now} WHERE id = ${eventId}`;
     }
     if (fields.approve_mode !== undefined) {
-      await db`UPDATE events SET approve_mode = ${fields.approve_mode}::approvemode, updated_at = ${now} WHERE id = ${eventId}`;
+      // Validate approve_mode at application layer
+      if (fields.approve_mode !== 'MANUAL' && fields.approve_mode !== 'AUTO') {
+        throw new Error('approve_mode must be MANUAL or AUTO');
+      }
+      await db`UPDATE events SET approve_mode = ${fields.approve_mode}, updated_at = ${now} WHERE id = ${eventId}`;
     }
     if (fields.status !== undefined) {
-      await db`UPDATE events SET status = ${fields.status}::eventstatus, updated_at = ${now} WHERE id = ${eventId}`;
+      // Validate status at application layer
+      const validStatuses = ['DRAFT', 'PUBLISHED', 'COMPLETE', 'CANCELLED'];
+      if (!validStatuses.includes(fields.status)) {
+        throw new Error('status must be DRAFT, PUBLISHED, COMPLETE, or CANCELLED');
+      }
+      await db`UPDATE events SET status = ${fields.status}, updated_at = ${now} WHERE id = ${eventId}`;
     }
 
     return NextResponse.json({

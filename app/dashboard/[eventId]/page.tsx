@@ -1,9 +1,9 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, useRef } from 'react'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
-import { supabase } from '@/lib/supabase' // Still needed for image uploads only
+import { supabase } from '@/lib/supabase' // Still needed for guest operations only
 
 // Neon status enum values
 type NeonStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'CANCELLED' | 'DRAFT'
@@ -13,6 +13,7 @@ type EventStatus = 'DRAFT' | 'PUBLISHED' | 'COMPLETE' | 'CANCELLED'
 type Sponsor = {
   title: string
   subtitle?: string
+  url?: string
   logo_url?: string
   description?: string
 }
@@ -84,31 +85,139 @@ const STATUS_BG: Record<NeonStatus, string> = {
   DRAFT: 'bg-slate-600 text-slate-200',
 }
 
-function formatLocalDDMMYYYYHHMM(iso: string) {
+const US_STATES = [
+  { code: 'AL', name: 'Alabama' },
+  { code: 'AK', name: 'Alaska' },
+  { code: 'AZ', name: 'Arizona' },
+  { code: 'AR', name: 'Arkansas' },
+  { code: 'CA', name: 'California' },
+  { code: 'CO', name: 'Colorado' },
+  { code: 'CT', name: 'Connecticut' },
+  { code: 'DE', name: 'Delaware' },
+  { code: 'FL', name: 'Florida' },
+  { code: 'GA', name: 'Georgia' },
+  { code: 'HI', name: 'Hawaii' },
+  { code: 'ID', name: 'Idaho' },
+  { code: 'IL', name: 'Illinois' },
+  { code: 'IN', name: 'Indiana' },
+  { code: 'IA', name: 'Iowa' },
+  { code: 'KS', name: 'Kansas' },
+  { code: 'KY', name: 'Kentucky' },
+  { code: 'LA', name: 'Louisiana' },
+  { code: 'ME', name: 'Maine' },
+  { code: 'MD', name: 'Maryland' },
+  { code: 'MA', name: 'Massachusetts' },
+  { code: 'MI', name: 'Michigan' },
+  { code: 'MN', name: 'Minnesota' },
+  { code: 'MS', name: 'Mississippi' },
+  { code: 'MO', name: 'Missouri' },
+  { code: 'MT', name: 'Montana' },
+  { code: 'NE', name: 'Nebraska' },
+  { code: 'NV', name: 'Nevada' },
+  { code: 'NH', name: 'New Hampshire' },
+  { code: 'NJ', name: 'New Jersey' },
+  { code: 'NM', name: 'New Mexico' },
+  { code: 'NY', name: 'New York' },
+  { code: 'NC', name: 'North Carolina' },
+  { code: 'ND', name: 'North Dakota' },
+  { code: 'OH', name: 'Ohio' },
+  { code: 'OK', name: 'Oklahoma' },
+  { code: 'OR', name: 'Oregon' },
+  { code: 'PA', name: 'Pennsylvania' },
+  { code: 'RI', name: 'Rhode Island' },
+  { code: 'SC', name: 'South Carolina' },
+  { code: 'SD', name: 'South Dakota' },
+  { code: 'TN', name: 'Tennessee' },
+  { code: 'TX', name: 'Texas' },
+  { code: 'UT', name: 'Utah' },
+  { code: 'VT', name: 'Vermont' },
+  { code: 'VA', name: 'Virginia' },
+  { code: 'WA', name: 'Washington' },
+  { code: 'WV', name: 'West Virginia' },
+  { code: 'WI', name: 'Wisconsin' },
+  { code: 'WY', name: 'Wyoming' },
+  { code: 'DC', name: 'District of Columbia' }
+]
+
+const TIMEZONES = [
+  'America/New_York',
+  'America/Chicago',
+  'America/Denver',
+  'America/Los_Angeles',
+  'America/Phoenix',
+  'America/Toronto',
+  'America/Vancouver',
+  'UTC',
+]
+
+// Format ISO date to MM/DD/YYYY
+function formatUSDate(iso: string): string {
+  if (!iso) return ''
   const d = new Date(iso)
   if (isNaN(d.getTime())) return ''
   const pad = (n: number) => (n < 10 ? `0${n}` : `${n}`)
-  return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()}, ${pad(d.getHours())}:${pad(d.getMinutes())}`
+  return `${pad(d.getMonth() + 1)}/${pad(d.getDate())}/${d.getFullYear()}`
 }
-function parseFlexibleToISO(input: string): string | null {
-  if (!input) return null
-  const s = input.trim()
-  if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(s)) {
-    const d = new Date(s)
-    return isNaN(d.getTime()) ? null : d.toISOString()
+
+// Parse YYYY-MM-DD to MM/DD/YYYY
+function isoDateToUS(yyyymmdd: string): string {
+  if (!yyyymmdd) return ''
+  const parts = yyyymmdd.split('-')
+  if (parts.length !== 3) return ''
+  const [yyyy, mm, dd] = parts
+  return `${mm}/${dd}/${yyyy}`
+}
+
+// Format ISO time to "12:00 AM" format
+function formatTime12Hour(iso: string): string {
+  if (!iso) return ''
+  const d = new Date(iso)
+  if (isNaN(d.getTime())) return ''
+  const hours24 = d.getHours()
+  const minutes = d.getMinutes()
+  const ampm = hours24 >= 12 ? 'PM' : 'AM'
+  const hours12 = hours24 % 12 || 12
+  const pad = (n: number) => (n < 10 ? `0${n}` : `${n}`)
+  return `${hours12}:${pad(minutes)} ${ampm}`
+}
+
+// Generate 30-minute increment time options from 12:00 AM to 11:30 PM
+function generateTimeOptions(): string[] {
+  const times: string[] = []
+  for (let h = 0; h < 24; h++) {
+    for (let m = 0; m < 60; m += 30) {
+      const ampm = h >= 12 ? 'PM' : 'AM'
+      const hours12 = h % 12 || 12
+      const pad = (n: number) => (n < 10 ? `0${n}` : `${n}`)
+      times.push(`${hours12}:${pad(m)} ${ampm}`)
+    }
   }
-  const m = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})(?:[,\s]+(\d{1,2}):(\d{2}))?$/)
-  if (m) {
-    const dd = Number(m[1])
-    const mm = Number(m[2]) - 1
-    const yyyy = Number(m[3])
-    const hh = m[4] ? Number(m[4]) : 0
-    const min = m[5] ? Number(m[5]) : 0
-    const d = new Date(yyyy, mm, dd, hh, min, 0, 0)
-    return isNaN(d.getTime()) ? null : d.toISOString()
-  }
-  const d = new Date(s)
-  return isNaN(d.getTime()) ? null : d.toISOString()
+  return times
+}
+
+// Combine US date (MM/DD/YYYY) + time (HH:MM AM/PM) -> ISO string
+function combineToISO(mmddyyyy: string, timeStr: string): string {
+  if (!mmddyyyy || !timeStr) return ''
+  const [month, day, year] = mmddyyyy.split('/').map(Number)
+  const match = timeStr.match(/(\d+):(\d+)\s*(AM|PM)/i)
+  if (!match) return ''
+  let hours = parseInt(match[1], 10)
+  const minutes = parseInt(match[2], 10)
+  const ampm = match[3].toUpperCase()
+  if (ampm === 'PM' && hours !== 12) hours += 12
+  if (ampm === 'AM' && hours === 12) hours = 0
+  const d = new Date(year, month - 1, day, hours, minutes)
+  return d.toISOString()
+}
+
+// Format date for US display (MM/DD/YYYY, HH:MM AM/PM)
+function formatUSDateTime(iso: string): string {
+  if (!iso) return ''
+  const d = new Date(iso)
+  if (isNaN(d.getTime())) return ''
+  const dateStr = formatUSDate(iso)
+  const timeStr = formatTime12Hour(iso)
+  return `${dateStr}, ${timeStr}`
 }
 
 export default function DashboardPage() {
@@ -125,9 +234,13 @@ export default function DashboardPage() {
   const [isCreatingEvent, setIsCreatingEvent] = useState(false)
   const [evName, setEvName] = useState('')
   const [evTimezone, setEvTimezone] = useState('')
-  const [evStartsAtInput, setEvStartsAtInput] = useState('')
-  const [evEndsAtInput, setEvEndsAtInput] = useState('')
+  const [evStartDate, setEvStartDate] = useState('') // MM/DD/YYYY
+  const [evStartTime, setEvStartTime] = useState('12:00 PM')
+  const [evEndDate, setEvEndDate] = useState('') // MM/DD/YYYY
+  const [evEndTime, setEvEndTime] = useState('3:00 PM')
   const [evEventUrl, setEvEventUrl] = useState('')
+  const startDateRef = useRef<HTMLInputElement>(null)
+  const endDateRef = useRef<HTMLInputElement>(null)
   const [evImageUrl, setEvImageUrl] = useState<string>('')
   const [newImageFile, setNewImageFile] = useState<File | null>(null)
   const [hosts, setHosts] = useState<Host[]>([])
@@ -156,6 +269,29 @@ export default function DashboardPage() {
     comments: string
   }>({ full_name: '', email: '', status: 'PENDING', plus_ones: 0, comments: '' })
 
+  async function fetchEvent() {
+    if (!eventId) return
+    try {
+      const eventRes = await fetch(`/api/events/${eventId}?t=${Date.now()}`, {
+        cache: 'no-store'
+      })
+      if (!eventRes.ok) {
+        const errorText = await eventRes.text()
+        console.error('Failed to fetch event:', errorText)
+        setMessage(`Failed to load event: ${eventRes.status}`)
+        return
+      }
+      const eventData = await eventRes.json()
+      // DEBUG: Log what was received from API
+      console.log('[FRONTEND GET] Received sponsors:', JSON.stringify(eventData.sponsors, null, 2))
+      console.log('[FRONTEND GET] Received hosts:', JSON.stringify(eventData.hosts, null, 2))
+      setEvent(eventData)
+    } catch (err: any) {
+      console.error('Error fetching event:', err)
+      setMessage(`Error: ${err.message || 'Failed to fetch event'}`)
+    }
+  }
+
   useEffect(() => {
     if (!eventId) return
 
@@ -163,21 +299,8 @@ export default function DashboardPage() {
 
     ;(async () => {
       try {
-        // Fetch event from Neon API
-        const eventRes = await fetch(`/api/events/${eventId}`)
-        if (!eventRes.ok) {
-          const errorText = await eventRes.text()
-          console.error('Failed to fetch event:', errorText)
-          if (!cancelled) {
-            setMessage(`Failed to load event: ${eventRes.status}`)
-          }
-          return
-        }
-
-        const eventData = await eventRes.json()
-        if (!cancelled) {
-          setEvent(eventData)
-        }
+        await fetchEvent()
+        if (cancelled) return
 
         // Fetch join requests from Neon API
         const joinReqRes = await fetch(`/api/events/${eventId}/join-requests`)
@@ -312,17 +435,24 @@ export default function DashboardPage() {
     setModalError(null)
     // Support both legacy (name) and new (title) field names
     setEvName(event.title ?? event.name ?? '')
-    setEvTimezone(event.timezone ?? '')
+    setEvTimezone(event.timezone ?? 'America/New_York')
     // Support both legacy (starts_at) and new (start_date) field names
     const startDate = event.start_date ?? event.starts_at ?? ''
-    setEvStartsAtInput(formatLocalDDMMYYYYHHMM(startDate))
+    setEvStartDate(formatUSDate(startDate))
+    setEvStartTime(formatTime12Hour(startDate) || '12:00 PM')
     const endDate = event.end_date ?? ''
-    setEvEndsAtInput(endDate ? formatLocalDDMMYYYYHHMM(endDate) : '')
+    setEvEndDate(endDate ? formatUSDate(endDate) : '')
+    setEvEndTime(endDate ? formatTime12Hour(endDate) : '3:00 PM')
     setEvEventUrl(event.event_url ?? '')
     setEvImageUrl(event.image_url ?? '')
     setNewImageFile(null)
-    setHosts(Array.isArray(event.hosts) ? [...event.hosts] : [])
-    setSponsors(Array.isArray(event.sponsors) ? [...event.sponsors] : [])
+    const loadedHosts = Array.isArray(event.hosts) ? [...event.hosts] : []
+    const loadedSponsors = Array.isArray(event.sponsors) ? [...event.sponsors] : []
+    // DEBUG: Log what's being loaded into edit form
+    console.log('[FRONTEND EDIT OPEN] Loading sponsors into form:', JSON.stringify(loadedSponsors, null, 2))
+    console.log('[FRONTEND EDIT OPEN] Loading hosts into form:', JSON.stringify(loadedHosts, null, 2))
+    setHosts(loadedHosts)
+    setSponsors(loadedSponsors)
     setEvIsPrivate(event.is_private ?? false)
     setEvApproveMode(event.approve_mode ?? 'MANUAL')
     setEvStatus(event.status ?? 'DRAFT')
@@ -332,7 +462,7 @@ export default function DashboardPage() {
     setEvLocationStreet(loc?.street_address ?? '')
     setEvLocationCity(loc?.city ?? event.city ?? (typeof event.location === 'string' ? event.location : '') ?? '')
     setEvLocationState(loc?.state_province ?? '')
-    setEvLocationCountry(loc?.country ?? '')
+    setEvLocationCountry(loc?.country ?? 'USA')
     setIsEditingEvent(true)
   }
   function closeEditEvent() { setIsEditingEvent(false) }
@@ -340,9 +470,11 @@ export default function DashboardPage() {
   function openCreateEvent() {
     setModalError(null)
     setEvName('')
-    setEvTimezone('UTC')
-    setEvStartsAtInput('')
-    setEvEndsAtInput('')
+    setEvTimezone('America/New_York')
+    setEvStartDate('')
+    setEvStartTime('12:00 PM')
+    setEvEndDate('')
+    setEvEndTime('3:00 PM')
     setEvEventUrl('')
     setEvImageUrl('')
     setNewImageFile(null)
@@ -355,7 +487,7 @@ export default function DashboardPage() {
     setEvLocationStreet('')
     setEvLocationCity('')
     setEvLocationState('')
-    setEvLocationCountry('')
+    setEvLocationCountry('USA')
     setIsCreatingEvent(true)
   }
 
@@ -372,16 +504,22 @@ export default function DashboardPage() {
         return
       }
 
-      const startIso = parseFlexibleToISO(evStartsAtInput)
-      if (!startIso) {
-        setModalError('Start date & time is required (use "DD/MM/YYYY, HH:mm")')
+      if (!evStartDate.trim()) {
+        setModalError('Start date is required')
         setSaving(false)
         return
       }
 
-      const endIso = evEndsAtInput.trim() ? parseFlexibleToISO(evEndsAtInput) : null
-      if (evEndsAtInput.trim() && !endIso) {
-        setModalError('Invalid end date/time. Use "DD/MM/YYYY, HH:mm"')
+      const startIso = combineToISO(evStartDate, evStartTime)
+      if (!startIso) {
+        setModalError('Invalid start date or time')
+        setSaving(false)
+        return
+      }
+
+      const endIso = evEndDate.trim() ? combineToISO(evEndDate, evEndTime) : null
+      if (evEndDate.trim() && !endIso) {
+        setModalError('Invalid end date or time')
         setSaving(false)
         return
       }
@@ -415,6 +553,7 @@ export default function DashboardPage() {
             .map(s => ({
               title: (s.title ?? '').trim(),
               subtitle: (s.subtitle ?? '').trim() || undefined,
+              url: (s.url ?? '').trim() || undefined,
               logo_url: (s.logo_url ?? '').trim() || undefined,
               description: (s.description ?? '').trim() || undefined,
             }))
@@ -451,21 +590,73 @@ export default function DashboardPage() {
   }
   function addHost() { setHosts(prev => [...prev, { name: '', url: '' }]) }
   function removeHost(idx: number) { setHosts(prev => prev.filter((_,i)=> i!==idx)) }
+  function moveHostUp(idx: number) {
+    if (idx === 0) return
+    setHosts(prev => {
+      const copy = [...prev]
+      const temp = copy[idx - 1]
+      copy[idx - 1] = copy[idx]
+      copy[idx] = temp
+      return copy
+    })
+  }
+  function moveHostDown(idx: number) {
+    setHosts(prev => {
+      if (idx >= prev.length - 1) return prev
+      const copy = [...prev]
+      const temp = copy[idx + 1]
+      copy[idx + 1] = copy[idx]
+      copy[idx] = temp
+      return copy
+    })
+  }
 
   function updateSponsor(idx: number, patch: Partial<Sponsor>) {
     setSponsors(prev => prev.map((s,i)=> i===idx ? { ...s, ...patch } : s))
   }
-  function addSponsor() { setSponsors(prev => [...prev, { title: '', subtitle: '', logo_url: '', description: '' }]) }
+  function addSponsor() { setSponsors(prev => [...prev, { title: '', subtitle: '', url: '', logo_url: '', description: '' }]) }
   function removeSponsor(idx: number) { setSponsors(prev => prev.filter((_,i)=> i!==idx)) }
+  function moveSponsorUp(idx: number) {
+    if (idx === 0) return
+    setSponsors(prev => {
+      const copy = [...prev]
+      const temp = copy[idx - 1]
+      copy[idx - 1] = copy[idx]
+      copy[idx] = temp
+      return copy
+    })
+  }
+  function moveSponsorDown(idx: number) {
+    setSponsors(prev => {
+      if (idx >= prev.length - 1) return prev
+      const copy = [...prev]
+      const temp = copy[idx + 1]
+      copy[idx + 1] = copy[idx]
+      copy[idx] = temp
+      return copy
+    })
+  }
 
   async function uploadEventImageIfNeeded(evId: string | number): Promise<string | null> {
     if (!newImageFile) return null
-    const ext = newImageFile.name.split('.').pop() || 'jpg'
-    const path = `images/${evId}-${Date.now()}.${ext}`
-    const { error: upErr } = await supabase.storage.from('events').upload(path, newImageFile, { upsert: true, cacheControl: '3600' })
-    if (upErr) { throw upErr }
-    const { data } = supabase.storage.from('events').getPublicUrl(path)
-    return data.publicUrl
+
+    // Upload to Azure Blob Storage via API route
+    const formData = new FormData()
+    formData.append('file', newImageFile)
+    formData.append('eventId', String(evId))
+
+    const res = await fetch('/api/uploads/event-image', {
+      method: 'POST',
+      body: formData,
+    })
+
+    if (!res.ok) {
+      const error = await res.json()
+      throw new Error(error.error || 'Failed to upload image')
+    }
+
+    const data = await res.json()
+    return data.url
   }
 
   async function saveEvent() {
@@ -473,16 +664,22 @@ export default function DashboardPage() {
     setSaving(true)
     setModalError(null)
     try {
-      const startIso = parseFlexibleToISO(evStartsAtInput)
-      if (!startIso) {
-        setModalError('Invalid start date/time. Use "DD/MM/YYYY, HH:mm" or pick a valid value.')
+      if (!evStartDate.trim()) {
+        setModalError('Start date is required')
         setSaving(false)
         return
       }
 
-      const endIso = evEndsAtInput.trim() ? parseFlexibleToISO(evEndsAtInput) : null
-      if (evEndsAtInput.trim() && !endIso) {
-        setModalError('Invalid end date/time. Use "DD/MM/YYYY, HH:mm" or pick a valid value.')
+      const startIso = combineToISO(evStartDate, evStartTime)
+      if (!startIso) {
+        setModalError('Invalid start date or time')
+        setSaving(false)
+        return
+      }
+
+      const endIso = evEndDate.trim() ? combineToISO(evEndDate, evEndTime) : null
+      if (evEndDate.trim() && !endIso) {
+        setModalError('Invalid end date or time')
         setSaving(false)
         return
       }
@@ -517,15 +714,20 @@ export default function DashboardPage() {
         sponsors: sponsors
           .map(s => ({
             title: (s.title ?? '').trim(),
-            subtitle: (s.subtitle ?? '').trim() || undefined,
-            logo_url: (s.logo_url ?? '').trim() || undefined,
-            description: (s.description ?? '').trim() || undefined,
+            subtitle: (s.subtitle ?? '').trim() || null,
+            url: (s.url ?? '').trim() || null,
+            logo_url: (s.logo_url ?? '').trim() || null,
+            description: (s.description ?? '').trim() || null,
           }))
           .filter(s => s.title.length > 0),
         is_private: evIsPrivate,
         approve_mode: evApproveMode,
         status: evStatus,
       }
+
+      // DEBUG: Log payload before sending
+      console.log('[FRONTEND UPDATE] Payload sponsors:', JSON.stringify(payload.sponsors, null, 2));
+      console.log('[FRONTEND UPDATE] Payload hosts:', JSON.stringify(payload.hosts, null, 2));
 
       const res = await fetch('/api/events/update', {
         method: 'POST',
@@ -535,12 +737,8 @@ export default function DashboardPage() {
       const json = await res.json()
       if (!res.ok) throw new Error(json.error || 'Failed to update event')
 
-      // Refetch the event to get updated data
-      const refetchRes = await fetch(`/api/events/${event.id}`)
-      if (refetchRes.ok) {
-        const refetchData = await refetchRes.json()
-        setEvent(refetchData as EventRow)
-      }
+      // Refetch the event to get updated data (especially image_url)
+      await fetchEvent()
       setMessage('Event updated.')
       closeEditEvent()
     } catch (err: any) {
@@ -552,7 +750,7 @@ export default function DashboardPage() {
 
   if (!event) {
     return (
-      <main className="p-6 text-white">
+      <main className="p-6 bg-slate-950 text-slate-100" style={{ backgroundColor: '#020617', color: '#f1f5f9' }}>
         {message ? (
           <div>
             <p className="text-red-400 mb-4">{message}</p>
@@ -568,7 +766,7 @@ export default function DashboardPage() {
   }
 
   return (
-    <main className="p-6 w-full space-y-6 text-white">
+    <main className="p-6 w-full space-y-6 bg-slate-950 text-slate-100" style={{ backgroundColor: '#020617', color: '#f1f5f9' }}>
       {/* HEADER */}
       <header className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div className="flex items-start gap-3 min-w-0 flex-1">
@@ -590,6 +788,17 @@ export default function DashboardPage() {
                     <span key={`${h.name}-${i}`}>
                       {h.url ? (<a href={h.url} target="_blank" rel="noreferrer" className="underline hover:text-slate-100">{h.name}</a>) : (<span>{h.name}</span>)}
                       {i < event.hosts!.length - 1 ? ', ' : ''}
+                    </span>
+                  ))}
+                </span>
+              )}
+              {Array.isArray(event.sponsors) && event.sponsors.length > 0 && (
+                <span className="truncate">
+                  <span className="text-slate-400">Sponsors:</span>{' '}
+                  {event.sponsors.map((s, i) => (
+                    <span key={`${s.title}-${i}`}>
+                      {s.url ? (<a href={s.url} target="_blank" rel="noreferrer" className="underline hover:text-slate-100">{s.title}</a>) : (<span>{s.title}</span>)}
+                      {i < event.sponsors!.length - 1 ? ', ' : ''}
                     </span>
                   ))}
                 </span>
@@ -639,9 +848,9 @@ export default function DashboardPage() {
 
       {isAdding && (
         <form onSubmit={handleCreateGuest} className="mt-3 grid grid-cols-1 md:grid-cols-6 gap-3 p-3 border rounded bg-slate-900/30">
-          <input required value={newGuest.full_name} onChange={e=>setNewGuest(s=>({...s,full_name:e.target.value}))} placeholder="Full name" className="p-2 rounded border bg-transparent md:col-span-2" />
-          <input required type="email" value={newGuest.email} onChange={e=>setNewGuest(s=>({...s,email:e.target.value}))} placeholder="Email" className="p-2 rounded border bg-transparent md:col-span-2" />
-          <select value={newGuest.status} onChange={e=>setNewGuest(s=>({...s,status:e.target.value as NeonStatus}))} className="p-2 rounded border bg-transparent md:col-span-2">
+          <input required value={newGuest.full_name} onChange={e=>setNewGuest(s=>({...s,full_name:e.target.value}))} placeholder="Full name" className="p-2 rounded border bg-slate-900 text-slate-100 md:col-span-2" style={{ backgroundColor: '#0f172a', color: '#f1f5f9' }} />
+          <input required type="email" value={newGuest.email} onChange={e=>setNewGuest(s=>({...s,email:e.target.value}))} placeholder="Email" className="p-2 rounded border bg-slate-900 text-slate-100 md:col-span-2" style={{ backgroundColor: '#0f172a', color: '#f1f5f9' }} />
+          <select value={newGuest.status} onChange={e=>setNewGuest(s=>({...s,status:e.target.value as NeonStatus}))} className="p-2 rounded border bg-slate-900 text-slate-100 md:col-span-2" style={{ backgroundColor: '#0f172a', color: '#f1f5f9' }}>
             {(Object.keys(STATUS_LABEL) as NeonStatus[]).map(s=> <option key={s} value={s}>{STATUS_LABEL[s]}</option>)}
           </select>
           <div className="flex items-center gap-2 md:col-span-2">
@@ -650,7 +859,7 @@ export default function DashboardPage() {
             <span className="min-w-6 text-center">{newGuest.plus_ones}</span>
             <button type="button" className="px-2 py-1 rounded border hover:bg-slate-900" onClick={()=>setNewGuest(s=>({...s,plus_ones: s.plus_ones+1}))}>＋</button>
           </div>
-          <input value={newGuest.comments} onChange={e=>setNewGuest(s=>({...s,comments:e.target.value}))} placeholder="Comments (e.g., invited by …)" className="p-2 rounded border bg-transparent md:col-span-4" />
+          <input value={newGuest.comments} onChange={e=>setNewGuest(s=>({...s,comments:e.target.value}))} placeholder="Comments (e.g., invited by …)" className="p-2 rounded border bg-slate-900 text-slate-100 md:col-span-4" style={{ backgroundColor: '#0f172a', color: '#f1f5f9' }} />
           <div className="md:col-span-2 flex justify-end">
             <button type="submit" className="px-3 py-2 rounded border bg-blue-700 hover:bg-blue-600">Save</button>
           </div>
@@ -659,8 +868,8 @@ export default function DashboardPage() {
 
       {/* CONTROLS */}
       <section className="flex gap-3 items-center">
-        <input value={q} onChange={e=>setQ(e.target.value)} placeholder="Search name or email…" className="flex-1 p-2 rounded border bg-transparent" />
-        <select value={sortKey} onChange={e=>setSortKey(e.target.value as any)} className="p-2 rounded border bg-transparent">
+        <input value={q} onChange={e=>setQ(e.target.value)} placeholder="Search name or email…" className="flex-1 p-2 rounded border bg-slate-900 text-slate-100" style={{ backgroundColor: '#0f172a', color: '#f1f5f9' }} />
+        <select value={sortKey} onChange={e=>setSortKey(e.target.value as any)} className="p-2 rounded border bg-slate-900 text-slate-100" style={{ backgroundColor: '#0f172a', color: '#f1f5f9' }}>
           <option value="name">Sort: name</option>
           <option value="status">Sort: status</option>
           <option value="plus_ones">Sort: plus-ones</option>
@@ -716,7 +925,8 @@ export default function DashboardPage() {
                     readOnly
                     onClick={() => { setCommentGuest(g); setCommentDraft(g.comments ?? '') }}
                     placeholder="Add a note…"
-                    className="w-full p-1 rounded border bg-transparent cursor-pointer"
+                    className="w-full p-1 rounded border bg-slate-900 text-slate-100 cursor-pointer"
+                    style={{ backgroundColor: '#0f172a', color: '#f1f5f9' }}
                     title={g.comments ?? ''}
                   />
                 </td>
@@ -737,12 +947,12 @@ export default function DashboardPage() {
       {commentGuest && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
           <div className="absolute inset-0 bg-black/60" onClick={closeCommentModal} />
-          <div className="relative z-10 w-[min(800px,92vw)] max-h-[88vh] bg-slate-900 border border-slate-700 rounded-xl p-4 shadow-xl">
+          <div className="relative z-10 w-[min(800px,92vw)] max-h-[88vh] bg-slate-900 border border-slate-700 rounded-xl p-4 shadow-xl text-slate-100" style={{ backgroundColor: '#0f172a', color: '#f1f5f9' }}>
             <div className="flex items-center justify-between mb-3">
               <h2 className="text-lg font-semibold">Edit note — {commentGuest.full_name}</h2>
               <button className="px-3 py-1 rounded border hover:bg-slate-800" onClick={closeCommentModal}>Close (Esc)</button>
             </div>
-            <textarea value={commentDraft} onChange={(e) => setCommentDraft(e.target.value)} rows={10} className="w-full p-3 rounded border bg-transparent resize-y" placeholder="Type your note…" />
+            <textarea value={commentDraft} onChange={(e) => setCommentDraft(e.target.value)} rows={10} className="w-full p-3 rounded border bg-slate-900 text-slate-100 resize-y" style={{ backgroundColor: '#0f172a', color: '#f1f5f9' }} placeholder="Type your note…" />
             <div className="mt-4 flex items-center justify-end gap-2">
               <button className="px-3 py-2 rounded border hover:bg-slate-800" onClick={saveCommentModal}>Save</button>
             </div>
@@ -754,7 +964,7 @@ export default function DashboardPage() {
       {isEditingEvent && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
           <div className="absolute inset-0 bg-black/60" onClick={closeEditEvent} />
-          <div className="relative z-10 w-[min(900px,95vw)] max-h-[92vh] overflow-auto bg-slate-900 border border-slate-700 rounded-xl p-5 shadow-xl space-y-4">
+          <div className="relative z-10 w-[min(900px,95vw)] max-h-[92vh] overflow-auto bg-slate-900 border border-slate-700 rounded-xl p-5 shadow-xl space-y-4 text-slate-100" style={{ backgroundColor: '#0f172a', color: '#f1f5f9' }}>
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-semibold">Edit event</h2>
               <button className="px-3 py-1 rounded border hover:bg-slate-800" onClick={closeEditEvent}>Close</button>
@@ -765,11 +975,11 @@ export default function DashboardPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <label className="text-sm md:col-span-2">
                 Event title <span className="text-red-400">*</span>
-                <input value={evName} onChange={e=>setEvName(e.target.value)} className="mt-1 w-full p-2 rounded border bg-transparent" required />
+                <input value={evName} onChange={e=>setEvName(e.target.value)} className="mt-1 w-full p-2 rounded border bg-slate-900 text-slate-100" style={{ backgroundColor: '#0f172a', color: '#f1f5f9' }} required />
               </label>
 
-              <label className="text-sm">Status
-                <select value={evStatus} onChange={e=>setEvStatus(e.target.value as EventStatus)} className="mt-1 w-full p-2 rounded border bg-transparent">
+              <label className="text-sm">Event status
+                <select value={evStatus} onChange={e=>setEvStatus(e.target.value as EventStatus)} className="mt-1 w-full p-2 rounded border bg-slate-900 text-slate-100" style={{ backgroundColor: '#0f172a', color: '#f1f5f9' }}>
                   <option value="DRAFT">Draft</option>
                   <option value="PUBLISHED">Published</option>
                   <option value="COMPLETE">Complete</option>
@@ -777,8 +987,8 @@ export default function DashboardPage() {
                 </select>
               </label>
 
-              <label className="text-sm">Approve Mode
-                <select value={evApproveMode} onChange={e=>setEvApproveMode(e.target.value as ApproveMode)} className="mt-1 w-full p-2 rounded border bg-transparent">
+              <label className="text-sm">Guest approval mode
+                <select value={evApproveMode} onChange={e=>setEvApproveMode(e.target.value as ApproveMode)} className="mt-1 w-full p-2 rounded border bg-slate-900 text-slate-100" style={{ backgroundColor: '#0f172a', color: '#f1f5f9' }}>
                   <option value="MANUAL">Manual</option>
                   <option value="AUTO">Auto</option>
                 </select>
@@ -789,21 +999,86 @@ export default function DashboardPage() {
                 <span>Private event</span>
               </label>
 
-              <label className="text-sm">
-                Start date & time <span className="text-red-400">*</span>
-                <input value={evStartsAtInput} onChange={e=>setEvStartsAtInput(e.target.value)} className="mt-1 w-full p-2 rounded border bg-transparent" placeholder="dd/mm/yyyy, hh:mm" required />
-              </label>
+              <div className="space-y-2">
+                <label className="text-sm">
+                  Start date <span className="text-red-400">*</span>
+                  <input
+                    type="text"
+                    value={evStartDate}
+                    placeholder="MM/DD/YYYY"
+                    onClick={() => startDateRef.current?.showPicker()}
+                    readOnly
+                    className="mt-1 w-full p-2 rounded border bg-slate-900 text-slate-100 cursor-pointer"
+                    style={{ backgroundColor: '#0f172a', color: '#f1f5f9' }}
+                    required
+                  />
+                  <input
+                    ref={startDateRef}
+                    type="date"
+                    className="hidden"
+                    onChange={(e) => setEvStartDate(isoDateToUS(e.target.value))}
+                  />
+                </label>
+                <label className="text-sm">
+                  Start time <span className="text-red-400">*</span>
+                  <select
+                    value={evStartTime}
+                    onChange={e => setEvStartTime(e.target.value)}
+                    className="mt-1 w-full p-2 rounded border bg-slate-900 text-slate-100"
+                    style={{ backgroundColor: '#0f172a', color: '#f1f5f9' }}
+                    required
+                  >
+                    {generateTimeOptions().map(t => (
+                      <option key={t} value={t}>{t}</option>
+                    ))}
+                  </select>
+                </label>
+              </div>
 
-              <label className="text-sm">End date & time
-                <input value={evEndsAtInput} onChange={e=>setEvEndsAtInput(e.target.value)} className="mt-1 w-full p-2 rounded border bg-transparent" placeholder="dd/mm/yyyy, hh:mm" />
-              </label>
+              <div className="space-y-2">
+                <label className="text-sm">
+                  End date
+                  <input
+                    type="text"
+                    value={evEndDate}
+                    placeholder="MM/DD/YYYY"
+                    onClick={() => endDateRef.current?.showPicker()}
+                    readOnly
+                    className="mt-1 w-full p-2 rounded border bg-slate-900 text-slate-100 cursor-pointer"
+                    style={{ backgroundColor: '#0f172a', color: '#f1f5f9' }}
+                  />
+                  <input
+                    ref={endDateRef}
+                    type="date"
+                    className="hidden"
+                    onChange={(e) => setEvEndDate(isoDateToUS(e.target.value))}
+                  />
+                </label>
+                <label className="text-sm">
+                  End time
+                  <select
+                    value={evEndTime}
+                    onChange={e => setEvEndTime(e.target.value)}
+                    className="mt-1 w-full p-2 rounded border bg-slate-900 text-slate-100"
+                    style={{ backgroundColor: '#0f172a', color: '#f1f5f9' }}
+                  >
+                    {generateTimeOptions().map(t => (
+                      <option key={t} value={t}>{t}</option>
+                    ))}
+                  </select>
+                </label>
+              </div>
 
               <label className="text-sm">Timezone
-                <input value={evTimezone} onChange={e=>setEvTimezone(e.target.value)} className="mt-1 w-full p-2 rounded border bg-transparent" placeholder="UTC, America/Los_Angeles, etc." />
+                <select value={evTimezone} onChange={e=>setEvTimezone(e.target.value)} className="mt-1 w-full p-2 rounded border bg-slate-900 text-slate-100" style={{ backgroundColor: '#0f172a', color: '#f1f5f9' }}>
+                  {TIMEZONES.map(tz => (
+                    <option key={tz} value={tz}>{tz}</option>
+                  ))}
+                </select>
               </label>
 
               <label className="text-sm md:col-span-2">Event link (Luma / Eventbrite / site)
-                <input value={evEventUrl} onChange={e=>setEvEventUrl(e.target.value)} className="mt-1 w-full p-2 rounded border bg-transparent" placeholder="https://…" />
+                <input value={evEventUrl} onChange={e=>setEvEventUrl(e.target.value)} className="mt-1 w-full p-2 rounded border bg-slate-900 text-slate-100" style={{ backgroundColor: '#0f172a', color: '#f1f5f9' }} placeholder="https://…" />
               </label>
 
               {/* Location */}
@@ -811,19 +1086,24 @@ export default function DashboardPage() {
                 <div className="text-sm font-medium mb-2">Location</div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <label className="text-sm">Venue name
-                    <input value={evLocationVenue} onChange={e=>setEvLocationVenue(e.target.value)} className="mt-1 w-full p-2 rounded border bg-transparent" placeholder="Conference center, hotel, etc." />
+                    <input value={evLocationVenue} onChange={e=>setEvLocationVenue(e.target.value)} className="mt-1 w-full p-2 rounded border bg-slate-900 text-slate-100" style={{ backgroundColor: '#0f172a', color: '#f1f5f9' }} placeholder="Conference center, hotel, etc." />
                   </label>
                   <label className="text-sm">Street address
-                    <input value={evLocationStreet} onChange={e=>setEvLocationStreet(e.target.value)} className="mt-1 w-full p-2 rounded border bg-transparent" placeholder="123 Main St" />
+                    <input value={evLocationStreet} onChange={e=>setEvLocationStreet(e.target.value)} className="mt-1 w-full p-2 rounded border bg-slate-900 text-slate-100" style={{ backgroundColor: '#0f172a', color: '#f1f5f9' }} placeholder="123 Main St" />
                   </label>
                   <label className="text-sm">City
-                    <input value={evLocationCity} onChange={e=>setEvLocationCity(e.target.value)} className="mt-1 w-full p-2 rounded border bg-transparent" placeholder="San Francisco" />
+                    <input value={evLocationCity} onChange={e=>setEvLocationCity(e.target.value)} className="mt-1 w-full p-2 rounded border bg-slate-900 text-slate-100" style={{ backgroundColor: '#0f172a', color: '#f1f5f9' }} placeholder="San Francisco" />
                   </label>
-                  <label className="text-sm">State / Province
-                    <input value={evLocationState} onChange={e=>setEvLocationState(e.target.value)} className="mt-1 w-full p-2 rounded border bg-transparent" placeholder="CA" />
+                  <label className="text-sm">State
+                    <select value={evLocationState} onChange={e=>setEvLocationState(e.target.value)} className="mt-1 w-full p-2 rounded border bg-slate-900 text-slate-100" style={{ backgroundColor: '#0f172a', color: '#f1f5f9' }}>
+                      <option value="">Select state...</option>
+                      {US_STATES.map(state => (
+                        <option key={state.code} value={state.code}>{state.name}</option>
+                      ))}
+                    </select>
                   </label>
                   <label className="text-sm md:col-span-2">Country
-                    <input value={evLocationCountry} onChange={e=>setEvLocationCountry(e.target.value)} className="mt-1 w-full p-2 rounded border bg-transparent" placeholder="USA" />
+                    <input value="USA" readOnly className="mt-1 w-full p-2 rounded border bg-slate-800 text-slate-400" />
                   </label>
                 </div>
               </div>
@@ -858,13 +1138,19 @@ export default function DashboardPage() {
               {/* Hosts */}
               <div className="md:col-span-2">
                 <div className="text-sm mb-2">Hosts</div>
-                <div className="space-y-2">
+                <div className="space-y-3">
                   {hosts.map((h, idx) => (
-                    <div key={idx} className="grid grid-cols-1 md:grid-cols-5 gap-2">
-                      <input value={h.name ?? ''} onChange={e=>updateHost(idx,{name:e.target.value})} placeholder="Host name" className="p-2 rounded border bg-transparent md:col-span-2" />
-                      <input value={h.url ?? ''} onChange={e=>updateHost(idx,{url:e.target.value})} placeholder="Host website / link" className="p-2 rounded border bg-transparent md:col-span-2" />
-                      <div className="md:col-span-1 flex justify-end">
-                        <button type="button" className="px-3 py-2 rounded border hover:bg-slate-800" onClick={()=>removeHost(idx)}>Remove</button>
+                    <div key={idx} className="flex gap-2 items-start">
+                      <div className="flex flex-col gap-1 pt-3">
+                        <button type="button" className="px-2 py-1 rounded border hover:bg-slate-800 text-xs" onClick={()=>moveHostUp(idx)} disabled={idx === 0} title="Move up">↑</button>
+                        <button type="button" className="px-2 py-1 rounded border hover:bg-slate-800 text-xs" onClick={()=>moveHostDown(idx)} disabled={idx === hosts.length - 1} title="Move down">↓</button>
+                      </div>
+                      <div className="flex-1 p-3 border border-slate-700 rounded space-y-2">
+                        <input value={h.name ?? ''} onChange={e=>updateHost(idx,{name:e.target.value})} placeholder="Host name" className="w-full p-2 rounded border bg-slate-900 text-slate-100" style={{ backgroundColor: '#0f172a', color: '#f1f5f9' }} />
+                        <input value={h.url ?? ''} onChange={e=>updateHost(idx,{url:e.target.value})} placeholder="Profile URL (optional)" className="w-full p-2 rounded border bg-slate-900 text-slate-100" style={{ backgroundColor: '#0f172a', color: '#f1f5f9' }} />
+                        <div className="flex justify-end">
+                          <button type="button" className="px-3 py-2 rounded border hover:bg-slate-800" onClick={()=>removeHost(idx)}>Remove</button>
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -877,13 +1163,100 @@ export default function DashboardPage() {
                 <div className="text-sm mb-2">Sponsors</div>
                 <div className="space-y-3">
                   {sponsors.map((s, idx) => (
-                    <div key={idx} className="grid grid-cols-1 md:grid-cols-6 gap-2 p-3 border border-slate-700 rounded">
-                      <input value={s.title ?? ''} onChange={e=>updateSponsor(idx,{title:e.target.value})} placeholder="Sponsor name" className="p-2 rounded border bg-transparent md:col-span-2" />
-                      <input value={s.subtitle ?? ''} onChange={e=>updateSponsor(idx,{subtitle:e.target.value})} placeholder="Subtitle (optional)" className="p-2 rounded border bg-transparent md:col-span-2" />
-                      <input value={s.logo_url ?? ''} onChange={e=>updateSponsor(idx,{logo_url:e.target.value})} placeholder="Logo URL (optional)" className="p-2 rounded border bg-transparent md:col-span-2" />
-                      <textarea value={s.description ?? ''} onChange={e=>updateSponsor(idx,{description:e.target.value})} placeholder="Description (optional)" rows={2} className="p-2 rounded border bg-transparent md:col-span-5 resize-y" />
-                      <div className="md:col-span-1 flex justify-end items-start">
-                        <button type="button" className="px-3 py-2 rounded border hover:bg-slate-800" onClick={()=>removeSponsor(idx)}>Remove</button>
+                    <div key={idx} className="flex gap-2 items-start">
+                      <div className="flex flex-col gap-1 pt-3">
+                        <button type="button" className="px-2 py-1 rounded border hover:bg-slate-800 text-xs" onClick={()=>moveSponsorUp(idx)} disabled={idx === 0} title="Move up">↑</button>
+                        <button type="button" className="px-2 py-1 rounded border hover:bg-slate-800 text-xs" onClick={()=>moveSponsorDown(idx)} disabled={idx === sponsors.length - 1} title="Move down">↓</button>
+                      </div>
+                      <div className="flex-1 p-3 border border-slate-700 rounded space-y-3">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          <div>
+                            <input value={s.title ?? ''} onChange={e=>{
+                              const val = e.target.value
+                              if (val.length <= 60) updateSponsor(idx,{title:val})
+                            }} placeholder="Sponsor name" maxLength={60} className="w-full p-2 rounded border bg-slate-900 text-slate-100" style={{ backgroundColor: '#0f172a', color: '#f1f5f9' }} />
+                            <div className="text-xs text-slate-400 mt-1">{(s.title ?? '').length} / 60 characters</div>
+                          </div>
+                          <div>
+                            <input value={s.subtitle ?? ''} onChange={e=>{
+                              const val = e.target.value
+                              if (val.length <= 80) updateSponsor(idx,{subtitle:val})
+                            }} placeholder="Subtitle (optional)" maxLength={80} className="w-full p-2 rounded border bg-slate-900 text-slate-100" style={{ backgroundColor: '#0f172a', color: '#f1f5f9' }} />
+                            <div className="text-xs text-slate-400 mt-1">{(s.subtitle ?? '').length} / 80 characters</div>
+                          </div>
+                        </div>
+
+                        <div>
+                          <input value={s.url ?? ''} onChange={e=>updateSponsor(idx,{url:e.target.value})} placeholder="Sponsor website / link (optional)" className="w-full p-2 rounded border bg-slate-900 text-slate-100" style={{ backgroundColor: '#0f172a', color: '#f1f5f9' }} />
+                        </div>
+
+                        <div>
+                          <textarea
+                            ref={(el) => {
+                              if (el) {
+                                el.style.height = 'auto'
+                                el.style.height = el.scrollHeight + 'px'
+                              }
+                            }}
+                            value={s.description ?? ''}
+                            onChange={e=>updateSponsor(idx,{description:e.target.value})}
+                            onInput={(e) => {
+                              const target = e.target as HTMLTextAreaElement
+                              target.style.height = 'auto'
+                              target.style.height = target.scrollHeight + 'px'
+                            }}
+                            placeholder="Description (optional)"
+                            rows={2}
+                            className="w-full p-2 rounded border bg-slate-900 text-slate-100 resize-none overflow-hidden"
+                            style={{ backgroundColor: '#0f172a', color: '#f1f5f9' }}
+                          />
+                          <div className="text-xs text-slate-400 mt-1">{(s.description ?? '').length} characters</div>
+                        </div>
+
+                        <div>
+                          <div className="text-sm mb-1">Sponsor logo (optional)</div>
+                          <div className="flex items-center gap-4">
+                            <div className="w-24 h-24 rounded-lg border border-slate-700 overflow-hidden bg-slate-800 flex items-center justify-center">
+                              {s.logo_url ? (
+                                <img src={s.logo_url} className="w-full h-full object-contain" alt="Sponsor logo" />
+                              ) : (
+                                <span className="text-xs text-slate-400">No image</span>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <label className="px-3 py-2 rounded border cursor-pointer hover:bg-slate-800">
+                                Choose file
+                                <input type="file" accept="image/*" className="hidden" onChange={async (e) => {
+                                  const file = e.target.files?.[0]
+                                  if (!file) return
+                                  try {
+                                    const formData = new FormData()
+                                    formData.append('file', file)
+                                    formData.append('eventId', String(event?.id ?? 0))
+                                    const res = await fetch('/api/uploads/event-image', {
+                                      method: 'POST',
+                                      body: formData,
+                                    })
+                                    if (!res.ok) throw new Error('Upload failed')
+                                    const data = await res.json()
+                                    updateSponsor(idx, { logo_url: data.url })
+                                  } catch (err) {
+                                    console.error('Logo upload failed:', err)
+                                  }
+                                }} />
+                              </label>
+                              {s.logo_url && (
+                                <button type="button" className="px-3 py-2 rounded border hover:bg-slate-800" onClick={() => updateSponsor(idx, { logo_url: '' })}>
+                                  Remove
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex justify-end">
+                          <button type="button" className="px-3 py-2 rounded border hover:bg-slate-800" onClick={()=>removeSponsor(idx)}>Remove sponsor</button>
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -915,11 +1288,11 @@ export default function DashboardPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <label className="text-sm md:col-span-2">
                 Event title <span className="text-red-400">*</span>
-                <input value={evName} onChange={e=>setEvName(e.target.value)} className="mt-1 w-full p-2 rounded border bg-transparent" required />
+                <input value={evName} onChange={e=>setEvName(e.target.value)} className="mt-1 w-full p-2 rounded border bg-slate-900 text-slate-100" style={{ backgroundColor: '#0f172a', color: '#f1f5f9' }} required />
               </label>
 
-              <label className="text-sm">Status
-                <select value={evStatus} onChange={e=>setEvStatus(e.target.value as EventStatus)} className="mt-1 w-full p-2 rounded border bg-transparent">
+              <label className="text-sm">Event status
+                <select value={evStatus} onChange={e=>setEvStatus(e.target.value as EventStatus)} className="mt-1 w-full p-2 rounded border bg-slate-900 text-slate-100" style={{ backgroundColor: '#0f172a', color: '#f1f5f9' }}>
                   <option value="DRAFT">Draft</option>
                   <option value="PUBLISHED">Published</option>
                   <option value="COMPLETE">Complete</option>
@@ -927,8 +1300,8 @@ export default function DashboardPage() {
                 </select>
               </label>
 
-              <label className="text-sm">Approve Mode
-                <select value={evApproveMode} onChange={e=>setEvApproveMode(e.target.value as ApproveMode)} className="mt-1 w-full p-2 rounded border bg-transparent">
+              <label className="text-sm">Guest approval mode
+                <select value={evApproveMode} onChange={e=>setEvApproveMode(e.target.value as ApproveMode)} className="mt-1 w-full p-2 rounded border bg-slate-900 text-slate-100" style={{ backgroundColor: '#0f172a', color: '#f1f5f9' }}>
                   <option value="MANUAL">Manual</option>
                   <option value="AUTO">Auto</option>
                 </select>
@@ -939,21 +1312,86 @@ export default function DashboardPage() {
                 <span>Private event</span>
               </label>
 
-              <label className="text-sm">
-                Start date & time <span className="text-red-400">*</span>
-                <input value={evStartsAtInput} onChange={e=>setEvStartsAtInput(e.target.value)} className="mt-1 w-full p-2 rounded border bg-transparent" placeholder="dd/mm/yyyy, hh:mm" required />
-              </label>
+              <div className="space-y-2">
+                <label className="text-sm">
+                  Start date <span className="text-red-400">*</span>
+                  <input
+                    type="text"
+                    value={evStartDate}
+                    placeholder="MM/DD/YYYY"
+                    onClick={() => startDateRef.current?.showPicker()}
+                    readOnly
+                    className="mt-1 w-full p-2 rounded border bg-slate-900 text-slate-100 cursor-pointer"
+                    style={{ backgroundColor: '#0f172a', color: '#f1f5f9' }}
+                    required
+                  />
+                  <input
+                    ref={startDateRef}
+                    type="date"
+                    className="hidden"
+                    onChange={(e) => setEvStartDate(isoDateToUS(e.target.value))}
+                  />
+                </label>
+                <label className="text-sm">
+                  Start time <span className="text-red-400">*</span>
+                  <select
+                    value={evStartTime}
+                    onChange={e => setEvStartTime(e.target.value)}
+                    className="mt-1 w-full p-2 rounded border bg-slate-900 text-slate-100"
+                    style={{ backgroundColor: '#0f172a', color: '#f1f5f9' }}
+                    required
+                  >
+                    {generateTimeOptions().map(t => (
+                      <option key={t} value={t}>{t}</option>
+                    ))}
+                  </select>
+                </label>
+              </div>
 
-              <label className="text-sm">End date & time
-                <input value={evEndsAtInput} onChange={e=>setEvEndsAtInput(e.target.value)} className="mt-1 w-full p-2 rounded border bg-transparent" placeholder="dd/mm/yyyy, hh:mm" />
-              </label>
+              <div className="space-y-2">
+                <label className="text-sm">
+                  End date
+                  <input
+                    type="text"
+                    value={evEndDate}
+                    placeholder="MM/DD/YYYY"
+                    onClick={() => endDateRef.current?.showPicker()}
+                    readOnly
+                    className="mt-1 w-full p-2 rounded border bg-slate-900 text-slate-100 cursor-pointer"
+                    style={{ backgroundColor: '#0f172a', color: '#f1f5f9' }}
+                  />
+                  <input
+                    ref={endDateRef}
+                    type="date"
+                    className="hidden"
+                    onChange={(e) => setEvEndDate(isoDateToUS(e.target.value))}
+                  />
+                </label>
+                <label className="text-sm">
+                  End time
+                  <select
+                    value={evEndTime}
+                    onChange={e => setEvEndTime(e.target.value)}
+                    className="mt-1 w-full p-2 rounded border bg-slate-900 text-slate-100"
+                    style={{ backgroundColor: '#0f172a', color: '#f1f5f9' }}
+                  >
+                    {generateTimeOptions().map(t => (
+                      <option key={t} value={t}>{t}</option>
+                    ))}
+                  </select>
+                </label>
+              </div>
 
               <label className="text-sm md:col-span-2">Timezone
-                <input value={evTimezone} onChange={e=>setEvTimezone(e.target.value)} className="mt-1 w-full p-2 rounded border bg-transparent" placeholder="UTC, America/Los_Angeles, etc." />
+                <select value={evTimezone} onChange={e=>setEvTimezone(e.target.value)} className="mt-1 w-full p-2 rounded border bg-slate-900 text-slate-100" style={{ backgroundColor: '#0f172a', color: '#f1f5f9' }}>
+                  {TIMEZONES.map(tz => (
+                    <option key={tz} value={tz}>{tz}</option>
+                  ))}
+                </select>
               </label>
 
               <label className="text-sm md:col-span-2">Event link (Luma / Eventbrite / site)
-                <input value={evEventUrl} onChange={e=>setEvEventUrl(e.target.value)} className="mt-1 w-full p-2 rounded border bg-transparent" placeholder="https://…" />
+                <input value={evEventUrl} onChange={e=>setEvEventUrl(e.target.value)} className="mt-1 w-full p-2 rounded border bg-slate-900 text-slate-100" style={{ backgroundColor: '#0f172a', color: '#f1f5f9' }} placeholder="https://…" />
               </label>
 
               {/* Location */}
@@ -961,19 +1399,24 @@ export default function DashboardPage() {
                 <div className="text-sm font-medium mb-2">Location</div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <label className="text-sm">Venue name
-                    <input value={evLocationVenue} onChange={e=>setEvLocationVenue(e.target.value)} className="mt-1 w-full p-2 rounded border bg-transparent" placeholder="Conference center, hotel, etc." />
+                    <input value={evLocationVenue} onChange={e=>setEvLocationVenue(e.target.value)} className="mt-1 w-full p-2 rounded border bg-slate-900 text-slate-100" style={{ backgroundColor: '#0f172a', color: '#f1f5f9' }} placeholder="Conference center, hotel, etc." />
                   </label>
                   <label className="text-sm">Street address
-                    <input value={evLocationStreet} onChange={e=>setEvLocationStreet(e.target.value)} className="mt-1 w-full p-2 rounded border bg-transparent" placeholder="123 Main St" />
+                    <input value={evLocationStreet} onChange={e=>setEvLocationStreet(e.target.value)} className="mt-1 w-full p-2 rounded border bg-slate-900 text-slate-100" style={{ backgroundColor: '#0f172a', color: '#f1f5f9' }} placeholder="123 Main St" />
                   </label>
                   <label className="text-sm">City
-                    <input value={evLocationCity} onChange={e=>setEvLocationCity(e.target.value)} className="mt-1 w-full p-2 rounded border bg-transparent" placeholder="San Francisco" />
+                    <input value={evLocationCity} onChange={e=>setEvLocationCity(e.target.value)} className="mt-1 w-full p-2 rounded border bg-slate-900 text-slate-100" style={{ backgroundColor: '#0f172a', color: '#f1f5f9' }} placeholder="San Francisco" />
                   </label>
-                  <label className="text-sm">State / Province
-                    <input value={evLocationState} onChange={e=>setEvLocationState(e.target.value)} className="mt-1 w-full p-2 rounded border bg-transparent" placeholder="CA" />
+                  <label className="text-sm">State
+                    <select value={evLocationState} onChange={e=>setEvLocationState(e.target.value)} className="mt-1 w-full p-2 rounded border bg-slate-900 text-slate-100" style={{ backgroundColor: '#0f172a', color: '#f1f5f9' }}>
+                      <option value="">Select state...</option>
+                      {US_STATES.map(state => (
+                        <option key={state.code} value={state.code}>{state.name}</option>
+                      ))}
+                    </select>
                   </label>
                   <label className="text-sm md:col-span-2">Country
-                    <input value={evLocationCountry} onChange={e=>setEvLocationCountry(e.target.value)} className="mt-1 w-full p-2 rounded border bg-transparent" placeholder="USA" />
+                    <input value="USA" readOnly className="mt-1 w-full p-2 rounded border bg-slate-800 text-slate-400" />
                   </label>
                 </div>
               </div>
@@ -1006,11 +1449,17 @@ export default function DashboardPage() {
                 <div className="text-sm mb-2">Hosts</div>
                 <div className="space-y-3">
                   {hosts.map((h, idx) => (
-                    <div key={idx} className="grid grid-cols-1 md:grid-cols-5 gap-2 p-3 border border-slate-700 rounded">
-                      <input value={h.name ?? ''} onChange={e=>updateHost(idx,{name:e.target.value})} placeholder="Host name" className="p-2 rounded border bg-transparent md:col-span-2" />
-                      <input value={h.url ?? ''} onChange={e=>updateHost(idx,{url:e.target.value})} placeholder="Profile URL (optional)" className="p-2 rounded border bg-transparent md:col-span-2" />
-                      <div className="md:col-span-1 flex justify-end">
-                        <button type="button" className="px-3 py-2 rounded border hover:bg-slate-800" onClick={()=>removeHost(idx)}>Remove</button>
+                    <div key={idx} className="flex gap-2 items-start">
+                      <div className="flex flex-col gap-1 pt-3">
+                        <button type="button" className="px-2 py-1 rounded border hover:bg-slate-800 text-xs" onClick={()=>moveHostUp(idx)} disabled={idx === 0} title="Move up">↑</button>
+                        <button type="button" className="px-2 py-1 rounded border hover:bg-slate-800 text-xs" onClick={()=>moveHostDown(idx)} disabled={idx === hosts.length - 1} title="Move down">↓</button>
+                      </div>
+                      <div className="flex-1 grid grid-cols-1 md:grid-cols-5 gap-2 p-3 border border-slate-700 rounded">
+                        <input value={h.name ?? ''} onChange={e=>updateHost(idx,{name:e.target.value})} placeholder="Host name" className="p-2 rounded border bg-slate-900 text-slate-100 md:col-span-2" style={{ backgroundColor: '#0f172a', color: '#f1f5f9' }} />
+                        <input value={h.url ?? ''} onChange={e=>updateHost(idx,{url:e.target.value})} placeholder="Profile URL (optional)" className="p-2 rounded border bg-slate-900 text-slate-100 md:col-span-2" style={{ backgroundColor: '#0f172a', color: '#f1f5f9' }} />
+                        <div className="md:col-span-1 flex justify-end">
+                          <button type="button" className="px-3 py-2 rounded border hover:bg-slate-800" onClick={()=>removeHost(idx)}>Remove</button>
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -1023,13 +1472,100 @@ export default function DashboardPage() {
                 <div className="text-sm mb-2">Sponsors</div>
                 <div className="space-y-3">
                   {sponsors.map((s, idx) => (
-                    <div key={idx} className="grid grid-cols-1 md:grid-cols-6 gap-2 p-3 border border-slate-700 rounded">
-                      <input value={s.title ?? ''} onChange={e=>updateSponsor(idx,{title:e.target.value})} placeholder="Sponsor name" className="p-2 rounded border bg-transparent md:col-span-2" />
-                      <input value={s.subtitle ?? ''} onChange={e=>updateSponsor(idx,{subtitle:e.target.value})} placeholder="Subtitle (optional)" className="p-2 rounded border bg-transparent md:col-span-2" />
-                      <input value={s.logo_url ?? ''} onChange={e=>updateSponsor(idx,{logo_url:e.target.value})} placeholder="Logo URL (optional)" className="p-2 rounded border bg-transparent md:col-span-2" />
-                      <textarea value={s.description ?? ''} onChange={e=>updateSponsor(idx,{description:e.target.value})} placeholder="Description (optional)" rows={2} className="p-2 rounded border bg-transparent md:col-span-5 resize-y" />
-                      <div className="md:col-span-1 flex justify-end items-start">
-                        <button type="button" className="px-3 py-2 rounded border hover:bg-slate-800" onClick={()=>removeSponsor(idx)}>Remove</button>
+                    <div key={idx} className="flex gap-2 items-start">
+                      <div className="flex flex-col gap-1 pt-3">
+                        <button type="button" className="px-2 py-1 rounded border hover:bg-slate-800 text-xs" onClick={()=>moveSponsorUp(idx)} disabled={idx === 0} title="Move up">↑</button>
+                        <button type="button" className="px-2 py-1 rounded border hover:bg-slate-800 text-xs" onClick={()=>moveSponsorDown(idx)} disabled={idx === sponsors.length - 1} title="Move down">↓</button>
+                      </div>
+                      <div className="flex-1 p-3 border border-slate-700 rounded space-y-3">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          <div>
+                            <input value={s.title ?? ''} onChange={e=>{
+                              const val = e.target.value
+                              if (val.length <= 60) updateSponsor(idx,{title:val})
+                            }} placeholder="Sponsor name" maxLength={60} className="w-full p-2 rounded border bg-slate-900 text-slate-100" style={{ backgroundColor: '#0f172a', color: '#f1f5f9' }} />
+                            <div className="text-xs text-slate-400 mt-1">{(s.title ?? '').length} / 60 characters</div>
+                          </div>
+                          <div>
+                            <input value={s.subtitle ?? ''} onChange={e=>{
+                              const val = e.target.value
+                              if (val.length <= 80) updateSponsor(idx,{subtitle:val})
+                            }} placeholder="Subtitle (optional)" maxLength={80} className="w-full p-2 rounded border bg-slate-900 text-slate-100" style={{ backgroundColor: '#0f172a', color: '#f1f5f9' }} />
+                            <div className="text-xs text-slate-400 mt-1">{(s.subtitle ?? '').length} / 80 characters</div>
+                          </div>
+                        </div>
+
+                        <div>
+                          <input value={s.url ?? ''} onChange={e=>updateSponsor(idx,{url:e.target.value})} placeholder="Sponsor website / link (optional)" className="w-full p-2 rounded border bg-slate-900 text-slate-100" style={{ backgroundColor: '#0f172a', color: '#f1f5f9' }} />
+                        </div>
+
+                        <div>
+                          <textarea
+                            ref={(el) => {
+                              if (el) {
+                                el.style.height = 'auto'
+                                el.style.height = el.scrollHeight + 'px'
+                              }
+                            }}
+                            value={s.description ?? ''}
+                            onChange={e=>updateSponsor(idx,{description:e.target.value})}
+                            onInput={(e) => {
+                              const target = e.target as HTMLTextAreaElement
+                              target.style.height = 'auto'
+                              target.style.height = target.scrollHeight + 'px'
+                            }}
+                            placeholder="Description (optional)"
+                            rows={2}
+                            className="w-full p-2 rounded border bg-slate-900 text-slate-100 resize-none overflow-hidden"
+                            style={{ backgroundColor: '#0f172a', color: '#f1f5f9' }}
+                          />
+                          <div className="text-xs text-slate-400 mt-1">{(s.description ?? '').length} characters</div>
+                        </div>
+
+                        <div>
+                          <div className="text-sm mb-1">Sponsor logo (optional)</div>
+                          <div className="flex items-center gap-4">
+                            <div className="w-24 h-24 rounded-lg border border-slate-700 overflow-hidden bg-slate-800 flex items-center justify-center">
+                              {s.logo_url ? (
+                                <img src={s.logo_url} className="w-full h-full object-contain" alt="Sponsor logo" />
+                              ) : (
+                                <span className="text-xs text-slate-400">No image</span>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <label className="px-3 py-2 rounded border cursor-pointer hover:bg-slate-800">
+                                Choose file
+                                <input type="file" accept="image/*" className="hidden" onChange={async (e) => {
+                                  const file = e.target.files?.[0]
+                                  if (!file) return
+                                  try {
+                                    const formData = new FormData()
+                                    formData.append('file', file)
+                                    formData.append('eventId', '0')
+                                    const res = await fetch('/api/uploads/event-image', {
+                                      method: 'POST',
+                                      body: formData,
+                                    })
+                                    if (!res.ok) throw new Error('Upload failed')
+                                    const data = await res.json()
+                                    updateSponsor(idx, { logo_url: data.url })
+                                  } catch (err) {
+                                    console.error('Logo upload failed:', err)
+                                  }
+                                }} />
+                              </label>
+                              {s.logo_url && (
+                                <button type="button" className="px-3 py-2 rounded border hover:bg-slate-800" onClick={() => updateSponsor(idx, { logo_url: '' })}>
+                                  Remove
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex justify-end">
+                          <button type="button" className="px-3 py-2 rounded border hover:bg-slate-800" onClick={()=>removeSponsor(idx)}>Remove sponsor</button>
+                        </div>
                       </div>
                     </div>
                   ))}

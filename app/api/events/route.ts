@@ -2,30 +2,26 @@ import { NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
 
 export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic'; // ✅ IMPORTANT
+export const revalidate = 0;            // ✅ IMPORTANT
 
-/**
- * GET /api/events
- * List all events (dashboard mode only)
- * Returns events with both Neon schema fields and legacy field names for backward compatibility
- */
 export async function GET(_req: Request) {
   try {
-    // Get database client (lazy-initialized, dashboard-mode only)
     const db = getDb();
 
-    // Query all events from Neon
+    // Cast JSONB to text to prevent automatic parsing/filtering
     const events = await db`
       SELECT
         id,
         title,
-        location,
+        location::text as location_raw,
         start_date,
         end_date,
         timezone,
         image_url,
         event_url,
-        hosts,
-        sponsors,
+        hosts::text as hosts_raw,
+        sponsors::text as sponsors_raw,
         is_private,
         approve_mode,
         status,
@@ -35,34 +31,44 @@ export async function GET(_req: Request) {
       ORDER BY start_date DESC
     `;
 
-    // Map Neon schema to include both new and legacy field names
-    const mappedEvents = events.map(event => ({
-      // Neon fields (new schema)
-      id: event.id,
-      title: event.title,
-      location: event.location, // JSONB object
-      start_date: event.start_date,
-      end_date: event.end_date,
-      timezone: event.timezone,
-      image_url: event.image_url,
-      event_url: event.event_url,
-      hosts: event.hosts || [],
-      sponsors: event.sponsors || [],
-      is_private: event.is_private,
-      approve_mode: event.approve_mode,
-      status: event.status,
-      created_at: event.created_at,
-      updated_at: event.updated_at,
-      // Legacy fields for backward compatibility
-      name: event.title, // title → name
-      city: event.location?.city || null, // extract city from location jsonb
-      starts_at: event.start_date, // start_date → starts_at
-    }));
+    const mappedEvents = events.map(event => {
+      // Manually parse JSONB text to preserve all fields and array order
+      const location = event.location_raw ? JSON.parse(event.location_raw) : null;
+      const hosts = event.hosts_raw ? JSON.parse(event.hosts_raw) : [];
+      const sponsors = event.sponsors_raw ? JSON.parse(event.sponsors_raw) : [];
 
-    return NextResponse.json({
-      events: mappedEvents,
-      total: events.length,
+      return {
+        id: event.id,
+        title: event.title,
+        location: location,
+        start_date: event.start_date,
+        end_date: event.end_date,
+        timezone: event.timezone,
+        image_url: event.image_url,
+        event_url: event.event_url,
+        hosts: hosts,
+        sponsors: sponsors,
+        is_private: event.is_private,
+        approve_mode: event.approve_mode,
+        status: event.status,
+        created_at: event.created_at,
+        updated_at: event.updated_at,
+
+        // legacy
+        name: event.title,
+        city: location?.city || null,
+        starts_at: event.start_date,
+      };
     });
+
+    return NextResponse.json(
+      { events: mappedEvents, total: events.length },
+      {
+        headers: {
+          'Cache-Control': 'no-store, max-age=0', // ✅ IMPORTANT
+        },
+      }
+    );
   } catch (err: any) {
     console.error('[GET /api/events] Error:', err);
     return NextResponse.json(
@@ -71,3 +77,4 @@ export async function GET(_req: Request) {
     );
   }
 }
+
