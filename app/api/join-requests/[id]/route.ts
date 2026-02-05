@@ -99,6 +99,7 @@ export async function PATCH(req: Request, { params }: RouteParams) {
       await db`
         INSERT INTO event_attendees (
           event_id,
+          owner_id,
           user_profile_id,
           join_request_id,
           visibility_enabled,
@@ -108,6 +109,7 @@ export async function PATCH(req: Request, { params }: RouteParams) {
         )
         SELECT
           ${updatedJoinRequest.event_id},
+          ${updatedJoinRequest.owner_id},
           ${updatedJoinRequest.user_profile_id},
           ${updatedJoinRequest.id},
           true,
