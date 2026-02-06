@@ -67,70 +67,143 @@ export async function PATCH(req: Request, { params }: RouteParams) {
       );
     }
 
-    // Always update the updated_at timestamp
-    const now = new Date().toISOString();
-
     // Get database client (lazy-initialized, dashboard-mode only)
     const db = getDb();
 
-    // Build dynamic update query using conditional updates
-    const result = await db`
-      UPDATE event_join_requests
-      SET
-        status = COALESCE(${updates.status || null}::text, status::text)::eventjoinrequeststatus,
-        plus_ones = COALESCE(${updates.plus_ones ?? null}, plus_ones),
-        comments = CASE WHEN ${updates.comments !== undefined} THEN ${updates.comments ?? null} ELSE comments END,
-        updated_at = ${now}
-      WHERE id = ${id}
-      RETURNING *
-    `;
-
-    if (!result || result.length === 0) {
-      return NextResponse.json(
-        { error: 'Join request not found' },
-        { status: 404 }
-      );
-    }
-
-    const updatedJoinRequest = result[0];
-
-    // If status was changed to APPROVED, materialize attendee in event_attendees
+    // Fix3: If approving, pre-validate that user_profile_id exists
     if (updates.status === 'APPROVED') {
-      await db`
-        INSERT INTO event_attendees (
-          event_id,
-          owner_id,
-          user_profile_id,
-          join_request_id,
-          visibility_enabled,
-          notifications_enabled,
-          created_at,
-          updated_at
-        )
-        SELECT
-          ${updatedJoinRequest.event_id},
-          ${updatedJoinRequest.owner_id},
-          ${updatedJoinRequest.user_profile_id},
-          ${updatedJoinRequest.id},
-          true,
-          true,
-          ${now},
-          ${now}
-        WHERE NOT EXISTS (
-          SELECT 1 FROM event_attendees
-          WHERE join_request_id = ${updatedJoinRequest.id}
-        )
+      const preCheck = await db`
+        SELECT user_profile_id FROM event_join_requests WHERE id = ${id}
       `;
+
+      if (preCheck.length === 0) {
+        return NextResponse.json(
+          { error: 'Join request not found' },
+          { status: 404 }
+        );
+      }
+
+      if (preCheck[0].user_profile_id === null) {
+        return NextResponse.json(
+          {
+            error: 'Cannot approve: join request has no user_profile_id. This join request needs investigation.',
+            details: 'The user_profile_id is NULL and must be set before approval can proceed.'
+          },
+          { status: 422 }
+        );
+      }
     }
 
-    return NextResponse.json({
-      join_request: updatedJoinRequest,
-      message: 'Join request updated successfully',
-    });
+    // Always update the updated_at timestamp
+    const now = new Date().toISOString();
+
+    // Fix2: Generate UUID for event_attendees.id (no DB default exists)
+    const attendeeId = crypto.randomUUID();
+
+    // Fix3: Use CTE to make UPDATE + INSERT atomic in a single query
+    // This ensures we don't end up with status=APPROVED but no attendee row
+    if (updates.status === 'APPROVED') {
+      const result = await db`
+        WITH updated AS (
+          UPDATE event_join_requests
+          SET
+            status = COALESCE(${updates.status || null}::text, status::text)::eventjoinrequeststatus,
+            plus_ones = COALESCE(${updates.plus_ones ?? null}, plus_ones),
+            comments = CASE WHEN ${updates.comments !== undefined} THEN ${updates.comments ?? null} ELSE comments END,
+            approved_at = CASE
+              WHEN COALESCE(${updates.status || null}::text, status::text)::eventjoinrequeststatus = 'APPROVED'
+              THEN NOW()
+              ELSE approved_at
+            END,
+            updated_at = ${now}
+          WHERE id = ${id}
+          RETURNING *
+        ),
+        inserted AS (
+          INSERT INTO event_attendees (
+            id,
+            event_id,
+            owner_id,
+            user_profile_id,
+            join_request_id,
+            visibility_enabled,
+            notifications_enabled,
+            created_at,
+            updated_at
+          )
+          SELECT
+            ${attendeeId},
+            event_id,
+            owner_id,
+            user_profile_id,
+            id,
+            true,
+            true,
+            ${now},
+            ${now}
+          FROM updated
+          WHERE NOT EXISTS (
+            SELECT 1 FROM event_attendees
+            WHERE join_request_id = updated.id
+          )
+          RETURNING id
+        )
+        SELECT * FROM updated
+      `;
+
+      if (!result || result.length === 0) {
+        return NextResponse.json(
+          { error: 'Join request not found' },
+          { status: 404 }
+        );
+      }
+
+      const updatedJoinRequest = result[0];
+
+      return NextResponse.json({
+        join_request: updatedJoinRequest,
+        message: 'Join request updated successfully',
+      });
+    } else {
+      // Non-APPROVED status updates: simpler UPDATE without attendee materialization
+      const result = await db`
+        UPDATE event_join_requests
+        SET
+          status = COALESCE(${updates.status || null}::text, status::text)::eventjoinrequeststatus,
+          plus_ones = COALESCE(${updates.plus_ones ?? null}, plus_ones),
+          comments = CASE WHEN ${updates.comments !== undefined} THEN ${updates.comments ?? null} ELSE comments END,
+          updated_at = ${now}
+        WHERE id = ${id}
+        RETURNING *
+      `;
+
+      if (!result || result.length === 0) {
+        return NextResponse.json(
+          { error: 'Join request not found' },
+          { status: 404 }
+        );
+      }
+
+      const updatedJoinRequest = result[0];
+
+      return NextResponse.json({
+        join_request: updatedJoinRequest,
+        message: 'Join request updated successfully',
+      });
+    }
   } catch (err: any) {
     console.error(`[PATCH /api/join-requests/${(await params).id}] Error:`, err);
+
+    // Provide detailed error information for debugging
+    const errorMessage = err.message || 'Failed to update join request';
+    const errorDetails = err.detail || err.hint || '';
+
     return NextResponse.json(
-      { error: err.message || 'Failed to update join request' },
+      {
+        error: errorMessage,
+        details: errorDetails,
+        summary: 'Database operation failed. Check that all required fields are present.'
+      },
       { status: 500 }
     );
   }
