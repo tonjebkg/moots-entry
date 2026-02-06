@@ -124,6 +124,26 @@ function formatUSDateTime(iso: string): string {
   return `${dateStr}, ${timeStr}`
 }
 
+function datetimeLocalToISO(
+  date: string,
+  time: string,
+  timezone: string
+): string {
+  const dt = new Date(`${date} ${time}`);
+
+  return new Intl.DateTimeFormat('sv-SE', {
+    timeZone: timezone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit'
+  })
+    .format(dt)
+    .replace(' ', 'T') + 'Z';
+}
+
 const STATUS_BG: Record<EventStatus, string> = {
   DRAFT: 'bg-slate-600 text-slate-200',
   PUBLISHED: 'bg-green-700 text-white',
@@ -401,15 +421,15 @@ export default function DashboardHomePage() {
         return
       }
 
-      const startIso = datetimeLocalToISO(evStartsAtInput)
+      const startIso = datetimeLocalToISO(evStartDate, evStartTime, evTimezone)
       if (!startIso) {
         setModalError('Start date & time is required')
         setSaving(false)
         return
       }
 
-      const endIso = evEndsAtInput.trim() ? datetimeLocalToISO(evEndsAtInput) : null
-      if (evEndsAtInput.trim() && !endIso) {
+      const endIso = evEndDate.trim() ? datetimeLocalToISO(evEndDate, evEndTime, evTimezone) : null
+      if (evEndDate.trim() && !endIso) {
         setModalError('Invalid end date/time')
         setSaving(false)
         return
