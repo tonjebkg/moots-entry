@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
+import crypto from 'crypto';
 
 export const runtime = 'nodejs';
 
@@ -176,9 +177,38 @@ export async function POST(req: Request, { params }: RouteParams) {
       });
     }
 
+    const now = new Date().toISOString();
+
+    // Create event-scoped user profile so the dashboard JOIN and
+    // later approval/attendee materialization can reference it.
+    // Upserts: if a profile already exists for this user+event, update the email.
+    const profileId = crypto.randomUUID();
+    const emailsJson = rsvpContact
+      ? JSON.stringify([{ email: rsvpContact }])
+      : JSON.stringify([]);
+
+    const profileResult = await db`
+      INSERT INTO user_profiles (id, owner_id, event_id, emails, created_at, updated_at)
+      VALUES (
+        ${profileId}::uuid,
+        ${ownerId},
+        ${Number(eventId)},
+        ${emailsJson}::jsonb,
+        ${now},
+        ${now}
+      )
+      ON CONFLICT (owner_id, event_id) DO UPDATE SET
+        emails = EXCLUDED.emails,
+        updated_at = EXCLUDED.updated_at
+      RETURNING id
+    `;
+
+    if (!profileResult || profileResult.length === 0) {
+      throw new Error('Failed to create user profile');
+    }
+
     // Insert new join request
     // Note: visibility_enabled and notifications_enabled have DB defaults (true)
-    const now = new Date().toISOString();
     const result = await db`
       INSERT INTO event_join_requests (
         event_id,
