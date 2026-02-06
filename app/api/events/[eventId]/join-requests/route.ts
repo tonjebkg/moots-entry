@@ -45,7 +45,9 @@ export async function GET(_req: Request, { params }: RouteParams) {
         up.emails,
         up.photo_url
       FROM event_join_requests ejr
-      LEFT JOIN user_profiles up ON ejr.owner_id = up.owner_id
+      LEFT JOIN user_profiles up
+        ON up.owner_id = ejr.owner_id
+        AND up.event_id = ejr.event_id
       WHERE ejr.event_id = ${Number(eventId)}
       ORDER BY ejr.created_at DESC
     `;
@@ -247,6 +249,205 @@ export async function POST(req: Request, { params }: RouteParams) {
     console.error(`[POST /api/events/${eventId}/join-requests] Error:`, err);
     return NextResponse.json(
       { error: err.message || 'Failed to create join request' },
+      { status: 500 }
+    );
+  }
+}
+type UpdatePayload = {
+  status?: 'PENDING' | 'APPROVED' | 'REJECTED' | 'CANCELLED' | 'DRAFT';
+  plus_ones?: number;
+  comments?: string;
+};
+
+export async function PATCH(req: Request, { params }: RouteParams) {
+  try {
+    const { eventId } = await params;
+    const url = new URL(req.url);
+    const joinRequestId = url.searchParams.get('id');
+
+    if (!joinRequestId) {
+      return NextResponse.json(
+        { error: 'Join request ID is required' },
+        { status: 400 }
+      );
+    }
+
+    if (!eventId || isNaN(Number(eventId))) {
+      return NextResponse.json(
+        { error: 'Valid eventId is required' },
+        { status: 400 }
+      );
+    }
+
+    const body: UpdatePayload = await req.json();
+    const updates: Record<string, any> = {};
+
+    const VALID_STATUSES = ['PENDING', 'APPROVED', 'REJECTED', 'CANCELLED', 'DRAFT'];
+    
+    if (body.status !== undefined) {
+      if (!VALID_STATUSES.includes(body.status)) {
+        return NextResponse.json(
+          { error: `Invalid status. Must be one of: ${VALID_STATUSES.join(', ')}` },
+          { status: 400 }
+        );
+      }
+      updates.status = body.status;
+    }
+
+    if (body.plus_ones !== undefined) {
+      const plusOnes = Number(body.plus_ones);
+      if (!Number.isInteger(plusOnes) || plusOnes < 0) {
+        return NextResponse.json(
+          { error: 'plus_ones must be a non-negative integer' },
+          { status: 400 }
+        );
+      }
+      updates.plus_ones = plusOnes;
+    }
+
+    if (body.comments !== undefined) {
+      updates.comments = body.comments;
+    }
+
+    if (Object.keys(updates).length === 0) {
+      return NextResponse.json(
+        { error: 'No valid fields to update' },
+        { status: 400 }
+      );
+    }
+
+    const db = getDb();
+    const now = new Date().toISOString();
+
+    if (updates.status === 'APPROVED') {
+      const attendeeId = crypto.randomUUID();
+
+      const joinRequestData = await db`
+        SELECT owner_id, event_id
+        FROM event_join_requests
+        WHERE id = ${joinRequestId}
+          AND event_id = ${Number(eventId)}
+        LIMIT 1
+      `;
+
+      if (!joinRequestData || joinRequestData.length === 0) {
+        return NextResponse.json(
+          { error: 'Join request not found' },
+          { status: 404 }
+        );
+      }
+
+      const { owner_id: ownerId, event_id: eventIdFromDb } = joinRequestData[0];
+
+      const profileResult = await db`
+        SELECT id
+        FROM user_profiles
+        WHERE owner_id = ${ownerId}
+          AND event_id = ${eventIdFromDb}
+        LIMIT 1
+      `;
+
+      if (!profileResult || profileResult.length === 0) {
+        return NextResponse.json(
+          {
+            error: 'Approval failed: event-scoped user_profile not found for owner_id + event_id',
+            details: `Cannot approve join request ${joinRequestId}: no user_profile exists for owner_id="${ownerId}" with event_id=${eventIdFromDb}. Profile must be created at RSVP time (POST /api/events/[eventId]/join-requests).`
+          },
+          { status: 422 }
+        );
+      }
+
+      const userProfileId = profileResult[0].id;
+
+      const result = await db`
+        WITH updated AS (
+          UPDATE event_join_requests
+          SET
+            status = COALESCE(${updates.status || null}::text, status::text)::eventjoinrequeststatus,
+            plus_ones = COALESCE(${updates.plus_ones ?? null}, plus_ones),
+            comments = CASE WHEN ${updates.comments !== undefined} THEN ${updates.comments ?? null} ELSE comments END,
+            approved_at = NOW(),
+            updated_at = ${now}
+          WHERE id = ${joinRequestId}
+            AND event_id = ${Number(eventId)}
+          RETURNING *
+        ),
+        inserted AS (
+          INSERT INTO event_attendees (
+            id,
+            event_id,
+            owner_id,
+            user_profile_id,
+            join_request_id,
+            visibility_enabled,
+            notifications_enabled,
+            created_at,
+            updated_at
+          )
+          SELECT
+            ${attendeeId}::uuid,
+            event_id,
+            owner_id,
+            ${userProfileId}::uuid,
+            id,
+            true,
+            true,
+            ${now},
+            ${now}
+          FROM updated
+          WHERE NOT EXISTS (
+            SELECT 1 FROM event_attendees
+            WHERE join_request_id = updated.id
+          )
+          RETURNING id
+        )
+        SELECT * FROM updated
+      `;
+
+      if (!result || result.length === 0) {
+        return NextResponse.json(
+          { error: 'Join request not found' },
+          { status: 404 }
+        );
+      }
+
+      return NextResponse.json({
+        join_request: result[0],
+        message: 'Join request updated successfully'
+      });
+    } else {
+      const result = await db`
+        UPDATE event_join_requests
+        SET
+          status = COALESCE(${updates.status || null}::text, status::text)::eventjoinrequeststatus,
+          plus_ones = COALESCE(${updates.plus_ones ?? null}, plus_ones),
+          comments = CASE WHEN ${updates.comments !== undefined} THEN ${updates.comments ?? null} ELSE comments END,
+          updated_at = ${now}
+        WHERE id = ${joinRequestId}
+          AND event_id = ${Number(eventId)}
+        RETURNING *
+      `;
+
+      if (!result || result.length === 0) {
+        return NextResponse.json(
+          { error: 'Join request not found' },
+          { status: 404 }
+        );
+      }
+
+      return NextResponse.json({
+        join_request: result[0],
+        message: 'Join request updated successfully'
+      });
+    }
+  } catch (err: any) {
+    const { eventId } = await params;
+    console.error(`[PATCH /api/events/${eventId}/join-requests] Error:`, err);
+    return NextResponse.json(
+      {
+        error: err.message || 'Failed to update join request',
+        details: err.detail || err.hint || ''
+      },
       { status: 500 }
     );
   }
