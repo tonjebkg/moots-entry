@@ -71,39 +71,14 @@ export async function PATCH(req: Request, { params }: RouteParams) {
     // Get database client (lazy-initialized, dashboard-mode only)
     const db = getDb();
 
-    // Fix3: If approving, pre-validate that user_profile_id exists
-    if (updates.status === 'APPROVED') {
-      const preCheck = await db`
-        SELECT user_profile_id FROM event_join_requests WHERE id = ${id}
-      `;
-
-      if (preCheck.length === 0) {
-        return NextResponse.json(
-          { error: 'Join request not found' },
-          { status: 404 }
-        );
-      }
-
-      if (preCheck[0].user_profile_id === null) {
-        return NextResponse.json(
-          {
-            error: 'Cannot approve: join request has no user_profile_id. This join request needs investigation.',
-            details: 'The user_profile_id is NULL and must be set before approval can proceed.'
-          },
-          { status: 422 }
-        );
-      }
-    }
-
     // Always update the updated_at timestamp
     const now = new Date().toISOString();
 
-    // Fix2: Generate UUID for event_attendees.id (no DB default exists)
-    const attendeeId = crypto.randomUUID();
-
-    // Fix3: Use CTE to make UPDATE + INSERT atomic in a single query
-    // This ensures we don't end up with status=APPROVED but no attendee row
+    // Use CTE to make UPDATE + INSERT atomic when approving
     if (updates.status === 'APPROVED') {
+      // Generate UUID for event_attendees.id (no DB default exists)
+      const attendeeId = crypto.randomUUID();
+
       const result = await db`
         WITH updated AS (
           UPDATE event_join_requests
@@ -111,11 +86,7 @@ export async function PATCH(req: Request, { params }: RouteParams) {
             status = COALESCE(${updates.status || null}::text, status::text)::eventjoinrequeststatus,
             plus_ones = COALESCE(${updates.plus_ones ?? null}, plus_ones),
             comments = CASE WHEN ${updates.comments !== undefined} THEN ${updates.comments ?? null} ELSE comments END,
-            approved_at = CASE
-              WHEN COALESCE(${updates.status || null}::text, status::text)::eventjoinrequeststatus = 'APPROVED'
-              THEN NOW()
-              ELSE approved_at
-            END,
+            approved_at = NOW(),
             updated_at = ${now}
           WHERE id = ${id}
           RETURNING *
@@ -125,7 +96,6 @@ export async function PATCH(req: Request, { params }: RouteParams) {
             id,
             event_id,
             owner_id,
-            user_profile_id,
             join_request_id,
             visibility_enabled,
             notifications_enabled,
@@ -133,10 +103,9 @@ export async function PATCH(req: Request, { params }: RouteParams) {
             updated_at
           )
           SELECT
-            ${attendeeId},
+            ${attendeeId}::uuid,
             event_id,
             owner_id,
-            user_profile_id,
             id,
             true,
             true,
@@ -195,7 +164,6 @@ export async function PATCH(req: Request, { params }: RouteParams) {
   } catch (err: any) {
     console.error(`[PATCH /api/join-requests/${(await params).id}] Error:`, err);
 
-    // Provide detailed error information for debugging
     const errorMessage = err.message || 'Failed to update join request';
     const errorDetails = err.detail || err.hint || '';
 
