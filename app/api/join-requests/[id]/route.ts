@@ -123,11 +123,11 @@ export async function PATCH(req: Request, { params }: RouteParams) {
         SET event_ids = (
           SELECT ARRAY(
             SELECT DISTINCT unnest_val
-            FROM unnest(COALESCE(event_ids, '{}') || ARRAY[${eventId}]) AS unnest_val
+            FROM unnest(COALESCE(event_ids, ARRAY[]::int[]) || ARRAY[${eventId}::int]) AS unnest_val
           )
         )
         WHERE owner_id = ${ownerId}
-          AND NOT (${eventId} = ANY(COALESCE(event_ids, '{}')))
+          AND NOT (${eventId}::int = ANY(COALESCE(event_ids, ARRAY[]::int[])))
       `;
 
       // Atomic UPDATE + INSERT: set approved_at, materialize attendee with user_profile_id

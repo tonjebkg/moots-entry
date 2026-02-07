@@ -183,7 +183,7 @@ export async function POST(req: Request, { params }: RouteParams) {
           SELECT ARRAY(
             SELECT DISTINCT unnest_val
             FROM unnest(
-              COALESCE(user_profiles.event_ids, '{}') || ARRAY[${Number(eventId)}]
+              COALESCE(user_profiles.event_ids, ARRAY[]::int[]) || ARRAY[${Number(eventId)}::int]
             ) AS unnest_val
           )
         ),
@@ -369,11 +369,11 @@ export async function PATCH(req: Request, { params }: RouteParams) {
         SET event_ids = (
           SELECT ARRAY(
             SELECT DISTINCT unnest_val
-            FROM unnest(COALESCE(event_ids, '{}') || ARRAY[${Number(eventId)}]) AS unnest_val
+            FROM unnest(COALESCE(event_ids, ARRAY[]::int[]) || ARRAY[${Number(eventId)}::int]) AS unnest_val
           )
         )
         WHERE owner_id = ${ownerId}
-          AND NOT (${Number(eventId)} = ANY(COALESCE(event_ids, '{}')))
+          AND NOT (${Number(eventId)}::int = ANY(COALESCE(event_ids, ARRAY[]::int[])))
       `;
 
       const result = await db`
