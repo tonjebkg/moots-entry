@@ -22,7 +22,8 @@ export async function GET(_req: Request, { params }: RouteParams) {
     // Get database client (lazy-initialized, dashboard-mode only)
     const db = getDb();
 
-    // Query join requests with user profile data
+    // GET MUST REMAIN READ-ONLY — no INSERT/UPDATE/event_ids mutation
+    // Query join requests with user profile data (one row per owner_id)
     const joinRequests = await db`
       SELECT
         ejr.id,
@@ -45,9 +46,7 @@ export async function GET(_req: Request, { params }: RouteParams) {
         up.emails,
         up.photo_url
       FROM event_join_requests ejr
-      LEFT JOIN user_profiles up
-        ON up.owner_id = ejr.owner_id
-        AND up.event_id = ejr.event_id
+      LEFT JOIN user_profiles up ON up.owner_id = ejr.owner_id
       WHERE ejr.event_id = ${Number(eventId)}
       ORDER BY ejr.created_at DESC
     `;
@@ -158,10 +157,46 @@ export async function POST(req: Request, { params }: RouteParams) {
     const comments = body.comments?.trim() || null;
     const rsvpContact = body.rsvp_contact?.trim() || null;
 
-    // Get database client (lazy-initialized, dashboard-mode only)
     const db = getDb();
+    const now = new Date().toISOString();
 
-    // Check for existing join request (idempotency)
+    // Step 1: Upsert ONE user_profiles row per owner_id.
+    // event_ids[] tracks which events this user belongs to.
+    // Uses array union to add eventId without duplicates.
+    const profileId = crypto.randomUUID();
+    const emailsJson = rsvpContact
+      ? JSON.stringify([{ email: rsvpContact }])
+      : JSON.stringify([]);
+
+    const profileResult = await db`
+      INSERT INTO user_profiles (id, owner_id, event_ids, emails, created_at, updated_at)
+      VALUES (
+        ${profileId}::uuid,
+        ${ownerId},
+        ARRAY[${Number(eventId)}],
+        ${emailsJson}::jsonb,
+        ${now},
+        ${now}
+      )
+      ON CONFLICT (owner_id) DO UPDATE SET
+        event_ids = (
+          SELECT ARRAY(
+            SELECT DISTINCT unnest_val
+            FROM unnest(
+              COALESCE(user_profiles.event_ids, '{}') || ARRAY[${Number(eventId)}]
+            ) AS unnest_val
+          )
+        ),
+        emails = EXCLUDED.emails,
+        updated_at = EXCLUDED.updated_at
+      RETURNING id
+    `;
+
+    if (!profileResult || profileResult.length === 0) {
+      throw new Error('Failed to upsert user profile');
+    }
+
+    // Step 2: Check for existing join request (idempotency)
     const existing = await db`
       SELECT id, event_id, owner_id, status, plus_ones, comments,
              rsvp_contact, created_at, updated_at
@@ -171,7 +206,6 @@ export async function POST(req: Request, { params }: RouteParams) {
       LIMIT 1
     `;
 
-    // If exists, return existing request instead of creating duplicate
     if (existing && existing.length > 0) {
       return NextResponse.json({
         join_request: existing[0],
@@ -179,38 +213,8 @@ export async function POST(req: Request, { params }: RouteParams) {
       });
     }
 
-    const now = new Date().toISOString();
-
-    // Create event-scoped user profile so the dashboard JOIN and
-    // later approval/attendee materialization can reference it.
-    // Upserts: if a profile already exists for this user+event, update the email.
-    const profileId = crypto.randomUUID();
-    const emailsJson = rsvpContact
-      ? JSON.stringify([{ email: rsvpContact }])
-      : JSON.stringify([]);
-
-    const profileResult = await db`
-      INSERT INTO user_profiles (id, owner_id, event_id, emails, created_at, updated_at)
-      VALUES (
-        ${profileId}::uuid,
-        ${ownerId},
-        ${Number(eventId)},
-        ${emailsJson}::jsonb,
-        ${now},
-        ${now}
-      )
-      ON CONFLICT (owner_id, event_id) DO UPDATE SET
-        emails = EXCLUDED.emails,
-        updated_at = EXCLUDED.updated_at
-      RETURNING id
-    `;
-
-    if (!profileResult || profileResult.length === 0) {
-      throw new Error('Failed to create user profile');
-    }
-
-    // Insert new join request
-    // Note: visibility_enabled and notifications_enabled have DB defaults (true)
+    // Step 3: Insert new join request
+    // user_profile_id is resolved from user_profiles at approval time, not stored here
     const result = await db`
       INSERT INTO event_join_requests (
         event_id,
@@ -339,19 +343,21 @@ export async function PATCH(req: Request, { params }: RouteParams) {
 
       const { owner_id: ownerId, event_id: eventIdFromDb } = joinRequestData[0];
 
+      // Resolve user_profile_id: one row per owner_id, event membership via event_ids[]
       const profileResult = await db`
         SELECT id
         FROM user_profiles
         WHERE owner_id = ${ownerId}
-          AND event_id = ${eventIdFromDb}
+          AND ${Number(eventId)} = ANY(event_ids)
         LIMIT 1
       `;
 
+      // Defensive assertion: approval is illegal without an event-scoped profile
       if (!profileResult || profileResult.length === 0) {
         return NextResponse.json(
           {
-            error: 'Approval failed: event-scoped user_profile not found for owner_id + event_id',
-            details: `Cannot approve join request ${joinRequestId}: no user_profile exists for owner_id="${ownerId}" with event_id=${eventIdFromDb}. Profile must be created at RSVP time (POST /api/events/[eventId]/join-requests).`
+            error: 'Approval failed: no user_profile found with this event in event_ids[]',
+            details: `Cannot approve join request ${joinRequestId}: no user_profile exists for owner_id="${ownerId}" with event_id=${eventIdFromDb} in event_ids[]. Profile must exist and include eventId in event_ids[] before approval. Profile is created at RSVP time (POST /api/events/[eventId]/join-requests).`
           },
           { status: 422 }
         );

@@ -76,9 +76,65 @@ export async function PATCH(req: Request, { params }: RouteParams) {
 
     // Use CTE to make UPDATE + INSERT atomic when approving
     if (updates.status === 'APPROVED') {
-      // Generate UUID for event_attendees.id (no DB default exists)
       const attendeeId = crypto.randomUUID();
 
+      // Fetch join request to get owner_id and event_id
+      const joinRequestData = await db`
+        SELECT owner_id, event_id
+        FROM event_join_requests
+        WHERE id = ${id}
+        LIMIT 1
+      `;
+
+      if (!joinRequestData || joinRequestData.length === 0) {
+        return NextResponse.json(
+          { error: 'Join request not found' },
+          { status: 404 }
+        );
+      }
+
+      const { owner_id: ownerId, event_id: eventId } = joinRequestData[0];
+
+      // Resolve user_profile_id from user_profiles (one row per owner_id).
+      // event_join_requests does NOT have a user_profile_id column;
+      // it is resolved here at approval time from the global profile.
+      const profileLookup = await db`
+        SELECT id FROM user_profiles
+        WHERE owner_id = ${ownerId}
+        LIMIT 1
+      `;
+
+      if (!profileLookup || profileLookup.length === 0) {
+        return NextResponse.json(
+          {
+            error: 'Approval failed: user_profile missing for this owner_id',
+            details: `Cannot approve join request ${id}: no user_profiles row exists for owner_id="${ownerId}". RSVP must create profile first (POST /api/events/[eventId]/join-requests).`
+          },
+          { status: 422 }
+        );
+      }
+
+      const userProfileId = profileLookup[0].id;
+
+      // Defensive assertion: event_id must be in user_profiles.event_ids[]
+      const eventLinked = await db`
+        SELECT 1 FROM user_profiles
+        WHERE owner_id = ${ownerId}
+          AND ${eventId} = ANY(event_ids)
+        LIMIT 1
+      `;
+
+      if (!eventLinked || eventLinked.length === 0) {
+        return NextResponse.json(
+          {
+            error: 'Approval failed: event_id not linked in user_profiles.event_ids[]',
+            details: `Profile exists for owner_id="${ownerId}" but event_id=${eventId} is not in event_ids[]. RSVP upsert is broken or was bypassed.`
+          },
+          { status: 422 }
+        );
+      }
+
+      // Atomic UPDATE + INSERT: set approved_at, materialize attendee with user_profile_id
       const result = await db`
         WITH updated AS (
           UPDATE event_join_requests
@@ -96,6 +152,7 @@ export async function PATCH(req: Request, { params }: RouteParams) {
             id,
             event_id,
             owner_id,
+            user_profile_id,
             join_request_id,
             visibility_enabled,
             notifications_enabled,
@@ -106,6 +163,7 @@ export async function PATCH(req: Request, { params }: RouteParams) {
             ${attendeeId}::uuid,
             event_id,
             owner_id,
+            ${userProfileId}::uuid,
             id,
             true,
             true,
@@ -128,11 +186,9 @@ export async function PATCH(req: Request, { params }: RouteParams) {
         );
       }
 
-      const updatedJoinRequest = result[0];
-
       return NextResponse.json({
-        join_request: updatedJoinRequest,
-        message: 'Join request updated successfully',
+        join_request: result[0],
+        message: 'Join request approved and attendee created successfully',
       });
     } else {
       // Non-APPROVED status updates: simpler UPDATE without attendee materialization
