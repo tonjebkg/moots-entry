@@ -341,29 +341,40 @@ export async function PATCH(req: Request, { params }: RouteParams) {
         );
       }
 
-      const { owner_id: ownerId, event_id: eventIdFromDb } = joinRequestData[0];
+      const { owner_id: ownerId } = joinRequestData[0];
 
-      // Resolve user_profile_id: one row per owner_id, event membership via event_ids[]
+      // Resolve user_profile_id from user_profiles (one row per owner_id)
       const profileResult = await db`
         SELECT id
         FROM user_profiles
         WHERE owner_id = ${ownerId}
-          AND ${Number(eventId)} = ANY(event_ids)
         LIMIT 1
       `;
 
-      // Defensive assertion: approval is illegal without an event-scoped profile
       if (!profileResult || profileResult.length === 0) {
         return NextResponse.json(
           {
-            error: 'Approval failed: no user_profile found with this event in event_ids[]',
-            details: `Cannot approve join request ${joinRequestId}: no user_profile exists for owner_id="${ownerId}" with event_id=${eventIdFromDb} in event_ids[]. Profile must exist and include eventId in event_ids[] before approval. Profile is created at RSVP time (POST /api/events/[eventId]/join-requests).`
+            error: 'Approval failed: no user_profile found for this owner_id',
+            details: `Cannot approve join request ${joinRequestId}: no user_profile exists for owner_id="${ownerId}". Profile must be created at RSVP time (POST /api/events/[eventId]/join-requests).`
           },
           { status: 422 }
         );
       }
 
       const userProfileId = profileResult[0].id;
+
+      // Auto-repair event_ids[] for legacy RSVPs created before the upsert fix
+      await db`
+        UPDATE user_profiles
+        SET event_ids = (
+          SELECT ARRAY(
+            SELECT DISTINCT unnest_val
+            FROM unnest(COALESCE(event_ids, '{}') || ARRAY[${Number(eventId)}]) AS unnest_val
+          )
+        )
+        WHERE owner_id = ${ownerId}
+          AND NOT (${Number(eventId)} = ANY(COALESCE(event_ids, '{}')))
+      `;
 
       const result = await db`
         WITH updated AS (

@@ -116,23 +116,19 @@ export async function PATCH(req: Request, { params }: RouteParams) {
 
       const userProfileId = profileLookup[0].id;
 
-      // Defensive assertion: event_id must be in user_profiles.event_ids[]
-      const eventLinked = await db`
-        SELECT 1 FROM user_profiles
+      // Ensure event_id is in user_profiles.event_ids[] (auto-repair for legacy RSVPs
+      // created before the event_ids[] upsert was added to the POST handler)
+      await db`
+        UPDATE user_profiles
+        SET event_ids = (
+          SELECT ARRAY(
+            SELECT DISTINCT unnest_val
+            FROM unnest(COALESCE(event_ids, '{}') || ARRAY[${eventId}]) AS unnest_val
+          )
+        )
         WHERE owner_id = ${ownerId}
-          AND ${eventId} = ANY(event_ids)
-        LIMIT 1
+          AND NOT (${eventId} = ANY(COALESCE(event_ids, '{}')))
       `;
-
-      if (!eventLinked || eventLinked.length === 0) {
-        return NextResponse.json(
-          {
-            error: 'Approval failed: event_id not linked in user_profiles.event_ids[]',
-            details: `Profile exists for owner_id="${ownerId}" but event_id=${eventId} is not in event_ids[]. RSVP upsert is broken or was bypassed.`
-          },
-          { status: 422 }
-        );
-      }
 
       // Atomic UPDATE + INSERT: set approved_at, materialize attendee with user_profile_id
       const result = await db`
