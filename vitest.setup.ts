@@ -1,7 +1,6 @@
 import { vi } from 'vitest';
 
-// Mock environment variables
-process.env.NODE_ENV = 'test';
+// Mock environment variables (NODE_ENV is set by vitest automatically)
 process.env.NEXT_PUBLIC_APP_MODE = 'dashboard';
 process.env.DATABASE_URL = 'postgresql://test:test@localhost:5432/test';
 process.env.RESEND_API_KEY = 're_test_key';

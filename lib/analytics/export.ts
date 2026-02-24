@@ -3,11 +3,11 @@ import type { AnalyticsMetrics, TeamPerformance } from '@/types/phase4';
 /**
  * Export analytics data as CSV, JSON, or PDF.
  */
-export function exportAnalyticsReport(
+export async function exportAnalyticsReport(
   metrics: AnalyticsMetrics,
   team: TeamPerformance[],
   format: 'csv' | 'json' | 'pdf'
-): { content: string; contentType: string; filename: string } | Promise<{ content: string; contentType: string; filename: string }> {
+): Promise<{ content: string; contentType: string; filename: string }> {
   if (format === 'json') {
     return {
       content: JSON.stringify({ metrics, team_performance: team }, null, 2),

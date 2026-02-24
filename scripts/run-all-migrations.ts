@@ -58,7 +58,8 @@ async function runMigration(name: string) {
   const sql = fs.readFileSync(filePath, 'utf-8');
 
   console.log(`  Applying ${name}...`);
-  await db(sql);
+  // neon's http driver typed as tagged template; cast for raw SQL string execution
+  await (db as unknown as (sql: string) => Promise<unknown>)(sql);
   await db`INSERT INTO schema_migrations (name) VALUES (${name})`;
   console.log(`  ✓ ${name} applied`);
   return true;

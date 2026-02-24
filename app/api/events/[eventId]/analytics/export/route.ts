@@ -15,14 +15,14 @@ export const GET = withErrorHandling(async (request: NextRequest, context: any) 
   const eventIdNum = parseInt(eventId, 10);
 
   const url = new URL(request.url);
-  const format = (url.searchParams.get('format') || 'csv') as 'csv' | 'json';
+  const format = (url.searchParams.get('format') || 'csv') as 'csv' | 'json' | 'pdf';
 
   const [metrics, team] = await Promise.all([
     getEventAnalytics(eventIdNum, auth.workspace.id),
     getTeamPerformance(eventIdNum, auth.workspace.id),
   ]);
 
-  const report = exportAnalyticsReport(metrics, team, format);
+  const report = await exportAnalyticsReport(metrics, team, format);
 
   return new Response(report.content, {
     headers: {

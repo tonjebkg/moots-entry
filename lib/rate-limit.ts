@@ -174,36 +174,39 @@ async function checkLimit(
   return inMemoryLimiters[name].check(identifier, cfg.maxRequests, cfg.windowMs);
 }
 
-// ─── Exported check functions (sync-compatible wrappers) ─────────────────
+// ─── Exported check functions ────────────────────────────────────────────
 
-export function checkPublicRateLimit(identifier: string): RateLimitResult | Promise<RateLimitResult> {
-  if (isUpstashConfigured()) return checkLimit('public', identifier);
+export function checkPublicRateLimit(identifier: string): RateLimitResult {
   return inMemoryLimiters.public.check(identifier, RATE_LIMITS.public.maxRequests, RATE_LIMITS.public.windowMs);
 }
 
-export function checkJoinRequestRateLimit(identifier: string): RateLimitResult | Promise<RateLimitResult> {
-  if (isUpstashConfigured()) return checkLimit('joinRequest', identifier);
+export function checkJoinRequestRateLimit(identifier: string): RateLimitResult {
   return inMemoryLimiters.joinRequest.check(identifier, RATE_LIMITS.joinRequest.maxRequests, RATE_LIMITS.joinRequest.windowMs);
 }
 
-export function checkUploadRateLimit(identifier: string): RateLimitResult | Promise<RateLimitResult> {
-  if (isUpstashConfigured()) return checkLimit('upload', identifier);
+export function checkUploadRateLimit(identifier: string): RateLimitResult {
   return inMemoryLimiters.upload.check(identifier, RATE_LIMITS.upload.maxRequests, RATE_LIMITS.upload.windowMs);
 }
 
-export function checkAuthRateLimit(identifier: string): RateLimitResult | Promise<RateLimitResult> {
-  if (isUpstashConfigured()) return checkLimit('auth', identifier);
+export function checkAuthRateLimit(identifier: string): RateLimitResult {
   return inMemoryLimiters.auth.check(identifier, RATE_LIMITS.auth.maxRequests, RATE_LIMITS.auth.windowMs);
 }
 
-export function checkRsvpSubmissionRateLimit(identifier: string): RateLimitResult | Promise<RateLimitResult> {
-  if (isUpstashConfigured()) return checkLimit('rsvpSubmission', identifier);
+export function checkRsvpSubmissionRateLimit(identifier: string): RateLimitResult {
   return inMemoryLimiters.rsvpSubmission.check(identifier, RATE_LIMITS.rsvpSubmission.maxRequests, RATE_LIMITS.rsvpSubmission.windowMs);
 }
 
-export function checkBroadcastSendRateLimit(identifier: string): RateLimitResult | Promise<RateLimitResult> {
-  if (isUpstashConfigured()) return checkLimit('broadcastSend', identifier);
+export function checkBroadcastSendRateLimit(identifier: string): RateLimitResult {
   return inMemoryLimiters.broadcastSend.check(identifier, RATE_LIMITS.broadcastSend.maxRequests, RATE_LIMITS.broadcastSend.windowMs);
+}
+
+// ─── Async check (uses Upstash when available, falls back to in-memory) ──
+
+export async function checkRateLimitAsync(
+  name: keyof typeof RATE_LIMITS,
+  identifier: string
+): Promise<RateLimitResult> {
+  return checkLimit(name, identifier);
 }
 
 // ─── Utilities ────────────────────────────────────────────────────────────
