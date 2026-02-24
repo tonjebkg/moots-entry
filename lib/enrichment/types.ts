@@ -1,6 +1,26 @@
 /**
  * Pluggable enrichment provider interface.
- * Allows swapping in LinkedIn, Apollo, Clearbit, WealthX, etc. later.
+ *
+ * v1 uses Claude AI search as the sole provider (see lib/enrichment/claude-provider.ts).
+ * To add future providers (Apollo, Clearbit, WealthX):
+ *
+ * 1. Create a new file, e.g. `lib/enrichment/apollo-provider.ts`
+ * 2. Implement the `EnrichmentProvider` interface:
+ *
+ *    import type { EnrichmentProvider, EnrichmentInput, EnrichmentResult } from './types';
+ *
+ *    export const apolloProvider: EnrichmentProvider = {
+ *      name: 'apollo',
+ *      async enrich(input: EnrichmentInput): Promise<EnrichmentResult> {
+ *        // Call Apollo API with input.full_name, input.emails, etc.
+ *        // Return enriched data following EnrichmentResult shape
+ *      },
+ *    };
+ *
+ * 3. Pass the provider to `runEnrichmentPipeline()` in your API route.
+ *
+ * Chain multiple providers by running them in sequence and merging results.
+ * Each provider returns cost_cents for budget tracking.
  */
 
 export interface EnrichmentInput {

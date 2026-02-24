@@ -40,16 +40,18 @@ export async function checkInGuest(params: CheckInParams): Promise<EventCheckin>
     }
   } else if (invitationId) {
     const invitations = await db`
-      SELECT ci.first_name, ci.last_name, ci.email, ci.company, ci.title
+      SELECT ci.full_name, ci.email, ci.contact_id,
+             pc.company, pc.title
       FROM campaign_invitations ci
+      LEFT JOIN people_contacts pc ON pc.id = ci.contact_id
       WHERE ci.id = ${invitationId}
     `;
     if (invitations.length > 0) {
       const inv = invitations[0];
-      fullName = [inv.first_name, inv.last_name].filter(Boolean).join(' ') || 'Unknown';
+      fullName = inv.full_name || 'Unknown';
       email = inv.email;
-      company = inv.company;
-      title = inv.title;
+      company = inv.company || null;
+      title = inv.title || null;
     }
   }
 
@@ -129,7 +131,7 @@ export async function getCheckinMetrics(
     FROM campaign_invitations ci
     JOIN invitation_campaigns ic ON ic.id = ci.campaign_id
     WHERE ic.event_id = ${eventId}
-      AND ci.status IN ('ACCEPTED', 'CONFIRMED')
+      AND ci.status = 'ACCEPTED'
   `;
 
   // Check-in counts

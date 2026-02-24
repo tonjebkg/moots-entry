@@ -85,7 +85,7 @@ export async function generateSeatingPlan(
     JOIN people_contacts c ON c.id = ci.contact_id
     LEFT JOIN guest_scores gs ON gs.contact_id = c.id AND gs.event_id = ${eventId}
     WHERE ci.event_id = ${eventId}
-      AND ci.status IN ('ACCEPTED', 'CONFIRMED')
+      AND ci.status = 'ACCEPTED'
     ORDER BY gs.relevance_score DESC NULLS LAST
   `;
 
@@ -173,7 +173,7 @@ export async function generateIntroductionPairings(
     JOIN people_contacts c ON c.id = ci.contact_id
     LEFT JOIN guest_scores gs ON gs.contact_id = c.id AND gs.event_id = ${eventId}
     WHERE ci.event_id = ${eventId}
-      AND ci.status IN ('ACCEPTED', 'CONFIRMED')
+      AND ci.status = 'ACCEPTED'
     ORDER BY gs.relevance_score DESC NULLS LAST
     LIMIT 100
   `;
@@ -264,7 +264,7 @@ export async function getSeatingAssignments(
     JOIN people_contacts c ON c.id = ci.contact_id
     LEFT JOIN guest_scores gs ON gs.contact_id = c.id AND gs.event_id = ${eventId}
     WHERE ci.event_id = ${eventId}
-      AND ci.status IN ('ACCEPTED', 'CONFIRMED')
+      AND ci.status = 'ACCEPTED'
     ORDER BY ci.table_assignment NULLS LAST, ci.seat_assignment NULLS LAST
   `;
 }

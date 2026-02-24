@@ -1,128 +1,25 @@
 /**
- * In-memory rate limiter using LRU cache
+ * Rate limiting with Upstash Redis (production) or in-memory fallback (dev).
  *
- * This is a simple, dependency-free rate limiter for serverless environments.
- * For production with multiple instances, consider using Redis or Upstash.
+ * When UPSTASH_REDIS_REST_URL + UPSTASH_REDIS_REST_TOKEN are set,
+ * uses @upstash/ratelimit with a sliding window. Otherwise falls
+ * back to an in-memory LRU limiter (resets on cold start).
  */
 
-interface RateLimitEntry {
-  count: number;
-  resetAt: number;
+import { Ratelimit } from '@upstash/ratelimit';
+import { Redis } from '@upstash/redis';
+
+// ─── Result type ──────────────────────────────────────────────────────────
+
+export interface RateLimitResult {
+  success: boolean;
+  limit: number;
+  remaining: number;
+  reset: number;
 }
 
-class RateLimiter {
-  private cache = new Map<string, RateLimitEntry>();
-  private maxEntries: number;
+// ─── Rate limit configs ───────────────────────────────────────────────────
 
-  constructor(maxEntries = 1000) {
-    this.maxEntries = maxEntries;
-  }
-
-  /**
-   * Check if request is within rate limit
-   *
-   * @param identifier Unique identifier for the client (IP, email, etc.)
-   * @param maxRequests Maximum requests allowed in the window
-   * @param windowMs Time window in milliseconds
-   * @returns Object with success status and limit info
-   */
-  check(
-    identifier: string,
-    maxRequests: number,
-    windowMs: number
-  ): {
-    success: boolean;
-    limit: number;
-    remaining: number;
-    reset: number;
-  } {
-    const now = Date.now();
-    const key = identifier;
-
-    // Clean up expired entries periodically
-    if (this.cache.size > this.maxEntries) {
-      this.cleanup(now);
-    }
-
-    const entry = this.cache.get(key);
-
-    // No entry or expired - create new entry
-    if (!entry || entry.resetAt < now) {
-      const resetAt = now + windowMs;
-      this.cache.set(key, { count: 1, resetAt });
-      return {
-        success: true,
-        limit: maxRequests,
-        remaining: maxRequests - 1,
-        reset: resetAt,
-      };
-    }
-
-    // Entry exists and not expired - check limit
-    if (entry.count >= maxRequests) {
-      return {
-        success: false,
-        limit: maxRequests,
-        remaining: 0,
-        reset: entry.resetAt,
-      };
-    }
-
-    // Increment count
-    entry.count++;
-    this.cache.set(key, entry);
-
-    return {
-      success: true,
-      limit: maxRequests,
-      remaining: maxRequests - entry.count,
-      reset: entry.resetAt,
-    };
-  }
-
-  /**
-   * Clean up expired entries
-   */
-  private cleanup(now: number) {
-    for (const [key, entry] of this.cache.entries()) {
-      if (entry.resetAt < now) {
-        this.cache.delete(key);
-      }
-    }
-  }
-
-  /**
-   * Clear all entries (useful for testing)
-   */
-  clear() {
-    this.cache.clear();
-  }
-}
-
-// Singleton instances for different use cases
-const rateLimiters = {
-  // General public API rate limiter - 30 requests per minute
-  public: new RateLimiter(),
-
-  // Join request rate limiter - 3 requests per 5 minutes per email
-  joinRequest: new RateLimiter(),
-
-  // Upload rate limiter - 5 uploads per minute
-  upload: new RateLimiter(),
-
-  // Auth rate limiter - 5 attempts per 15 minutes per IP
-  auth: new RateLimiter(),
-
-  // RSVP submission rate limiter - 5 submissions per 15 minutes per IP
-  rsvpSubmission: new RateLimiter(),
-
-  // Broadcast send rate limiter - 3 sends per minute per user
-  broadcastSend: new RateLimiter(),
-};
-
-/**
- * Rate limit configurations
- */
 export const RATE_LIMITS = {
   public: {
     maxRequests: 30,
@@ -150,99 +47,175 @@ export const RATE_LIMITS = {
   },
 } as const;
 
-/**
- * Check rate limit for public API requests
- */
-export function checkPublicRateLimit(identifier: string) {
-  return rateLimiters.public.check(
-    identifier,
-    RATE_LIMITS.public.maxRequests,
-    RATE_LIMITS.public.windowMs
-  );
+// ─── In-memory fallback ───────────────────────────────────────────────────
+
+interface RateLimitEntry {
+  count: number;
+  resetAt: number;
 }
 
-/**
- * Check rate limit for join request submissions
- */
-export function checkJoinRequestRateLimit(identifier: string) {
-  return rateLimiters.joinRequest.check(
-    identifier,
-    RATE_LIMITS.joinRequest.maxRequests,
-    RATE_LIMITS.joinRequest.windowMs
-  );
+class InMemoryRateLimiter {
+  private cache = new Map<string, RateLimitEntry>();
+  private maxEntries: number;
+
+  constructor(maxEntries = 1000) {
+    this.maxEntries = maxEntries;
+  }
+
+  check(identifier: string, maxRequests: number, windowMs: number): RateLimitResult {
+    const now = Date.now();
+
+    if (this.cache.size > this.maxEntries) {
+      this.cleanup(now);
+    }
+
+    const entry = this.cache.get(identifier);
+
+    if (!entry || entry.resetAt < now) {
+      const resetAt = now + windowMs;
+      this.cache.set(identifier, { count: 1, resetAt });
+      return { success: true, limit: maxRequests, remaining: maxRequests - 1, reset: resetAt };
+    }
+
+    if (entry.count >= maxRequests) {
+      return { success: false, limit: maxRequests, remaining: 0, reset: entry.resetAt };
+    }
+
+    entry.count++;
+    this.cache.set(identifier, entry);
+    return { success: true, limit: maxRequests, remaining: maxRequests - entry.count, reset: entry.resetAt };
+  }
+
+  private cleanup(now: number) {
+    for (const [key, entry] of this.cache.entries()) {
+      if (entry.resetAt < now) this.cache.delete(key);
+    }
+  }
+
+  clear() {
+    this.cache.clear();
+  }
 }
 
-/**
- * Check rate limit for file uploads
- */
-export function checkUploadRateLimit(identifier: string) {
-  return rateLimiters.upload.check(
-    identifier,
-    RATE_LIMITS.upload.maxRequests,
-    RATE_LIMITS.upload.windowMs
-  );
+// ─── Upstash-backed limiter ──────────────────────────────────────────────
+
+function isUpstashConfigured(): boolean {
+  return !!(process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN);
 }
 
-/**
- * Check rate limit for auth attempts (login, magic link, password reset)
- */
-export function checkAuthRateLimit(identifier: string) {
-  return rateLimiters.auth.check(
-    identifier,
-    RATE_LIMITS.auth.maxRequests,
-    RATE_LIMITS.auth.windowMs
-  );
+function createUpstashLimiter(
+  prefix: string,
+  maxRequests: number,
+  windowSec: number
+): Ratelimit {
+  const redis = new Redis({
+    url: process.env.UPSTASH_REDIS_REST_URL!,
+    token: process.env.UPSTASH_REDIS_REST_TOKEN!,
+  });
+
+  return new Ratelimit({
+    redis,
+    limiter: Ratelimit.slidingWindow(maxRequests, `${windowSec} s`),
+    prefix: `moots:rl:${prefix}`,
+    analytics: true,
+  });
 }
 
-/**
- * Check rate limit for RSVP submissions
- */
-export function checkRsvpSubmissionRateLimit(identifier: string) {
-  return rateLimiters.rsvpSubmission.check(
-    identifier,
-    RATE_LIMITS.rsvpSubmission.maxRequests,
-    RATE_LIMITS.rsvpSubmission.windowMs
-  );
+// ─── Singleton limiters ──────────────────────────────────────────────────
+
+let _upstashLimiters: Record<string, Ratelimit> | null = null;
+
+function getUpstashLimiters(): Record<string, Ratelimit> {
+  if (!_upstashLimiters) {
+    _upstashLimiters = {
+      public: createUpstashLimiter('public', RATE_LIMITS.public.maxRequests, 60),
+      joinRequest: createUpstashLimiter('join', RATE_LIMITS.joinRequest.maxRequests, 300),
+      upload: createUpstashLimiter('upload', RATE_LIMITS.upload.maxRequests, 60),
+      auth: createUpstashLimiter('auth', RATE_LIMITS.auth.maxRequests, 900),
+      rsvpSubmission: createUpstashLimiter('rsvp', RATE_LIMITS.rsvpSubmission.maxRequests, 900),
+      broadcastSend: createUpstashLimiter('broadcast', RATE_LIMITS.broadcastSend.maxRequests, 60),
+    };
+  }
+  return _upstashLimiters;
 }
 
-/**
- * Check rate limit for broadcast sends
- */
-export function checkBroadcastSendRateLimit(identifier: string) {
-  return rateLimiters.broadcastSend.check(
-    identifier,
-    RATE_LIMITS.broadcastSend.maxRequests,
-    RATE_LIMITS.broadcastSend.windowMs
-  );
+const inMemoryLimiters = {
+  public: new InMemoryRateLimiter(),
+  joinRequest: new InMemoryRateLimiter(),
+  upload: new InMemoryRateLimiter(),
+  auth: new InMemoryRateLimiter(),
+  rsvpSubmission: new InMemoryRateLimiter(),
+  broadcastSend: new InMemoryRateLimiter(),
+};
+
+// ─── Generic check function ──────────────────────────────────────────────
+
+async function checkLimit(
+  name: keyof typeof RATE_LIMITS,
+  identifier: string
+): Promise<RateLimitResult> {
+  const cfg = RATE_LIMITS[name];
+
+  if (isUpstashConfigured()) {
+    try {
+      const limiter = getUpstashLimiters()[name];
+      const result = await limiter.limit(identifier);
+      return {
+        success: result.success,
+        limit: result.limit,
+        remaining: result.remaining,
+        reset: result.reset,
+      };
+    } catch {
+      // Fall through to in-memory on Upstash error
+    }
+  }
+
+  return inMemoryLimiters[name].check(identifier, cfg.maxRequests, cfg.windowMs);
 }
 
-/**
- * Get client identifier from request (IP address)
- */
+// ─── Exported check functions (sync-compatible wrappers) ─────────────────
+
+export function checkPublicRateLimit(identifier: string): RateLimitResult | Promise<RateLimitResult> {
+  if (isUpstashConfigured()) return checkLimit('public', identifier);
+  return inMemoryLimiters.public.check(identifier, RATE_LIMITS.public.maxRequests, RATE_LIMITS.public.windowMs);
+}
+
+export function checkJoinRequestRateLimit(identifier: string): RateLimitResult | Promise<RateLimitResult> {
+  if (isUpstashConfigured()) return checkLimit('joinRequest', identifier);
+  return inMemoryLimiters.joinRequest.check(identifier, RATE_LIMITS.joinRequest.maxRequests, RATE_LIMITS.joinRequest.windowMs);
+}
+
+export function checkUploadRateLimit(identifier: string): RateLimitResult | Promise<RateLimitResult> {
+  if (isUpstashConfigured()) return checkLimit('upload', identifier);
+  return inMemoryLimiters.upload.check(identifier, RATE_LIMITS.upload.maxRequests, RATE_LIMITS.upload.windowMs);
+}
+
+export function checkAuthRateLimit(identifier: string): RateLimitResult | Promise<RateLimitResult> {
+  if (isUpstashConfigured()) return checkLimit('auth', identifier);
+  return inMemoryLimiters.auth.check(identifier, RATE_LIMITS.auth.maxRequests, RATE_LIMITS.auth.windowMs);
+}
+
+export function checkRsvpSubmissionRateLimit(identifier: string): RateLimitResult | Promise<RateLimitResult> {
+  if (isUpstashConfigured()) return checkLimit('rsvpSubmission', identifier);
+  return inMemoryLimiters.rsvpSubmission.check(identifier, RATE_LIMITS.rsvpSubmission.maxRequests, RATE_LIMITS.rsvpSubmission.windowMs);
+}
+
+export function checkBroadcastSendRateLimit(identifier: string): RateLimitResult | Promise<RateLimitResult> {
+  if (isUpstashConfigured()) return checkLimit('broadcastSend', identifier);
+  return inMemoryLimiters.broadcastSend.check(identifier, RATE_LIMITS.broadcastSend.maxRequests, RATE_LIMITS.broadcastSend.windowMs);
+}
+
+// ─── Utilities ────────────────────────────────────────────────────────────
+
 export function getClientIdentifier(request: Request): string {
-  // Try to get real IP from headers (Vercel, Cloudflare, etc.)
-  const forwardedFor = request.headers.get("x-forwarded-for");
-  if (forwardedFor) {
-    return forwardedFor.split(",")[0].trim();
-  }
-
-  const realIp = request.headers.get("x-real-ip");
-  if (realIp) {
-    return realIp;
-  }
-
-  // Fallback to a generic identifier
-  return "anonymous";
+  const forwardedFor = request.headers.get('x-forwarded-for');
+  if (forwardedFor) return forwardedFor.split(',')[0].trim();
+  const realIp = request.headers.get('x-real-ip');
+  if (realIp) return realIp;
+  return 'anonymous';
 }
 
-/**
- * Clear all rate limit caches (useful for testing)
- */
 export function clearRateLimits() {
-  rateLimiters.public.clear();
-  rateLimiters.joinRequest.clear();
-  rateLimiters.upload.clear();
-  rateLimiters.auth.clear();
-  rateLimiters.rsvpSubmission.clear();
-  rateLimiters.broadcastSend.clear();
+  Object.values(inMemoryLimiters).forEach(l => l.clear());
 }

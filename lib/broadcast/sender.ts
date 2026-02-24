@@ -18,13 +18,13 @@ export async function getRecipients(
   const db = getDb();
 
   const results = await db`
-    SELECT DISTINCT ci.email, CONCAT(ci.first_name, ' ', ci.last_name) AS full_name
+    SELECT DISTINCT ci.email, ci.full_name
     FROM campaign_invitations ci
     JOIN invitation_campaigns ic ON ic.id = ci.campaign_id
     WHERE ic.event_id = ${eventId}
-      AND ci.status IN ('ACCEPTED', 'CONFIRMED')
+      AND ci.status = 'ACCEPTED'
       AND ci.email IS NOT NULL
-    ORDER BY full_name
+    ORDER BY ci.full_name
   `;
 
   return results as RecipientInfo[];

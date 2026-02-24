@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import * as Sentry from "@sentry/nextjs";
 import { buildErrorResponse } from "./errors";
 import { logger } from "./logger";
 
@@ -52,6 +53,12 @@ export function withErrorHandling(handler: RouteHandler): RouteHandler {
         url: request.url,
         params: context?.params,
         durationMs,
+      });
+
+      // Report to Sentry
+      Sentry.captureException(error, {
+        tags: { method: request.method },
+        extra: { url: request.url, params: context?.params, durationMs },
       });
 
       // Build sanitized error response

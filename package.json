@@ -6,18 +6,30 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "migrate": "npx tsx scripts/run-all-migrations.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.78.0",
     "@azure/storage-blob": "^12.30.0",
     "@neondatabase/serverless": "^1.0.2",
+    "@sentry/nextjs": "^10.39.0",
     "@supabase/supabase-js": "^2.77.0",
+    "@upstash/ratelimit": "^2.0.8",
+    "@upstash/redis": "^1.36.2",
     "@yudiel/react-qr-scanner": "^2.4.1",
     "autoprefixer": "10.4.20",
     "bcryptjs": "^3.0.3",
     "dotenv": "^17.2.3",
     "html5-qrcode": "^2.3.8",
+    "jspdf": "^4.2.0",
+    "jspdf-autotable": "^5.0.7",
     "lucide-react": "^0.564.0",
     "next": "14.2.14",
     "papaparse": "^5.5.3",
@@ -32,6 +44,9 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
+    "@playwright/test": "^1.58.2",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
     "@types/bcryptjs": "^2.4.6",
     "@types/node": "^20",
     "@types/papaparse": "^5.3.16",
@@ -39,6 +54,8 @@
     "@types/react-dom": "^18",
     "eslint": "^8.57.1",
     "eslint-config-next": "^14.2.14",
-    "typescript": "^5"
+    "happy-dom": "^20.7.0",
+    "typescript": "^5",
+    "vitest": "^4.0.18"
   }
 }

@@ -277,6 +277,7 @@ export interface SendBroadcastEmailParams {
   subject: string;
   content: string;
   eventTitle: string;
+  replyTo?: string;
 }
 
 export async function sendBroadcastEmail(
@@ -310,6 +311,7 @@ export async function sendBroadcastEmail(
       to: params.to,
       subject: params.subject,
       html,
+      ...(params.replyTo ? { reply_to: params.replyTo } : {}),
       tags: [{ name: 'category', value: 'broadcast' }],
     });
 
@@ -330,6 +332,7 @@ export interface SendFollowUpEmailParams {
   subject: string;
   content: string;
   eventTitle: string;
+  replyTo?: string;
 }
 
 export async function sendFollowUpEmail(
@@ -363,6 +366,7 @@ export async function sendFollowUpEmail(
       to: params.to,
       subject: params.subject,
       html,
+      ...(params.replyTo ? { reply_to: params.replyTo } : {}),
       tags: [{ name: 'category', value: 'follow_up' }],
     });
 

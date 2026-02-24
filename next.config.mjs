@@ -1,4 +1,6 @@
 // next.config.mjs
+import { withSentryConfig } from '@sentry/nextjs';
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
@@ -17,11 +19,19 @@ const nextConfig = {
         destination: '/dashboard/:eventId/campaigns',
         permanent: true,
       },
-      // Note: Campaign detail redirect requires campaign-to-event mapping
-      // which cannot be done statically. Handle this in the campaigns tab
-      // by parsing the query param if needed.
     ];
   },
 };
 
-export default nextConfig;
+// Only apply Sentry wrapper when DSN is configured
+const sentryWebpackOptions = {
+  org: process.env.SENTRY_ORG,
+  project: process.env.SENTRY_PROJECT,
+  silent: !process.env.CI,
+  widenClientFileUpload: true,
+  disableLogger: true,
+};
+
+export default process.env.SENTRY_DSN
+  ? withSentryConfig(nextConfig, sentryWebpackOptions)
+  : nextConfig;

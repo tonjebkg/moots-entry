@@ -37,8 +37,8 @@ export async function getEventAnalytics(
     db`
       SELECT
         COUNT(*)::int AS total,
-        COUNT(*) FILTER (WHERE status IN ('INVITED', 'ACCEPTED', 'DECLINED', 'CONSIDERING', 'CONFIRMED'))::int AS invited,
-        COUNT(*) FILTER (WHERE status IN ('ACCEPTED', 'CONFIRMED'))::int AS accepted,
+        COUNT(*) FILTER (WHERE status IN ('INVITED', 'ACCEPTED', 'DECLINED', 'CONSIDERING'))::int AS invited,
+        COUNT(*) FILTER (WHERE status = 'ACCEPTED')::int AS accepted,
         COUNT(*) FILTER (WHERE status = 'DECLINED')::int AS declined
       FROM campaign_invitations
       WHERE event_id = ${eventId}
@@ -201,7 +201,7 @@ export async function getEventComparison(
     const metricsRows = await db`
       SELECT
         COUNT(*)::int AS invited,
-        COUNT(*) FILTER (WHERE status IN ('ACCEPTED', 'CONFIRMED'))::int AS accepted,
+        COUNT(*) FILTER (WHERE status = 'ACCEPTED')::int AS accepted,
         COUNT(*) FILTER (WHERE status = 'DECLINED')::int AS declined
       FROM campaign_invitations WHERE event_id = ${eid}
     `;

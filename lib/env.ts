@@ -100,6 +100,13 @@ const optionalEnvSchema = z.object({
   UPSTASH_REDIS_REST_URL: z.string().url().optional(),
   UPSTASH_REDIS_REST_TOKEN: z.string().optional(),
 
+  // Error monitoring (optional)
+  SENTRY_DSN: z.string().url().optional(),
+  NEXT_PUBLIC_SENTRY_DSN: z.string().url().optional(),
+
+  // Cron security
+  CRON_SECRET: z.string().optional(),
+
   // App URL for CORS
   NEXT_PUBLIC_APP_URL: z.string().url().optional(),
 });
@@ -126,6 +133,9 @@ function getRawEnv() {
     RESEND_FROM_EMAIL: process.env.RESEND_FROM_EMAIL,
     UPSTASH_REDIS_REST_URL: process.env.UPSTASH_REDIS_REST_URL,
     UPSTASH_REDIS_REST_TOKEN: process.env.UPSTASH_REDIS_REST_TOKEN,
+    SENTRY_DSN: process.env.SENTRY_DSN,
+    NEXT_PUBLIC_SENTRY_DSN: process.env.NEXT_PUBLIC_SENTRY_DSN,
+    CRON_SECRET: process.env.CRON_SECRET,
     NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
     ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY,
   };

@@ -24,10 +24,15 @@ Target events include: curated breakfasts, luncheons, dinners, private talks, ne
 | Optional Secondary DB | Supabase (used in entry/mobile mode) |
 | File Storage | Azure Blob Storage (event images, avatars) |
 | Email | Resend |
-| Rate Limiting | Upstash Redis (optional; falls back to in-memory) |
+| AI | Anthropic Claude (enrichment + scoring + seating) |
+| Rate Limiting | Upstash Redis (production) / in-memory fallback (dev) |
+| Error Monitoring | Sentry |
 | Validation | Zod |
 | CSV Parsing | Papa Parse |
+| PDF Export | jsPDF + jspdf-autotable |
 | QR Codes | `qrcode`, `html5-qrcode`, `@yudiel/react-qr-scanner` |
+| Testing | Vitest (unit), Playwright (E2E) |
+| CI | GitHub Actions |
 
 ---
 
@@ -35,7 +40,7 @@ Target events include: curated breakfasts, luncheons, dinners, private talks, ne
 
 The app has two operating modes, controlled by the `NEXT_PUBLIC_APP_MODE` environment variable:
 
-- **`dashboard`** — Admin interface for hosts. Uses Neon database. Requires HTTP Basic Auth.
+- **`dashboard`** — Admin interface for hosts. Uses Neon database. Session-based auth (cookies).
 - **`entry`** — Mobile/public API mode. Uses Supabase. Exposes public endpoints for guests.
 
 Most development has happened in **dashboard mode**.
@@ -44,232 +49,62 @@ Most development has happened in **dashboard mode**.
 
 ## Authentication & Authorization
 
-- **Dashboard** is protected by **HTTP Basic Auth** enforced in `middleware.ts`
-- Credentials are set via `DASHBOARD_AUTH_USER` and `DASHBOARD_AUTH_PASS` env vars
-- Uses timing-safe string comparison (`lib/timing-safe-compare.ts`) to prevent timing attacks
-- Public endpoints (for guests, no auth required):
+- **Session-based auth** with HTTP-only cookies (`lib/auth.ts`)
+- Users, workspaces, and roles managed via `users`, `workspaces`, `workspace_members` tables
+- `requireAuth()` / `requireRole()` middleware on protected API routes
+- Roles: `OWNER`, `ADMIN`, `TEAM_MEMBER`, `EXTERNAL_PARTNER`, `VIEWER`
+- Magic link + password login supported
+- Public endpoints (no auth required):
   - `GET /api/events/[eventId]`
   - `POST /api/events/[eventId]/join-requests`
-  - `GET /api/events/[eventId]/join-requests/me`
   - `GET|POST /api/rsvp/[invitation-token]`
   - `GET|POST /api/join/[join-token]`
+  - `GET /api/health`
+
+---
+
+## Three-Layer Architecture
+
+1. **People Database** (Layer 1) — Persistent, organization-level contact intelligence. Event-independent. `people_contacts` table.
+2. **Event Profile & Goals** (Layer 2) — Per-event objectives, capacity, target criteria. `event_objectives` table.
+3. **Matchmaking Engine** (Layer 3) — Scores contacts differently for every event. 0–100 relevance scores with rationale. `guest_scores` table.
 
 ---
 
 ## Database Schema
 
-All tables are in Neon PostgreSQL. The migration file is at `migrations/001_create_invitation_system.sql`.
+All tables are in Neon PostgreSQL. Migrations are in `migrations/` (001-006).
 
-### Core Tables
+### Foundation Tables
+- `events` — Event metadata, capacity, status, seating config
+- `users` — Host dashboard accounts (separate from mobile `user_profiles`)
+- `workspaces` — Multi-tenant organizational containers
+- `workspace_members` — User-to-workspace role mapping
+- `sessions` — Active user sessions (PostgreSQL-backed)
+- `audit_logs` — Immutable action trail
 
-#### `events`
-The central entity. Stores all event metadata.
-```
-id, title, location (JSONB), start_date, end_date, timezone
-image_url, event_url, hosts (JSONB), sponsors (JSONB)
-is_private, approve_mode (MANUAL | AUTO)
-status (DRAFT | PUBLISHED | COMPLETE | CANCELLED)
-total_capacity, seating_format (STANDING | SEATED | MIXED)
-tables_config (JSONB), created_at, updated_at
-```
+### People Database + Scoring
+- `people_contacts` — Persistent People Database with enrichment, tags, financials
+- `event_objectives` — Scoring criteria per event with weights
+- `guest_scores` — Per-contact, per-event AI scoring results
+- `enrichment_jobs` / `scoring_jobs` — Async batch job tracking
 
-#### `user_profiles`
-One record per unique guest (`owner_id`). Tracks all events a guest has attended.
-```
-id, owner_id (UNIQUE), event_ids (INT[])
-emails (JSONB), first_name, last_name, photo_url
-created_at, updated_at
-```
+### Invitation Pipeline
+- `invitation_campaigns` — Named invitation waves with denormalized stats
+- `campaign_invitations` — Individual guest invitations with tier/priority/status
+- `email_send_log` — Email delivery audit trail
 
-#### `event_join_requests`
-Guest requests to join an event (submitted via mobile app or landing page).
-```
-id, event_id, owner_id (UNIQUE per event)
-status (PENDING | APPROVED | REJECTED | CANCELLED | DRAFT)
-plus_ones, comments
-rsvp_contact, company_website, goals, looking_for
-visibility_enabled (default TRUE), notifications_enabled (default TRUE)
-approved_at, created_at, updated_at
-```
+### Event Operations
+- `event_checkins` — Check-in records (QR scan, walk-in, invitation)
+- `guest_team_assignments` — Host team member → contact assignments
+- `briefing_packets` — AI-generated briefings
+- `rsvp_pages` / `rsvp_submissions` — Embeddable RSVP pages
+- `broadcast_messages` — Host-to-all announcements
+- `follow_up_sequences` — Post-event automated follow-ups
 
-#### `event_attendees`
-Created when a join request is APPROVED. Links guest to event.
-```
-id, event_id, owner_id, user_profile_id (FK)
-join_request_id (FK), visibility_enabled, notifications_enabled
-created_at, updated_at
-```
-
-#### `invitation_campaigns`
-Named waves of invitations. A single event can have multiple campaigns (e.g. "Wave 1 — VIP", "Wave 2 — General").
-```
-id, event_id (FK), name, description
-status (DRAFT | ACTIVE | PAUSED | COMPLETED | CANCELLED)
-email_subject, email_body (customizable templates)
-total_considering, total_invited, total_accepted, total_declined, total_joined (denormalized)
-created_at, updated_at
-```
-
-#### `campaign_invitations`
-Individual guest records within a campaign. Tracks the full lifecycle from consideration to attendance.
-```
-id, campaign_id (FK), event_id (FK)
-full_name, email (UNIQUE per campaign)
-status (CONSIDERING | INVITED | ACCEPTED | DECLINED | WAITLIST | BOUNCED | FAILED)
-tier (TIER_1 | TIER_2 | TIER_3 | WAITLIST)
-priority (VIP | HIGH | NORMAL | LOW)
-internal_notes, expected_plus_ones
-invitation_token (unique), token_expires_at, rsvp_email_sent_at, rsvp_responded_at
-join_token (unique), join_link_sent_at, join_completed_at, join_request_id (FK)
-table_assignment, seat_assignment (reserved for future seating feature)
-created_at, updated_at
-```
-
-#### `email_send_log`
-Audit trail for all emails sent.
-```
-id, invitation_id (FK), campaign_id (FK)
-recipient_email, subject
-email_type (RSVP_INVITATION | JOIN_LINK)
-status (QUEUED | SENT | FAILED | BOUNCED)
-email_service_id, email_service_response (JSONB)
-sent_at, created_at
-```
-
-### Key Database Patterns
-- `updated_at` is automatically updated on all tables via PostgreSQL triggers
-- Campaign statistics (`total_considering`, `total_invited`, etc.) are **denormalized** and kept in sync via triggers — do not recompute them manually
-- `user_profiles.event_ids` is an `INT[]` array — use `ARRAY[]::int[]` for concatenation in raw SQL
-
----
-
-## Guest Lifecycle (The Core Flow)
-
-There are **two separate flows** that should not be confused:
-
-### Flow 1: Invitation → RSVP (Pre-Event Curation)
-Used when the host proactively invites specific people.
-
-```
-Host creates Campaign
-  → adds guests to campaign (status: CONSIDERING)
-  → sends RSVP emails (status: INVITED)
-Guest clicks email link → /rsvp/[invitation-token]
-  → accepts or declines (status: ACCEPTED | DECLINED)
-Host reviews responses
-  → sends join link email to accepted guests
-Guest clicks join link → /join/[join-token]
-  → completes onboarding form
-  → creates event_join_request + event_attendee records
-```
-
-### Flow 2: Direct Join Request (Organic / Mobile App)
-Used when guests discover the event and request to join.
-
-```
-Guest submits via mobile app → POST /api/events/[eventId]/join-requests
-  → creates event_join_request (status: PENDING)
-Host reviews in dashboard Guests tab
-  → approves or rejects
-On approval:
-  → event_join_request status → APPROVED
-  → event_attendee record created
-  → user_profile upserted / event_ids array updated
-```
-
----
-
-## API Routes Reference
-
-### Events
-| Method | Route | Auth | Purpose |
-|--------|-------|------|---------|
-| GET | `/api/events` | Yes | List all events |
-| POST | `/api/events/create` | Yes | Create new event |
-| GET | `/api/events/[eventId]` | No | Get event details (mobile) |
-| PATCH | `/api/events/update` | Yes | Update event |
-
-### Join Requests
-| Method | Route | Auth | Purpose |
-|--------|-------|------|---------|
-| GET | `/api/events/[eventId]/join-requests` | Yes | List join requests with stats |
-| POST | `/api/events/[eventId]/join-requests` | No | Submit join request (mobile, rate-limited) |
-| GET | `/api/events/[eventId]/join-requests/me` | No | Check own join status |
-| PATCH | `/api/events/[eventId]/join-requests?id=[id]` | Yes | Update request status/notes |
-
-### Capacity
-| Method | Route | Auth | Purpose |
-|--------|-------|------|---------|
-| GET | `/api/events/[eventId]/capacity-status` | Yes | Filled/remaining/over-capacity metrics |
-| GET | `/api/events/[eventId]/capacity` | Yes | Full capacity data |
-
-### Campaigns
-| Method | Route | Auth | Purpose |
-|--------|-------|------|---------|
-| GET | `/api/events/[eventId]/campaigns` | Yes | List campaigns for event |
-| POST | `/api/events/[eventId]/campaigns` | Yes | Create campaign |
-| GET | `/api/campaigns/[campaignId]` | Yes | Get campaign details |
-| PATCH | `/api/campaigns/[campaignId]` | Yes | Update campaign |
-| DELETE | `/api/campaigns/[campaignId]` | Yes | Delete campaign (cascades) |
-| POST | `/api/campaigns/[campaignId]/send-rsvp` | Yes | Send RSVP emails in bulk |
-
-### Invitations
-| Method | Route | Auth | Purpose |
-|--------|-------|------|---------|
-| GET | `/api/campaigns/[campaignId]/invitations` | Yes | List invitations |
-| POST | `/api/campaigns/[campaignId]/invitations` | Yes | Create single invitation |
-| POST | `/api/campaigns/[campaignId]/invitations/upload` | Yes | CSV bulk upload |
-| PATCH | `/api/invitations/[invitationId]` | Yes | Update single invitation |
-| POST | `/api/invitations/bulk-update` | Yes | Bulk update status/tier/priority |
-| POST | `/api/invitations/bulk-send-join-links` | Yes | Send join links to multiple guests |
-
-### RSVP & Join (Public)
-| Method | Route | Auth | Purpose |
-|--------|-------|------|---------|
-| GET | `/api/rsvp/[token]/details` | No | Fetch invitation for RSVP page |
-| POST | `/api/rsvp/[token]` | No | Accept or decline RSVP |
-| GET | `/api/join/[token]/details` | No | Fetch invitation for join page |
-| POST | `/api/join/[token]` | No | Complete join onboarding |
-
-### Uploads
-| Method | Route | Auth | Purpose |
-|--------|-------|------|---------|
-| POST | `/api/uploads/event-image` | Yes | Upload event image to Azure |
-
----
-
-## Frontend Pages
-
-| Route | Purpose |
-|-------|---------|
-| `/` | Homepage / marketing landing page |
-| `/dashboard` | Event list (upcoming, past, drafts) |
-| `/dashboard/[eventId]` | Redirects to `/overview` |
-| `/dashboard/[eventId]/overview` | Stats, capacity gauge, recent activity |
-| `/dashboard/[eventId]/guests` | Guest approval workflow |
-| `/dashboard/[eventId]/campaigns` | Invitation wave management |
-| `/dashboard/[eventId]/seating` | Placeholder (future) |
-| `/dashboard/[eventId]/checkin` | Placeholder (future) |
-| `/checkin/[eventId]` | Real-time check-in with QR scanning |
-| `/rsvp/[invitation-token]` | Guest RSVP accept/decline page (public) |
-| `/join/[join-token]` | Guest onboarding / join room page (public) |
-
----
-
-## Key Components
-
-| File | Purpose |
-|------|---------|
-| `CreateEventModal.tsx` | Modal + form for creating events |
-| `CampaignForm.tsx` | Campaign create/edit form |
-| `CampaignDetailPanel.tsx` | Slide-out panel showing campaign + invitations list |
-| `GuestDetailPanel.tsx` | Slide-out panel for viewing/editing a guest profile |
-| `GuestPipelineTable.tsx` | Table of campaign invitations with status, tier, priority |
-| `SendRsvpModal.tsx` | Modal for bulk-sending RSVP emails |
-| `InviteWavePlanner.tsx` | UI for managing invitation tiers/waves |
-| `CapacityGauge.tsx` | Visual capacity indicator (filled vs remaining) |
-| `EventTabNavigation.tsx` | Tab switcher within event dashboard |
-| `EventHeaderActions.tsx` | Header-level event action buttons |
+### Integrations
+- `seating_suggestions` / `introduction_pairings` — AI seating + intro recommendations
+- `crm_connections` / `crm_sync_log` — Salesforce/HubSpot sync
 
 ---
 
@@ -277,48 +112,107 @@ On approval:
 
 | File | Purpose |
 |------|---------|
-| `db.ts` | Neon PostgreSQL client (lazy-initialized) |
+| `db.ts` | Neon PostgreSQL client (lazy-initialized singleton) |
 | `env.ts` | Zod-validated environment config (fails fast on startup) |
-| `schemas/` | Zod schemas for API request body validation |
-| `email-service.ts` | Resend integration for RSVP and join link emails |
-| `cors.ts` | CORS headers for public API endpoints |
-| `security-headers.ts` | Security response headers middleware |
-| `rate-limit.ts` | Rate limiter using Upstash Redis or in-memory fallback |
-| `logger.ts` | Structured logging (info/warn/error) |
-| `invitation-token.ts` | Token generation for invitations |
-| `errors.ts` | Standardized API error responses |
-| `with-error-handling.ts` | Wrapper for consistent error handling in API routes |
-| `validate-request.ts` | Zod-based request body validation helper |
-| `file-validation.ts` | File type/size validation for uploads |
-| `mobile-redirect.ts` | Redirect logic for mobile app deep links |
-| `timing-safe-compare.ts` | Timing-safe string comparison for auth |
-| `password-validation.ts` | Password strength rules |
+| `auth.ts` | Session management, password hashing, `requireAuth()` |
+| `audit-log.ts` | `logAction()` — fire-and-forget audit logging |
+| `rate-limit.ts` | Upstash Redis (prod) / in-memory (dev) rate limiting |
+| `with-error-handling.ts` | Route handler wrapper + Sentry integration |
+| `errors.ts` | Custom error classes (ValidationError, NotFoundError, etc.) |
+| `validate-request.ts` | Zod-based request body validation |
+| `email-service.ts` | Resend integration for all email types |
+| `logger.ts` | Structured logging (JSON in prod, pretty in dev) |
+| `enrichment/pipeline.ts` | Batch enrichment orchestrator |
+| `enrichment/types.ts` | Pluggable `EnrichmentProvider` interface |
+| `scoring/engine.ts` | Claude AI scoring engine |
+| `broadcast/sender.ts` | Broadcast email sender |
+| `checkin/manager.ts` | Check-in + walk-in management |
+| `analytics/aggregator.ts` | Event analytics with funnel stages |
+| `analytics/export.ts` | CSV/JSON/PDF export |
+| `seating/optimizer.ts` | AI-powered seating suggestions |
+| `crm/provider.ts` | CRM sync abstraction (Salesforce/HubSpot) |
+| `contacts/import.ts` | CSV contact import with deduplication |
+| `waitlist/promoter.ts` | Auto-promote waitlisted guests when capacity opens |
+| `jobs/processor.ts` | Cron-based batch job processor |
 
 ---
 
-## Code Conventions
+## Production Infrastructure
 
-### API Route Pattern
-All API routes follow this pattern:
-1. Wrap with `withErrorHandling()` for consistent error responses
-2. Validate request body with `validateRequest(schema, body)`
-3. Use Zod schemas defined in `lib/schemas/`
-4. Return JSON with appropriate HTTP status codes (200/201/400/404/422/429/500)
+### Vercel Deployment
+- `vercel.json` — Function duration limits + cron configuration
+- Cron jobs: `process-jobs` (every minute), `cleanup` (daily at 3am UTC)
+- `GET /api/health` — Health check endpoint
 
-### Database Access
-- Use `getDb()` from `lib/db.ts` — never import the client directly
-- Raw SQL via tagged template literals (Neon serverless style)
-- Use `ARRAY[]::int[]` for PostgreSQL array concatenation (not `'{}'::int[]`)
+### Error Monitoring
+- Sentry client/server/edge configs (`sentry.*.config.ts`)
+- `withErrorHandling()` reports exceptions to Sentry
+- `SENTRY_DSN` env var (optional)
 
-### Environment Variables
-All env vars are validated via `lib/env.ts` at startup. Required in dashboard mode:
-- `DATABASE_URL` — Neon connection string
-- `DASHBOARD_AUTH_USER` + `DASHBOARD_AUTH_PASS` — Basic auth credentials
-- `RESEND_API_KEY` — Email sending
-- `AZURE_STORAGE_CONNECTION_STRING` + `AZURE_STORAGE_CONTAINER_NAME` — File uploads
+### Rate Limiting
+- Upstash Redis sliding window in production
+- In-memory LRU fallback for local dev
+- Separate limiters: public, auth, RSVP, broadcast, join, upload
 
-### Error Handling for Legacy Data
-Some older `user_profiles` records are missing `event_ids` entries. The approval flow in `join-requests/route.ts` includes auto-repair logic to add missing event IDs rather than failing with a 422 error.
+### Background Jobs
+- Enrichment + scoring jobs created via API, processed by cron
+- `lib/jobs/processor.ts` picks up PENDING jobs in batches of 10
+- Jobs tracked in `enrichment_jobs` / `scoring_jobs` tables
+
+---
+
+## Testing
+
+### Unit Tests (Vitest)
+- Config: `vitest.config.ts`
+- Run: `npm test`
+- 66 tests across 11 test files covering all lib modules
+- Mocked DB and external services
+
+### E2E Tests (Playwright)
+- Config: `playwright.config.ts`
+- Run: `npm run test:e2e`
+- Tests: dashboard navigation, check-in flows, RSVP submissions
+
+### CI Pipeline (GitHub Actions)
+- `.github/workflows/ci.yml`
+- Jobs: lint → typecheck → test → build (on push/PR to main)
+
+---
+
+## Scripts
+
+| Script | Purpose |
+|--------|---------|
+| `npm run dev` | Start dev server |
+| `npm run build` | Production build |
+| `npm test` | Run Vitest unit tests |
+| `npm run test:e2e` | Run Playwright E2E tests |
+| `npm run typecheck` | TypeScript type checking |
+| `npm run lint` | ESLint |
+| `npm run migrate` | Run all SQL migrations |
+
+### One-time Scripts
+| Script | Purpose |
+|--------|---------|
+| `npx tsx scripts/run-all-migrations.ts` | Idempotent migration runner |
+| `npx tsx scripts/backfill-contact-ids.ts` | Link invitations to contacts by email |
+
+---
+
+## Open Questions — Resolved Defaults
+
+| # | Question | v1 Default |
+|---|----------|------------|
+| 3 | Enrichment providers | Claude AI only. `EnrichmentProvider` interface documented for future Apollo/Clearbit |
+| 6 | Multi-day events | `start_date`/`end_date` range. No sub-event schema in v1 |
+| 8 | Waitlist auto-promotion | Implemented. Auto-promotes next WAITLIST guest when an invite is DECLINED |
+| 9 | Follow-up sender identity | Reply-To set to workspace owner's email. `reply_to_email`/`reply_to_name` on workspaces |
+| 10 | PDF export | Implemented via jsPDF. Branded with Moots colors |
+| 11 | Historical data migration | CSV import handles legacy data. No automatic migration |
+| 12 | Campaign → Contact linking | Backfill script + auto-link on future invitation creation |
+| 15 | Audit log retention | Daily cron deletes logs older than 365 days (configurable) |
+| 16 | Walk-in SMS | Phone captured but no SMS in v1. Documented for future Twilio integration |
 
 ---
 
@@ -328,65 +222,69 @@ Some older `user_profiles` records are missing `event_ids` entries. The approval
 moots-entry/
 ├── app/
 │   ├── api/
-│   │   ├── campaigns/[campaignId]/          # Campaign CRUD + send-rsvp
+│   │   ├── campaigns/[campaignId]/
 │   │   ├── events/[eventId]/
-│   │   │   ├── campaigns/                  # Event-scoped campaigns
-│   │   │   ├── capacity/                   # Capacity endpoints
-│   │   │   ├── capacity-status/
-│   │   │   └── join-requests/              # Join request management
-│   │   ├── invitations/                    # Invitation CRUD + bulk ops
-│   │   ├── join/[join-token]/              # Join flow (public)
-│   │   ├── rsvp/[invitation-token]/        # RSVP flow (public)
-│   │   └── uploads/event-image/            # Azure image upload
-│   ├── components/                         # Shared React components
-│   ├── checkin/[eventId]/                  # Check-in page
-│   ├── dashboard/
-│   │   ├── [eventId]/
-│   │   │   ├── layout.tsx                  # Shared event layout + tab nav
-│   │   │   ├── overview/
-│   │   │   ├── guests/
 │   │   │   ├── campaigns/
-│   │   │   ├── seating/
-│   │   │   └── checkin/
-│   │   └── page.tsx                        # Event list
-│   ├── join/[join-token]/                  # Join landing page (public)
-│   ├── rsvp/[invitation-token]/            # RSVP landing page (public)
-│   ├── globals.css
-│   ├── layout.tsx
-│   └── page.tsx                            # Homepage
-├── lib/                                    # Server utilities
-├── types/                                  # Shared TypeScript types
-├── migrations/                             # SQL migration files
-├── scripts/                                # Test + migration scripts
-├── middleware.ts                           # Auth + CORS + security headers
-├── next.config.mjs
-├── package.json
-└── tsconfig.json
+│   │   │   ├── capacity/
+│   │   │   ├── checkin/
+│   │   │   ├── join-requests/
+│   │   │   ├── objectives/
+│   │   │   └── scoring/
+│   │   ├── invitations/
+│   │   ├── join/[join-token]/
+│   │   ├── rsvp/
+│   │   ├── auth/
+│   │   ├── contacts/
+│   │   ├── enrichment-jobs/
+│   │   ├── cron/
+│   │   │   ├── process-jobs/
+│   │   │   └── cleanup/
+│   │   ├── health/
+│   │   └── uploads/
+│   ├── components/
+│   ├── dashboard/[eventId]/
+│   ├── auth/
+│   ├── checkin/[eventId]/
+│   ├── join/[join-token]/
+│   └── rsvp/[invitation-token]/
+├── lib/
+│   ├── analytics/
+│   ├── broadcast/
+│   ├── checkin/
+│   ├── contacts/
+│   ├── crm/
+│   ├── enrichment/
+│   ├── jobs/
+│   ├── scoring/
+│   ├── seating/
+│   ├── waitlist/
+│   └── schemas/
+├── e2e/                    # Playwright E2E tests
+├── migrations/             # SQL migrations (001-006)
+├── scripts/                # Migration runner, backfill scripts
+├── .github/workflows/      # CI pipeline
+├── sentry.*.config.ts      # Sentry monitoring
+├── vitest.config.ts        # Unit test config
+├── playwright.config.ts    # E2E test config
+├── vercel.json             # Deployment config
+└── .env.example            # Environment variable reference
 ```
 
 ---
 
 ## Development Status
 
-**Completed:**
-- Event creation and management
-- Guest pipeline (campaign invitations with tier/priority system)
-- Multi-wave RSVP email sending
-- Join link flow (two-step: RSVP → join room)
-- Guest approval workflow
-- User profile management with event attendance tracking
-- Capacity tracking and gauge visualization
-- Check-in page with QR code scanning
-- CSV bulk import for guest lists
-- Azure image uploads
-- Rate limiting and security headers
-- Email audit logging
+**All four implementation phases are complete:**
 
-**In Progress / Placeholders:**
-- Seating arrangement planning (`/dashboard/[eventId]/seating`)
-- Advanced check-in management (`/dashboard/[eventId]/checkin` tab)
+1. **Phase 1 — Foundation:** Auth, workspaces, audit logging, invitation system
+2. **Phase 2 — Core Intelligence:** People database, enrichment pipeline, AI scoring
+3. **Phase 3 — Event Operations:** Check-in, dossiers, RSVP pages, broadcast, follow-up
+4. **Phase 4 — Integrations:** Seating optimization, analytics, CRM sync, workspace imports
 
-**Known Issues / Notes:**
-- Legacy RSVPs may have missing `event_ids` in `user_profiles` — auto-repair is in place
-- Supabase integration is optional and only active in `entry` mode
-- Campaign statistics are denormalized (PostgreSQL triggers keep them in sync)
+**Operational items complete:**
+- Critical bug fixes (SQL column refs, status enum corrections)
+- Upstash Redis rate limiting + Sentry error monitoring
+- Vercel deployment config + cron-based job processing
+- Full test suite (Vitest unit + Playwright E2E + GitHub Actions CI)
+- Open question defaults (waitlist, reply-to, backfill, retention, PDF export)
+- Environment documentation + codebase overview update

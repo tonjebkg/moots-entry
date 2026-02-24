@@ -7,6 +7,7 @@ import { logger } from '@/lib/logger';
 import { requireAuth } from '@/lib/auth';
 import { logAction } from '@/lib/audit-log';
 import { getClientIdentifier } from '@/lib/rate-limit';
+import { checkAndPromoteWaitlist } from '@/lib/waitlist/promoter';
 
 export const runtime = 'nodejs';
 
@@ -222,6 +223,13 @@ export const PATCH = withErrorHandling(
       metadata: { updatedFields: Object.keys(body) },
       ipAddress: getClientIdentifier(req),
     });
+
+    // Auto-promote waitlisted guests when an invitation is declined
+    if (body.status === 'DECLINED' && result[0]?.event_id) {
+      checkAndPromoteWaitlist(result[0].event_id, auth.workspace.id).catch(err => {
+        logger.error('Waitlist promotion failed', err as Error, { invitationId });
+      });
+    }
 
     return NextResponse.json({
       invitation: result[0],
