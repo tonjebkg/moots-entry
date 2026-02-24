@@ -218,10 +218,11 @@ export default function DashboardPage() {
             {/* Moots Logo */}
             <div className="text-2xl font-bold text-[#1a1a2e]">Moots</div>
 
-            {/* Event Count */}
-            <div className="text-sm text-[#6e6e7e]">
-              {filteredEvents.length} event{filteredEvents.length !== 1 ? 's' : ''}
-            </div>
+            {/* Navigation */}
+            <nav className="flex items-center gap-6">
+              <span className="text-sm font-semibold text-[#0f3460]">Events</span>
+              <Link href="/dashboard/people" className="text-sm font-medium text-[#6e6e7e] hover:text-[#1a1a2e]">People</Link>
+            </nav>
           </div>
 
           <div className="flex items-center gap-3">

@@ -68,6 +68,9 @@ const dashboardEnvSchema = baseEnvSchema.extend({
   NEXT_PUBLIC_SUPABASE_URL: z.string().url().optional(),
   NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().optional(),
   SUPABASE_SERVICE_ROLE_KEY: z.string().optional(),
+
+  // Anthropic API (optional — required for enrichment & scoring)
+  ANTHROPIC_API_KEY: z.string().optional(),
 });
 
 // Entry mode specific variables
@@ -124,6 +127,7 @@ function getRawEnv() {
     UPSTASH_REDIS_REST_URL: process.env.UPSTASH_REDIS_REST_URL,
     UPSTASH_REDIS_REST_TOKEN: process.env.UPSTASH_REDIS_REST_TOKEN,
     NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
+    ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY,
   };
 }
 

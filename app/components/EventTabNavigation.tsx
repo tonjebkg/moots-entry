@@ -7,7 +7,7 @@ interface EventTabNavigationProps {
   eventId: string
 }
 
-type TabKey = 'overview' | 'guests' | 'campaigns' | 'seating' | 'checkin'
+type TabKey = 'overview' | 'guests' | 'campaigns' | 'objectives' | 'scoring' | 'seating' | 'checkin'
 
 export function EventTabNavigation({ eventId }: EventTabNavigationProps) {
   const pathname = usePathname()
@@ -16,6 +16,8 @@ export function EventTabNavigation({ eventId }: EventTabNavigationProps) {
     { key: 'overview', label: 'Overview', href: `/dashboard/${eventId}/overview` },
     { key: 'guests', label: 'Guests', href: `/dashboard/${eventId}/guests` },
     { key: 'campaigns', label: 'Campaigns', href: `/dashboard/${eventId}/campaigns` },
+    { key: 'objectives', label: 'Objectives', href: `/dashboard/${eventId}/objectives` },
+    { key: 'scoring', label: 'AI Scoring', href: `/dashboard/${eventId}/scoring` },
     { key: 'seating', label: 'Seating', href: `/dashboard/${eventId}/seating` },
     { key: 'checkin', label: 'Check-in', href: `/dashboard/${eventId}/checkin` },
   ]
