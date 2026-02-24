@@ -2,10 +2,18 @@
 
 import { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
-import { Users, Calendar, CheckCircle, XCircle, Clock, TrendingUp } from 'lucide-react'
+import Link from 'next/link'
+import { Users, Calendar, CheckCircle, XCircle, Clock, TrendingUp, BarChart3, Target, MessageSquare } from 'lucide-react'
 import { CapacityGauge } from '@/app/components/CapacityGauge'
 import { GuestDetailPanel } from '@/app/components/GuestDetailPanel'
 import { GuestProfile } from '@/types/guest'
+
+interface AnalyticsSummary {
+  checked_in: number
+  follow_ups_sent: number
+  meetings_booked: number
+  scored: number
+}
 
 interface CapacityStatus {
   total_capacity: number
@@ -36,6 +44,7 @@ export default function OverviewPage() {
   const [capacity, setCapacity] = useState<CapacityStatus | null>(null)
   const [stats, setStats] = useState<GuestStats | null>(null)
   const [recentGuests, setRecentGuests] = useState<RecentGuest[]>([])
+  const [analyticsSummary, setAnalyticsSummary] = useState<AnalyticsSummary | null>(null)
   const [loading, setLoading] = useState(true)
   const [selectedGuest, setSelectedGuest] = useState<GuestProfile | null>(null)
 
@@ -77,6 +86,24 @@ export default function OverviewPage() {
           )
           .slice(0, 10)
         setRecentGuests(recent)
+      }
+      // Fetch analytics summary
+      try {
+        const analyticsRes = await fetch(`/api/events/${eventId}/analytics`)
+        if (analyticsRes.ok) {
+          const analyticsData = await analyticsRes.json()
+          const h = analyticsData.metrics?.headline
+          if (h) {
+            setAnalyticsSummary({
+              checked_in: h.checked_in,
+              follow_ups_sent: h.follow_ups_sent,
+              meetings_booked: h.meetings_booked,
+              scored: h.scored,
+            })
+          }
+        }
+      } catch {
+        // Analytics summary is optional
       }
     } catch (err) {
       console.error('Failed to fetch overview data:', err)
@@ -225,6 +252,52 @@ export default function OverviewPage() {
                 <div className="text-xs font-semibold text-[#6e6e7e] uppercase">Cancelled</div>
               </div>
               <div className="text-2xl font-bold text-slate-700">{stats.cancelled}</div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Analytics Summary */}
+      {analyticsSummary && (
+        <div>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-[#1a1a2e]">Event Intelligence</h2>
+            <Link
+              href={`/dashboard/${eventId}/analytics`}
+              className="text-sm font-semibold text-[#0f3460] hover:underline flex items-center gap-1"
+            >
+              <BarChart3 size={14} />
+              Full Analytics
+            </Link>
+          </div>
+          <div className="grid grid-cols-4 gap-4">
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <Target size={16} className="text-blue-700" />
+                <div className="text-xs font-semibold text-[#6e6e7e] uppercase">AI Scored</div>
+              </div>
+              <div className="text-2xl font-bold text-blue-700">{analyticsSummary.scored}</div>
+            </div>
+            <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <CheckCircle size={16} className="text-green-700" />
+                <div className="text-xs font-semibold text-[#6e6e7e] uppercase">Checked In</div>
+              </div>
+              <div className="text-2xl font-bold text-green-700">{analyticsSummary.checked_in}</div>
+            </div>
+            <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <MessageSquare size={16} className="text-purple-700" />
+                <div className="text-xs font-semibold text-[#6e6e7e] uppercase">Follow-ups</div>
+              </div>
+              <div className="text-2xl font-bold text-purple-700">{analyticsSummary.follow_ups_sent}</div>
+            </div>
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <Calendar size={16} className="text-amber-700" />
+                <div className="text-xs font-semibold text-[#6e6e7e] uppercase">Meetings</div>
+              </div>
+              <div className="text-2xl font-bold text-amber-700">{analyticsSummary.meetings_booked}</div>
             </div>
           </div>
         </div>

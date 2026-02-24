@@ -1,285 +1,296 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
-import { CapacityGauge } from '@/app/components/CapacityGauge';
+import { useEffect, useState, useCallback } from 'react';
+import { useParams } from 'next/navigation';
+import { Sparkles, RotateCw, Settings } from 'lucide-react';
+import { SeatingChart } from '@/app/components/SeatingChart';
+import { SeatingAssignPanel } from '@/app/components/SeatingAssignPanel';
+import { IntroductionPairings } from '@/app/components/IntroductionPairings';
 
 type SeatingFormat = 'STANDING' | 'SEATED' | 'MIXED';
+type Strategy = 'MIXED_INTERESTS' | 'SIMILAR_INTERESTS' | 'SCORE_BALANCED';
 
 interface TableConfig {
   number: number;
   seats: number;
 }
 
-interface Event {
-  id: number;
-  title: string;
-  total_capacity: number | null;
-  seating_format: SeatingFormat;
-  tables_config: { tables: TableConfig[] } | null;
+interface Assignment {
+  invitation_id: string;
+  contact_id: string;
+  full_name: string;
+  company: string | null;
+  title: string | null;
+  table_assignment: number | null;
+  seat_assignment: number | null;
+  status: string;
+  relevance_score: number | null;
 }
 
-export default function EventSetupPage() {
-  const params = useParams();
-  const router = useRouter();
-  const eventId = params.eventId as string;
+interface Pairing {
+  id: string;
+  contact_a_name?: string;
+  contact_a_company?: string;
+  contact_b_name?: string;
+  contact_b_company?: string;
+  reason: string;
+  mutual_interest: string | null;
+  priority: number;
+}
 
-  const [event, setEvent] = useState<Event | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  // Form state
-  const [totalCapacity, setTotalCapacity] = useState<number>(0);
-  const [seatingFormat, setSeatingFormat] = useState<SeatingFormat>('STANDING');
+export default function SeatingPage() {
+  const { eventId } = useParams<{ eventId: string }>();
+  const [assignments, setAssignments] = useState<Assignment[]>([]);
+  const [pairings, setPairings] = useState<Pairing[]>([]);
   const [tables, setTables] = useState<TableConfig[]>([]);
+  const [seatingFormat, setSeatingFormat] = useState<SeatingFormat>('STANDING');
+  const [loading, setLoading] = useState(true);
+  const [generating, setGenerating] = useState(false);
+  const [generatingIntros, setGeneratingIntros] = useState(false);
+  const [strategy, setStrategy] = useState<Strategy>('MIXED_INTERESTS');
+  const [error, setError] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'chart' | 'introductions'>('chart');
 
-  // Load event data
-  useEffect(() => {
-    fetchEvent();
-  }, [eventId]);
-
-  async function fetchEvent() {
+  const fetchData = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await fetch(`/api/events/${eventId}`);
-      if (!res.ok) throw new Error('Failed to fetch event');
+      // Fetch event for table config
+      const eventRes = await fetch(`/api/events/${eventId}`);
+      if (eventRes.ok) {
+        const eventData = await eventRes.json();
+        const evt = eventData.event;
+        setSeatingFormat(evt.seating_format || 'STANDING');
+        setTables(evt.tables_config?.tables || []);
+      }
 
-      const data = await res.json();
-      setEvent(data.event);
+      // Fetch current assignments
+      const assignRes = await fetch(`/api/events/${eventId}/seating`);
+      if (assignRes.ok) {
+        const assignData = await assignRes.json();
+        setAssignments(assignData.assignments || []);
+      }
 
-      setTotalCapacity(data.event.total_capacity || 0);
-      setSeatingFormat(data.event.seating_format || 'STANDING');
-      setTables(data.event.tables_config?.tables || []);
+      // Fetch pairings
+      const pairRes = await fetch(`/api/events/${eventId}/seating/introductions`);
+      if (pairRes.ok) {
+        const pairData = await pairRes.json();
+        setPairings(pairData.pairings || []);
+      }
     } catch (err: any) {
       setError(err.message);
     } finally {
       setLoading(false);
     }
-  }
+  }, [eventId]);
 
-  async function handleSave() {
+  useEffect(() => { fetchData(); }, [fetchData]);
+
+  // Group assignments by table
+  const tableData = tables.map(t => ({
+    table_number: t.number,
+    seats: t.seats,
+    assignments: assignments
+      .filter(a => a.table_assignment === t.number)
+      .map(a => ({
+        contact_id: a.contact_id,
+        full_name: a.full_name,
+        company: a.company,
+        relevance_score: a.relevance_score,
+        seat_assignment: a.seat_assignment,
+      })),
+  }));
+
+  const unassigned = assignments
+    .filter(a => a.table_assignment == null)
+    .map(a => ({
+      contact_id: a.contact_id,
+      full_name: a.full_name,
+      company: a.company,
+      relevance_score: a.relevance_score,
+    }));
+
+  async function handleAssign(contactId: string, tableNumber: number) {
     try {
-      setSaving(true);
-      setError(null);
-
-      const payload: any = {
-        total_capacity: totalCapacity,
-        seating_format: seatingFormat,
-      };
-
-      if (seatingFormat === 'SEATED' && tables.length > 0) {
-        payload.tables_config = { tables };
-      }
-
-      const res = await fetch(`/api/events/${eventId}/capacity`, {
-        method: 'PATCH',
+      const res = await fetch(`/api/events/${eventId}/seating`, {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({ contact_id: contactId, table_number: tableNumber }),
       });
-
       if (!res.ok) {
         const data = await res.json();
-        throw new Error(data.error || 'Failed to update capacity');
+        throw new Error(data.error || 'Failed to assign');
       }
-
-      // Refresh event data
-      await fetchEvent();
-      alert('Capacity settings saved successfully!');
+      await fetchData();
     } catch (err: any) {
       setError(err.message);
-    } finally {
-      setSaving(false);
     }
   }
 
-  function addTable() {
-    const newTableNumber = tables.length > 0 ? Math.max(...tables.map(t => t.number)) + 1 : 1;
-    setTables([...tables, { number: newTableNumber, seats: 8 }]);
+  async function handleRemoveGuest(contactId: string) {
+    try {
+      // Assign to null table (remove assignment)
+      const res = await fetch(`/api/events/${eventId}/seating`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ contact_id: contactId, table_number: 0 }),
+      });
+      if (res.ok) await fetchData();
+    } catch (err: any) {
+      setError(err.message);
+    }
   }
 
-  function updateTable(index: number, field: 'number' | 'seats', value: number) {
-    const updated = [...tables];
-    updated[index][field] = value;
-    setTables(updated);
+  async function handleGenerateSuggestions() {
+    try {
+      setGenerating(true);
+      setError(null);
+      const res = await fetch(`/api/events/${eventId}/seating/suggest`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ strategy }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || 'Failed to generate suggestions');
+      }
+      await fetchData();
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setGenerating(false);
+    }
   }
 
-  function removeTable(index: number) {
-    setTables(tables.filter((_, i) => i !== index));
+  async function handleGenerateIntroductions() {
+    try {
+      setGeneratingIntros(true);
+      setError(null);
+      const res = await fetch(`/api/events/${eventId}/seating/introductions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ max_pairings: 20 }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || 'Failed to generate pairings');
+      }
+      const data = await res.json();
+      setPairings(prev => [...data.pairings.map((p: any, i: number) => ({ ...p, id: `new-${i}` })), ...prev]);
+      await fetchData();
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setGeneratingIntros(false);
+    }
   }
-
-  // Calculate total seats from tables
-  const totalTableSeats = tables.reduce((sum, t) => sum + t.seats, 0);
 
   if (loading) {
     return (
-      <div className="p-8">
-        <div className="animate-pulse">Loading event...</div>
-      </div>
-    );
-  }
-
-  if (!event) {
-    return (
-      <div className="p-8">
-        <div className="text-red-600">Event not found</div>
+      <div className="flex items-center justify-center py-32">
+        <div className="text-[#6e6e7e] text-sm font-medium">Loading seating...</div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-8">
-      <div className="max-w-5xl">
-        {/* Header */}
-        <div className="mb-8">
-          <button
-            onClick={() => router.push(`/dashboard/${eventId}`)}
-            className="text-blue-600 hover:text-blue-800 mb-4 flex items-center gap-2"
-          >
-            ← Back to Event
-          </button>
-          <h1 className="text-3xl font-bold text-gray-900">{event.title}</h1>
-          <p className="text-gray-600 mt-2">Configure event capacity and seating</p>
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-[#1a1a2e] tracking-tight mb-1">Seating Management</h1>
+          <p className="text-sm text-[#4a4a5e]">
+            {seatingFormat === 'STANDING'
+              ? 'Standing format — no table assignments needed'
+              : `${tables.length} tables · ${assignments.length} confirmed guests · ${unassigned.length} unassigned`}
+          </p>
         </div>
-
-        {error && (
-          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">
-            {error}
+        {seatingFormat !== 'STANDING' && (
+          <div className="flex items-center gap-3">
+            <select
+              value={strategy}
+              onChange={(e) => setStrategy(e.target.value as Strategy)}
+              className="px-3 py-2 text-sm border border-[#e1e4e8] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0f3460]"
+            >
+              <option value="MIXED_INTERESTS">Mixed Interests</option>
+              <option value="SIMILAR_INTERESTS">Similar Interests</option>
+              <option value="SCORE_BALANCED">Score Balanced</option>
+            </select>
+            <button
+              onClick={handleGenerateSuggestions}
+              disabled={generating}
+              className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-[#0f3460] rounded-lg hover:bg-[#0a2540] transition-colors disabled:opacity-50"
+            >
+              {generating ? <RotateCw size={14} className="animate-spin" /> : <Sparkles size={14} />}
+              {generating ? 'Generating...' : 'AI Suggest'}
+            </button>
           </div>
         )}
+      </div>
 
-        {/* Capacity Configuration */}
-        <div className="bg-white rounded-lg shadow p-6 mb-6">
-          <h2 className="text-xl font-semibold mb-4">Event Capacity</h2>
-
-          <div className="space-y-6">
-            {/* Total Capacity */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Total Capacity
-              </label>
-              <input
-                type="number"
-                min="0"
-                value={totalCapacity}
-                onChange={(e) => setTotalCapacity(Number(e.target.value))}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="Enter maximum number of attendees"
-              />
-              <p className="text-sm text-gray-500 mt-1">
-                Maximum number of people who can attend this event
-              </p>
-            </div>
-
-            {/* Seating Format */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Seating Format
-              </label>
-              <div className="flex gap-4">
-                {(['STANDING', 'SEATED', 'MIXED'] as SeatingFormat[]).map((format) => (
-                  <label key={format} className="flex items-center gap-2">
-                    <input
-                      type="radio"
-                      name="seating-format"
-                      value={format}
-                      checked={seatingFormat === format}
-                      onChange={(e) => setSeatingFormat(e.target.value as SeatingFormat)}
-                      className="w-4 h-4 text-blue-600"
-                    />
-                    <span className="text-sm text-gray-700 capitalize">{format.toLowerCase()}</span>
-                  </label>
-                ))}
-              </div>
-            </div>
-
-            {/* Table Configuration (only for SEATED) */}
-            {seatingFormat === 'SEATED' && (
-              <div>
-                <div className="flex items-center justify-between mb-3">
-                  <label className="block text-sm font-medium text-gray-700">
-                    Table Configuration
-                  </label>
-                  <button
-                    onClick={addTable}
-                    className="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700"
-                  >
-                    + Add Table
-                  </button>
-                </div>
-
-                {tables.length === 0 ? (
-                  <p className="text-sm text-gray-500 italic">No tables configured yet</p>
-                ) : (
-                  <div className="space-y-2">
-                    {tables.map((table, index) => (
-                      <div key={index} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                        <div className="flex-1">
-                          <label className="block text-xs text-gray-600 mb-1">Table #</label>
-                          <input
-                            type="number"
-                            min="1"
-                            value={table.number}
-                            onChange={(e) => updateTable(index, 'number', Number(e.target.value))}
-                            className="w-full px-2 py-1 text-sm border border-gray-300 rounded"
-                          />
-                        </div>
-                        <div className="flex-1">
-                          <label className="block text-xs text-gray-600 mb-1">Seats</label>
-                          <input
-                            type="number"
-                            min="1"
-                            value={table.seats}
-                            onChange={(e) => updateTable(index, 'seats', Number(e.target.value))}
-                            className="w-full px-2 py-1 text-sm border border-gray-300 rounded"
-                          />
-                        </div>
-                        <button
-                          onClick={() => removeTable(index)}
-                          className="mt-5 text-red-600 hover:text-red-800 text-sm"
-                        >
-                          Remove
-                        </button>
-                      </div>
-                    ))}
-                    <div className="text-sm text-gray-600 mt-2">
-                      Total table seats: <strong>{totalTableSeats}</strong>
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
+      {error && (
+        <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+          {error}
+          <button onClick={() => setError(null)} className="ml-3 text-red-500 hover:text-red-800 font-medium">×</button>
         </div>
+      )}
 
-        {/* Current Capacity Status */}
-        {totalCapacity > 0 && (
-          <div className="bg-white rounded-lg shadow p-6 mb-6">
-            <h2 className="text-xl font-semibold mb-4">Current Status</h2>
-            <CapacityGauge filled={0} total={totalCapacity} />
-            <p className="text-sm text-gray-500 mt-3">
-              No guests have been invited yet. Capacity tracking will update as you send invitations.
+      {/* Tabs */}
+      <div className="flex gap-1 bg-[#f0f2f5] rounded-lg p-1">
+        <button
+          onClick={() => setActiveTab('chart')}
+          className={`px-4 py-2 text-sm font-semibold rounded-md transition-colors ${
+            activeTab === 'chart'
+              ? 'bg-white text-[#1a1a2e] shadow-sm'
+              : 'text-[#6e6e7e] hover:text-[#1a1a2e]'
+          }`}
+        >
+          Seating Chart
+        </button>
+        <button
+          onClick={() => setActiveTab('introductions')}
+          className={`px-4 py-2 text-sm font-semibold rounded-md transition-colors ${
+            activeTab === 'introductions'
+              ? 'bg-white text-[#1a1a2e] shadow-sm'
+              : 'text-[#6e6e7e] hover:text-[#1a1a2e]'
+          }`}
+        >
+          Introduction Pairings ({pairings.length})
+        </button>
+      </div>
+
+      {/* Content */}
+      {activeTab === 'chart' ? (
+        seatingFormat === 'STANDING' ? (
+          <div className="bg-white border border-[#e1e4e8] rounded-lg p-8 text-center">
+            <Settings size={32} className="mx-auto mb-3 text-[#6e6e7e] opacity-50" />
+            <p className="text-sm text-[#6e6e7e]">
+              This event uses a standing format. Switch to &quot;Seated&quot; or &quot;Mixed&quot; format in event settings to enable table assignments.
             </p>
           </div>
-        )}
-
-        {/* Actions */}
-        <div className="flex gap-3">
-          <button
-            onClick={handleSave}
-            disabled={saving}
-            className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 font-medium"
-          >
-            {saving ? 'Saving...' : 'Save Capacity Settings'}
-          </button>
-          <button
-            onClick={() => router.push(`/dashboard/${eventId}`)}
-            className="px-6 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium"
-          >
-            Cancel
-          </button>
-        </div>
-      </div>
+        ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-2">
+              <SeatingChart
+                tables={tableData}
+                onRemoveGuest={handleRemoveGuest}
+              />
+            </div>
+            <div>
+              <SeatingAssignPanel
+                unassigned={unassigned}
+                tableNumbers={tables.map(t => t.number)}
+                onAssign={handleAssign}
+              />
+            </div>
+          </div>
+        )
+      ) : (
+        <IntroductionPairings
+          pairings={pairings}
+          onGenerate={handleGenerateIntroductions}
+          generating={generatingIntros}
+        />
+      )}
     </div>
   );
 }

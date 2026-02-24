@@ -375,6 +375,68 @@ export async function sendFollowUpEmail(
   }
 }
 
+// ─── CRM Sync Notification Email ─────────────────────────────────────
+
+export interface SendCrmSyncNotificationEmailParams {
+  to: string;
+  recipientName: string;
+  provider: string;
+  totalSynced: number;
+  successCount: number;
+  failedCount: number;
+  workspaceName: string;
+}
+
+export async function sendCrmSyncNotificationEmail(
+  params: SendCrmSyncNotificationEmailParams
+): Promise<EmailResult> {
+  try {
+    if (!resend) {
+      return { success: false, error: 'Email service not available' };
+    }
+
+    const statusText = params.failedCount === 0 ? 'completed successfully' : 'completed with errors';
+
+    const html = `
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8"></head>
+<body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;background:#f9fafb;">
+<table role="presentation" style="width:100%;border-collapse:collapse;"><tr><td align="center" style="padding:40px 0;">
+<table role="presentation" style="width:600px;max-width:100%;background:#fff;border-radius:8px;box-shadow:0 2px 4px rgba(0,0,0,.1);">
+<tr><td style="padding:40px;text-align:center;border-bottom:1px solid #e5e7eb;">
+  <h1 style="margin:0;font-size:24px;color:#111827;">CRM Sync ${statusText}</h1>
+</td></tr>
+<tr><td style="padding:32px 40px;">
+  <p style="font-size:16px;color:#374151;line-height:1.6;">Hi ${params.recipientName},</p>
+  <p style="font-size:16px;color:#374151;line-height:1.6;">Your ${params.provider} sync for <strong>${params.workspaceName}</strong> has ${statusText}.</p>
+  <table style="width:100%;margin:20px 0;border-collapse:collapse;">
+    <tr><td style="padding:8px 0;color:#6b7280;font-size:14px;">Total contacts:</td><td style="padding:8px 0;font-weight:600;color:#111827;font-size:14px;">${params.totalSynced}</td></tr>
+    <tr><td style="padding:8px 0;color:#6b7280;font-size:14px;">Successful:</td><td style="padding:8px 0;font-weight:600;color:#059669;font-size:14px;">${params.successCount}</td></tr>
+    ${params.failedCount > 0 ? `<tr><td style="padding:8px 0;color:#6b7280;font-size:14px;">Failed:</td><td style="padding:8px 0;font-weight:600;color:#ef4444;font-size:14px;">${params.failedCount}</td></tr>` : ''}
+  </table>
+</td></tr>
+<tr><td style="padding:24px 40px;text-align:center;border-top:1px solid #e5e7eb;background:#f9fafb;border-radius:0 0 8px 8px;">
+  <p style="margin:0;font-size:14px;color:#6b7280;">Powered by <strong>Moots</strong></p>
+</td></tr>
+</table></td></tr></table></body></html>`.trim();
+
+    const result = await resend.emails.send({
+      from: (env as any).RESEND_FROM_EMAIL,
+      to: params.to,
+      subject: `CRM Sync ${statusText} — ${params.provider}`,
+      html,
+      tags: [{ name: 'category', value: 'crm_sync_notification' }],
+    });
+
+    if (result.error) {
+      return { success: false, error: result.error.message };
+    }
+    return { success: true, emailServiceId: result.data?.id };
+  } catch (error) {
+    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+  }
+}
+
 /**
  * Generate HTML body for RSVP invitation email
  */
