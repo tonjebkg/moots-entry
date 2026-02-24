@@ -1,128 +1,151 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import { addSecurityHeaders } from '@/lib/security-headers';
+import { addCorsHeaders, handleCorsPreflightRequest } from '@/lib/cors';
 
-/**
- * HTTP Basic Auth middleware for dashboard mode.
- *
- * Protects:
- * - /dashboard/*
- * - /api/*
- * - /checkin/*
- *
- * Only active when NEXT_PUBLIC_APP_MODE === 'dashboard'.
- * Credentials from DASHBOARD_AUTH_USER and DASHBOARD_AUTH_PASS env vars.
- */
-
+// Note: Middleware runs in Edge Runtime, so we access env vars directly
 const isDashboardMode = process.env.NEXT_PUBLIC_APP_MODE === 'dashboard';
 
+const SESSION_COOKIE_NAME = 'moots_session';
+
+/**
+ * Session-based auth middleware for dashboard mode.
+ *
+ * Protected routes require a session cookie (moots_session).
+ * Auth pages (/login, /signup, /reset-password) are public.
+ * Public API endpoints for mobile app and guest flows are unchanged.
+ */
 export function middleware(request: NextRequest) {
   // Skip auth if not in dashboard mode
   if (!isDashboardMode) {
-    return NextResponse.next();
+    const response = NextResponse.next();
+    return addSecurityHeaders(response);
   }
 
-  // Allow POST to join-requests without auth (mobile app submissions)
-  // Pattern: /api/events/[numeric-id]/join-requests
   const pathname = request.nextUrl.pathname;
   const method = request.method;
+  const origin = request.headers.get('origin');
 
-  if (method === 'POST' && /^\/api\/events\/\d+\/join-requests$/.test(pathname)) {
-    return NextResponse.next(); // Allow mobile app to submit join requests
+  // ─── Public pages (no auth required) ──────────────────────────────
+  // Auth pages
+  if (
+    pathname === '/login' ||
+    pathname === '/signup' ||
+    pathname.startsWith('/signup/invite/') ||
+    pathname === '/reset-password'
+  ) {
+    const response = NextResponse.next();
+    return addSecurityHeaders(response);
   }
 
-  // Allow GET to /me endpoint without auth (mobile app checking own status)
-  // Pattern: /api/events/[numeric-id]/join-requests/me
-  if (method === 'GET' && /^\/api\/events\/\d+\/join-requests\/me$/.test(pathname)) {
-    return NextResponse.next(); // Allow mobile app to check own join request
+  // RSVP and join landing pages
+  if (pathname.startsWith('/rsvp/') || pathname.startsWith('/join/')) {
+    const response = NextResponse.next();
+    return addSecurityHeaders(response);
   }
 
-  // Fail closed if dashboard mode but credentials not configured
-  const expectedUser = process.env.DASHBOARD_AUTH_USER;
-  const expectedPass = process.env.DASHBOARD_AUTH_PASS;
+  // ─── Public API endpoints ─────────────────────────────────────────
+  const isPublicApiPath =
+    /^\/api\/events\/\d+\/join-requests$/.test(pathname) ||
+    /^\/api\/events\/\d+\/join-requests\/me$/.test(pathname) ||
+    /^\/api\/events\/\d+$/.test(pathname) ||
+    /^\/api\/rsvp\//.test(pathname) ||
+    /^\/api\/join\//.test(pathname) ||
+    /^\/api\/auth\//.test(pathname); // Auth endpoints are public
 
-  if (!expectedUser || !expectedPass) {
-    console.error('[middleware] Dashboard mode enabled but DASHBOARD_AUTH_USER or DASHBOARD_AUTH_PASS not set');
-    return new NextResponse('Authentication not configured', {
-      status: 500,
-      headers: {
-        'Content-Type': 'text/plain',
-      },
-    });
+  // Handle CORS preflight for public endpoints
+  if (isPublicApiPath && method === 'OPTIONS') {
+    const preflightResponse = handleCorsPreflightRequest(request);
+    return addSecurityHeaders(preflightResponse);
   }
 
-  // Extract Authorization header
-  const authHeader = request.headers.get('authorization');
-
-  if (!authHeader || !authHeader.startsWith('Basic ')) {
-    return new NextResponse('Authentication required', {
-      status: 401,
-      headers: {
-        'WWW-Authenticate': 'Basic realm="Dashboard", charset="UTF-8"',
-        'Content-Type': 'text/plain',
-      },
-    });
-  }
-
-  // Parse Basic Auth credentials
-  try {
-    const base64Credentials = authHeader.substring(6); // Remove "Basic "
-    const credentials = Buffer.from(base64Credentials, 'base64').toString('utf-8');
-    const [username, password] = credentials.split(':');
-
-    // Validate credentials (constant-time comparison would be ideal, but for Basic Auth this is acceptable)
-    if (username === expectedUser && password === expectedPass) {
-      // Auth success - continue to protected route
-      return NextResponse.next();
+  // Allow public API endpoints through
+  if (isPublicApiPath) {
+    // POST to join-requests (mobile app submissions)
+    if (method === 'POST' && /^\/api\/events\/\d+\/join-requests$/.test(pathname)) {
+      const response = NextResponse.next();
+      addCorsHeaders(response, origin);
+      return addSecurityHeaders(response);
     }
 
-    // Invalid credentials
-    return new NextResponse('Invalid credentials', {
-      status: 401,
-      headers: {
-        'WWW-Authenticate': 'Basic realm="Dashboard", charset="UTF-8"',
-        'Content-Type': 'text/plain',
-      },
-    });
-  } catch (err) {
-    // Failed to parse auth header
-    console.error('[middleware] Failed to parse Authorization header:', err);
-    return new NextResponse('Invalid authorization header', {
-      status: 401,
-      headers: {
-        'WWW-Authenticate': 'Basic realm="Dashboard", charset="UTF-8"',
-        'Content-Type': 'text/plain',
-      },
-    });
+    // GET to /me endpoint (mobile app checking own status)
+    if (method === 'GET' && /^\/api\/events\/\d+\/join-requests\/me$/.test(pathname)) {
+      const response = NextResponse.next();
+      addCorsHeaders(response, origin);
+      return addSecurityHeaders(response);
+    }
+
+    // GET event details (mobile app viewing events)
+    if (method === 'GET' && /^\/api\/events\/\d+$/.test(pathname)) {
+      const response = NextResponse.next();
+      addCorsHeaders(response, origin);
+      return addSecurityHeaders(response);
+    }
+
+    // Public RSVP API endpoints
+    if (/^\/api\/rsvp\//.test(pathname)) {
+      const response = NextResponse.next();
+      addCorsHeaders(response, origin);
+      return addSecurityHeaders(response);
+    }
+
+    // Public join API endpoints
+    if (/^\/api\/join\//.test(pathname)) {
+      const response = NextResponse.next();
+      addCorsHeaders(response, origin);
+      return addSecurityHeaders(response);
+    }
+
+    // Auth API endpoints (login, signup, etc.)
+    if (/^\/api\/auth\//.test(pathname)) {
+      const response = NextResponse.next();
+      return addSecurityHeaders(response);
+    }
   }
+
+  // ─── Protected routes: check session cookie ───────────────────────
+  const sessionCookie = request.cookies.get(SESSION_COOKIE_NAME);
+
+  if (!sessionCookie?.value) {
+    // API routes → 401 JSON
+    if (pathname.startsWith('/api/')) {
+      const response = NextResponse.json(
+        { error: 'Authentication required', code: 'UNAUTHORIZED' },
+        { status: 401 }
+      );
+      return addSecurityHeaders(response);
+    }
+
+    // Page routes → redirect to login
+    const loginUrl = new URL('/login', request.url);
+    loginUrl.searchParams.set('redirect', pathname);
+    const response = NextResponse.redirect(loginUrl);
+    return addSecurityHeaders(response);
+  }
+
+  // Session cookie exists — let the request through.
+  // Actual session validation happens in route handlers via requireAuth()
+  const response = NextResponse.next();
+  return addSecurityHeaders(response);
 }
 
 /**
- * Matcher configuration - only run middleware on protected routes.
- *
- * Public routes (no auth):
- * - GET /api/events/[eventId] - Mobile app reads events
- * - POST /api/events/[eventId]/join-requests - Mobile app submits join requests
- * - GET /api/events/[eventId]/join-requests/me - Mobile app checks own join request status
- *
- * Protected routes (Basic Auth required):
- * - /dashboard/* - Dashboard UI
- * - /checkin/* - Check-in and QR scan
- * - GET /api/events - Dashboard lists all events
- * - POST /api/events/create - Create events
- * - PATCH /api/events/update - Update events
- * - GET /api/events/[eventId]/join-requests - Dashboard lists join requests
- * - PATCH /api/join-requests/[id] - Update join requests
- * - /api/uploads/* - File uploads
+ * Matcher configuration — only run middleware on protected + public routes.
  */
 export const config = {
   matcher: [
+    // Auth pages
+    '/login',
+    '/signup',
+    '/signup/invite/:path*',
+    '/reset-password',
+    // Protected pages
     '/dashboard/:path*',
-    '/api/events$',
-    '/api/events/create',
-    '/api/events/update',
-    '/api/events/:path*/join-requests',
-    '/api/join-requests/:path*',
-    '/api/uploads/:path*',
     '/checkin/:path*',
+    // Public guest pages
+    '/rsvp/:path*',
+    '/join/:path*',
+    // API routes
+    '/api/:path*',
   ],
 };

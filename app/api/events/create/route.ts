@@ -1,5 +1,8 @@
 import { NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
+import { requireAuth } from '@/lib/auth';
+import { logAction } from '@/lib/audit-log';
+import { getClientIdentifier } from '@/lib/rate-limit';
 
 export const runtime = 'nodejs';
 
@@ -42,6 +45,7 @@ type CreateEventPayload = {
 
 export async function POST(req: Request) {
   try {
+    const auth = await requireAuth();
     const body: CreateEventPayload = await req.json();
     const { event } = body;
 
@@ -128,7 +132,8 @@ export async function POST(req: Request) {
         image_url,
         is_private,
         approve_mode,
-        status
+        status,
+        workspace_id
       ) VALUES (
         ${title},
         ${hostsJson}::jsonb,
@@ -141,7 +146,8 @@ export async function POST(req: Request) {
         ${event.image_url || null},
         ${event.is_private ?? false},
         ${approveMode},
-        ${status}
+        ${status},
+        ${auth.workspace.id}
       ) RETURNING id
     `;
 
@@ -150,6 +156,17 @@ export async function POST(req: Request) {
     }
 
     const eventId = result[0].id;
+
+    logAction({
+      workspaceId: auth.workspace.id,
+      actorId: auth.user.id,
+      actorEmail: auth.user.email,
+      action: 'event.created',
+      entityType: 'event',
+      entityId: String(eventId),
+      newValue: { title, status },
+      ipAddress: getClientIdentifier(req),
+    });
 
     return NextResponse.json({
       event_id: eventId,

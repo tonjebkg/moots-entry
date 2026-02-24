@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
 import crypto from 'crypto';
+import { checkJoinRequestRateLimit, getClientIdentifier } from '@/lib/rate-limit';
+import { validateRequest } from '@/lib/validate-request';
+import { createJoinRequestSchema } from '@/lib/schemas/join-request';
 
 export const runtime = 'nodejs';
 
@@ -110,13 +113,6 @@ export async function GET(_req: Request, { params }: RouteParams) {
   }
 }
 
-type CreateJoinRequestBody = {
-  owner_id: string;
-  plus_ones?: number;
-  comments?: string;
-  rsvp_contact?: string;
-};
-
 /**
  * POST /api/events/[eventId]/join-requests
  * Create a new join request for an event (mobile app)
@@ -134,28 +130,46 @@ export async function POST(req: Request, { params }: RouteParams) {
       );
     }
 
-    const body: CreateJoinRequestBody = await req.json();
+    // Apply rate limiting based on IP address
+    const identifier = getClientIdentifier(req);
+    const rateLimit = checkJoinRequestRateLimit(identifier);
 
-    // Validate required fields
-    if (!body.owner_id || typeof body.owner_id !== 'string' || body.owner_id.trim() === '') {
+    if (!rateLimit.success) {
+      const retryAfter = Math.ceil((rateLimit.reset - Date.now()) / 1000);
       return NextResponse.json(
-        { error: 'owner_id is required' },
-        { status: 400 }
+        {
+          error: 'Too many join requests. Please try again later.',
+          retryAfter,
+        },
+        {
+          status: 429,
+          headers: {
+            'X-RateLimit-Limit': rateLimit.limit.toString(),
+            'X-RateLimit-Remaining': rateLimit.remaining.toString(),
+            'X-RateLimit-Reset': rateLimit.reset.toString(),
+            'Retry-After': retryAfter.toString(),
+          },
+        }
       );
     }
 
-    // Validate optional fields
-    const plusOnes = body.plus_ones !== undefined ? Number(body.plus_ones) : 0;
-    if (!Number.isInteger(plusOnes) || plusOnes < 0) {
-      return NextResponse.json(
-        { error: 'plus_ones must be a non-negative integer' },
-        { status: 400 }
-      );
+    // Validate request body with Zod
+    const validation = await validateRequest(req, createJoinRequestSchema);
+    if (!validation.success) {
+      return validation.error;
     }
 
-    const ownerId = body.owner_id.trim();
-    const comments = body.comments?.trim() || null;
-    const rsvpContact = body.rsvp_contact?.trim() || null;
+    const {
+      owner_id: ownerId,
+      plus_ones: plusOnes,
+      comments,
+      rsvp_contact: rsvpContact,
+      company_website,
+      goals,
+      looking_for,
+      visibility_enabled,
+      notifications_enabled,
+    } = validation.data;
 
     const db = getDb();
     const now = new Date().toISOString();
@@ -223,6 +237,11 @@ export async function POST(req: Request, { params }: RouteParams) {
         plus_ones,
         comments,
         rsvp_contact,
+        company_website,
+        goals,
+        looking_for,
+        visibility_enabled,
+        notifications_enabled,
         created_at,
         updated_at
       ) VALUES (
@@ -232,10 +251,16 @@ export async function POST(req: Request, { params }: RouteParams) {
         ${plusOnes},
         ${comments},
         ${rsvpContact},
+        ${company_website},
+        ${goals},
+        ${looking_for},
+        ${visibility_enabled},
+        ${notifications_enabled},
         ${now},
         ${now}
       ) RETURNING id, event_id, owner_id, status, plus_ones, comments,
-                  rsvp_contact, visibility_enabled, notifications_enabled,
+                  rsvp_contact, company_website, goals, looking_for,
+                  visibility_enabled, notifications_enabled,
                   created_at, updated_at
     `;
 

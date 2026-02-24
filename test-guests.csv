@@ -1,0 +1,11 @@
+full_name,email,tier,priority,expected_plus_ones,internal_notes
+Sarah Johnson,sarah.johnson@example.com,TIER_1,VIP,1,Key investor - must attend
+Michael Chen,michael.chen@example.com,TIER_1,VIP,0,Portfolio company founder
+Emily Rodriguez,emily.rodriguez@example.com,TIER_1,HIGH,1,Strong network connector
+David Kim,david.kim@example.com,TIER_2,HIGH,0,Early stage founder
+Jessica Brown,jessica.brown@example.com,TIER_2,NORMAL,1,Referred by Sarah
+James Wilson,james.wilson@example.com,TIER_2,NORMAL,0,Tech entrepreneur
+Maria Garcia,maria.garcia@example.com,TIER_2,NORMAL,1,VC associate
+Robert Taylor,robert.taylor@example.com,TIER_3,NORMAL,0,Interested in Black Ambition
+Linda Martinez,linda.martinez@example.com,TIER_3,LOW,0,General network
+Christopher Lee,christopher.lee@example.com,TIER_3,LOW,0,New introduction

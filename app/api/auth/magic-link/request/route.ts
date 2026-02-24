@@ -1,0 +1,61 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { withErrorHandling } from '@/lib/with-error-handling';
+import { validateRequest } from '@/lib/validate-request';
+import { magicLinkRequestSchema } from '@/lib/schemas/auth';
+import { generateToken } from '@/lib/auth';
+import { getDb } from '@/lib/db';
+import { getClientIdentifier, checkAuthRateLimit } from '@/lib/rate-limit';
+import { RateLimitError } from '@/lib/errors';
+import { logger } from '@/lib/logger';
+
+export const runtime = 'nodejs';
+
+const MAGIC_LINK_EXPIRY_MS = 15 * 60 * 1000; // 15 minutes
+
+export const POST = withErrorHandling(async (request: NextRequest) => {
+  const ip = getClientIdentifier(request);
+  const rateCheck = checkAuthRateLimit(`magic-link:${ip}`);
+  if (!rateCheck.success) {
+    throw new RateLimitError(Math.ceil((rateCheck.reset - Date.now()) / 1000));
+  }
+
+  const result = await validateRequest(request, magicLinkRequestSchema);
+  if (!result.success) return result.error;
+  const { email } = result.data;
+
+  const db = getDb();
+
+  // Check if user exists
+  const userResult = await db`SELECT id FROM users WHERE email = ${email} LIMIT 1`;
+
+  // Always return success to prevent email enumeration
+  if (userResult.length === 0) {
+    return NextResponse.json({ message: 'If an account exists, a magic link has been sent.' });
+  }
+
+  const userId = userResult[0].id;
+  const token = generateToken();
+  const expiresAt = new Date(Date.now() + MAGIC_LINK_EXPIRY_MS).toISOString();
+
+  // Invalidate any existing magic link tokens for this user
+  await db`
+    UPDATE verification_tokens
+    SET used_at = NOW()
+    WHERE user_id = ${userId} AND type = 'MAGIC_LINK' AND used_at IS NULL
+  `;
+
+  // Create new token
+  await db`
+    INSERT INTO verification_tokens (user_id, email, token, type, expires_at)
+    VALUES (${userId}, ${email}, ${token}, 'MAGIC_LINK', ${expiresAt}::timestamptz)
+  `;
+
+  // Build magic link URL
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+  const magicLinkUrl = `${appUrl}/api/auth/magic-link/verify?token=${token}`;
+
+  // TODO: Send email via Resend when email templates are ready
+  logger.info('Magic link generated', { email, url: magicLinkUrl });
+
+  return NextResponse.json({ message: 'If an account exists, a magic link has been sent.' });
+});

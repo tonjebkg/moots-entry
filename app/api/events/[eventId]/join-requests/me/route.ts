@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
+import { checkPublicRateLimit, getClientIdentifier } from '@/lib/rate-limit';
 
 export const runtime = 'nodejs';
 
@@ -21,6 +22,29 @@ export async function GET(req: Request, { params }: RouteParams) {
       return NextResponse.json(
         { error: 'Valid eventId is required' },
         { status: 400 }
+      );
+    }
+
+    // Apply rate limiting based on IP address
+    const identifier = getClientIdentifier(req);
+    const rateLimit = checkPublicRateLimit(identifier);
+
+    if (!rateLimit.success) {
+      const retryAfter = Math.ceil((rateLimit.reset - Date.now()) / 1000);
+      return NextResponse.json(
+        {
+          error: 'Too many requests. Please try again later.',
+          retryAfter,
+        },
+        {
+          status: 429,
+          headers: {
+            'X-RateLimit-Limit': rateLimit.limit.toString(),
+            'X-RateLimit-Remaining': rateLimit.remaining.toString(),
+            'X-RateLimit-Reset': rateLimit.reset.toString(),
+            'Retry-After': retryAfter.toString(),
+          },
+        }
       );
     }
 

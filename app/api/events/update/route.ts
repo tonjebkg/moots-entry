@@ -1,5 +1,8 @@
 import { NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
+import { requireAuth } from '@/lib/auth';
+import { logAction } from '@/lib/audit-log';
+import { getClientIdentifier } from '@/lib/rate-limit';
 
 export const runtime = 'nodejs';
 
@@ -47,6 +50,7 @@ type UpdateEventPayload = {
  */
 export async function PATCH(req: Request) {
   try {
+    const auth = await requireAuth();
     const body: UpdateEventPayload = await req.json();
     const { id, ...fields } = body;
 
@@ -143,6 +147,17 @@ export async function PATCH(req: Request) {
       }
       await db`UPDATE events SET status = ${fields.status}, updated_at = ${now} WHERE id = ${eventId}`;
     }
+
+    logAction({
+      workspaceId: auth.workspace.id,
+      actorId: auth.user.id,
+      actorEmail: auth.user.email,
+      action: 'event.updated',
+      entityType: 'event',
+      entityId: String(id),
+      newValue: fields,
+      ipAddress: getClientIdentifier(req),
+    });
 
     return NextResponse.json({
       success: true,

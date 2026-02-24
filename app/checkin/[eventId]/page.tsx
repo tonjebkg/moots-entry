@@ -83,7 +83,7 @@ export default function CheckinPage() {
         .select('id,event_id,full_name,email,status,plus_ones,priority,comments,checked_in_at')
         .eq('event_id', eventId)
         .order('full_name', { ascending: true })
-      setGuests((gs ?? []).map(g => ({
+      setGuests((gs ?? []).map((g: any) => ({
         ...g,
         priority: (g.priority as Priority) ?? 'normal',
         comments: g.comments ?? '',

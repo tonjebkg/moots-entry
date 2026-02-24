@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
+import { getSession } from '@/lib/auth';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic'; // ✅ IMPORTANT
@@ -8,28 +9,29 @@ export const revalidate = 0;            // ✅ IMPORTANT
 export async function GET(_req: Request) {
   try {
     const db = getDb();
+    const session = await getSession();
+    const workspaceId = session?.workspace?.id;
 
     // Cast JSONB to text to prevent automatic parsing/filtering
-    const events = await db`
-      SELECT
-        id,
-        title,
-        location::text as location_raw,
-        start_date,
-        end_date,
-        timezone,
-        image_url,
-        event_url,
-        hosts::text as hosts_raw,
-        sponsors::text as sponsors_raw,
-        is_private,
-        approve_mode,
-        status,
-        created_at,
-        updated_at
-      FROM events
-      ORDER BY start_date DESC
-    `;
+    // Filter by workspace_id if authenticated; show all if no workspace (backward compat)
+    const events = workspaceId
+      ? await db`
+          SELECT
+            id, title, location::text as location_raw, start_date, end_date, timezone,
+            image_url, event_url, hosts::text as hosts_raw, sponsors::text as sponsors_raw,
+            is_private, approve_mode, status, created_at, updated_at
+          FROM events
+          WHERE workspace_id = ${workspaceId} OR workspace_id IS NULL
+          ORDER BY start_date DESC
+        `
+      : await db`
+          SELECT
+            id, title, location::text as location_raw, start_date, end_date, timezone,
+            image_url, event_url, hosts::text as hosts_raw, sponsors::text as sponsors_raw,
+            is_private, approve_mode, status, created_at, updated_at
+          FROM events
+          ORDER BY start_date DESC
+        `;
 
     const mappedEvents = events.map(event => {
       // Manually parse JSONB text to preserve all fields and array order
