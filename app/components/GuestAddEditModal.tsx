@@ -381,7 +381,7 @@ export function GuestAddEditModal({ campaignId, guestId, onSuccess, onCancel }: 
                 placeholder="Why they matter for this event..."
                 rows={3}
               />
-              <p className="text-xs text-[#6e6e7e] mt-1">e.g., "Key LP relationship. CEO of portfolio company ($50M ARR)."</p>
+              <p className="text-xs text-[#6e6e7e] mt-1">e.g., &quot;Key LP relationship. CEO of portfolio company ($50M ARR).&quot;</p>
             </div>
 
             {/* Tags */}

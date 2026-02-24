@@ -113,7 +113,7 @@ export default function JoinPage() {
             Welcome to the Event Room!
           </h1>
           <p className="text-gray-600 mb-6">
-            You've successfully joined <strong>{invitation?.event_title}</strong>
+            You&apos;ve successfully joined <strong>{invitation?.event_title}</strong>
           </p>
 
           {redirectUrl && (
@@ -157,7 +157,7 @@ export default function JoinPage() {
               Hi <strong className="text-gray-900">{invitation?.recipient_name}</strong>,
             </p>
             <p className="text-gray-600 mb-4">
-              You're confirmed for <strong className="text-gray-900">{invitation?.event_title}</strong>!
+              You&apos;re confirmed for <strong className="text-gray-900">{invitation?.event_title}</strong>!
             </p>
             <p className="text-gray-600">
               Click below to join the event room where you can:
@@ -186,7 +186,7 @@ export default function JoinPage() {
                 </div>
                 <div>
                   <div className="font-medium text-gray-900">Share your goals</div>
-                  <div className="text-sm text-gray-600">Let others know what you're looking for</div>
+                  <div className="text-sm text-gray-600">Let others know what you&apos;re looking for</div>
                 </div>
               </li>
               <li className="flex items-start gap-3">

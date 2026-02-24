@@ -129,7 +129,7 @@ export default function RsvpPage() {
       <div className="bg-white rounded-2xl shadow-xl max-w-2xl w-full overflow-hidden">
         {/* Header */}
         <div className="bg-gradient-to-r from-blue-600 to-purple-600 p-8 text-white text-center">
-          <h1 className="text-3xl font-bold mb-2">You're Invited!</h1>
+          <h1 className="text-3xl font-bold mb-2">You&apos;re Invited!</h1>
           <p className="text-blue-100">Please respond to your invitation</p>
         </div>
 
@@ -144,7 +144,7 @@ export default function RsvpPage() {
           {/* Guest Info */}
           <div className="mb-6">
             <p className="text-gray-600 mb-1">Hi <strong className="text-gray-900">{invitation?.recipient_name}</strong>,</p>
-            <p className="text-gray-600">You're invited to:</p>
+            <p className="text-gray-600">You&apos;re invited to:</p>
           </div>
 
           {/* Event Details */}

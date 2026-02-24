@@ -28,10 +28,6 @@ type EventRow = {
 }
 
 export default function ScanPage() {
-  // Guard: Skip Supabase usage when in dashboard mode
-  if (process.env.NEXT_PUBLIC_APP_MODE === 'dashboard') {
-    return <main className="p-6 text-white">QR scan page not available in dashboard mode</main>
-  }
   const { eventId } = useParams<{ eventId: string }>()
   const router = useRouter()
 
@@ -41,6 +37,8 @@ export default function ScanPage() {
   const [message, setMessage] = useState<string | null>(null)
   const [facingMode, setFacingMode] = useState<'environment' | 'user'>('environment')
   const [scanning, setScanning] = useState(true)
+
+  const isDashboardMode = process.env.NEXT_PUBLIC_APP_MODE === 'dashboard'
 
   // ---- Fetch event + guests ----
   useEffect(() => {
@@ -161,6 +159,11 @@ export default function ScanPage() {
   )
 
   const pct = (num: number, den: number) => (den > 0 ? Math.min(100, Math.round((num / den) * 100)) : 0)
+
+  // Guard: Skip Supabase usage when in dashboard mode
+  if (isDashboardMode) {
+    return <main className="p-6 text-white">QR scan page not available in dashboard mode</main>
+  }
 
   if (loading) return <main className="p-6 text-gray-400">Loading...</main>
 

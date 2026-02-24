@@ -170,7 +170,7 @@ export default async function EventLayout({ children, params }: LayoutProps) {
         <div className="max-w-md text-center bg-white border border-[#e1e4e8] rounded-lg p-8">
           <h1 className="text-2xl font-semibold text-[#1a1a2e] mb-4">Event not found</h1>
           <p className="text-[#4a4a5e] mb-8 leading-relaxed">
-            The event you're looking for doesn't exist or you don't have access to it.
+            The event you&apos;re looking for doesn&apos;t exist or you don&apos;t have access to it.
           </p>
           <Link
             href="/dashboard"

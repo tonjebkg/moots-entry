@@ -30,11 +30,6 @@ type EventRow = {
 }
 
 export default function CheckinPage() {
-  // Guard: Skip Supabase usage when in dashboard mode
-  if (process.env.NEXT_PUBLIC_APP_MODE === 'dashboard') {
-    return <main className="p-6 text-white">Check-in page not available in dashboard mode</main>
-  }
-
   const { eventId } = useParams<{ eventId: string }>()
   const [event, setEvent] = useState<EventRow | null>(null)
   const [guests, setGuests] = useState<Guest[]>([])
@@ -55,6 +50,8 @@ export default function CheckinPage() {
   // comments modal
   const [commentGuest, setCommentGuest] = useState<Guest | null>(null)
   const [commentDraft, setCommentDraft] = useState('')
+
+  const isDashboardMode = process.env.NEXT_PUBLIC_APP_MODE === 'dashboard'
 
   const searchRef = useRef<HTMLInputElement>(null)
   useEffect(() => {
@@ -181,6 +178,11 @@ export default function CheckinPage() {
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [commentGuest, commentDraft])
+
+  // Guard: Skip Supabase usage when in dashboard mode
+  if (isDashboardMode) {
+    return <main className="p-6 text-white">Check-in page not available in dashboard mode</main>
+  }
 
   // add guest inline (defaults to checked-in)
   async function handleCreateGuest(e: React.FormEvent) {
