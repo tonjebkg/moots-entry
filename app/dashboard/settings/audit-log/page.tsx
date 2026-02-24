@@ -83,19 +83,19 @@ export default function AuditLogPage() {
     if (action.includes('created') || action.includes('signup')) return 'bg-emerald-50 text-emerald-700';
     if (action.includes('deleted') || action.includes('removed')) return 'bg-red-50 text-red-700';
     if (action.includes('updated') || action.includes('switched')) return 'bg-amber-50 text-amber-700';
-    return 'bg-gray-100 text-[#6e6e7e]';
+    return 'bg-brand-cream text-ui-tertiary';
   }
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-[#1a1a2e] flex items-center gap-2">
+        <h2 className="text-lg font-semibold font-display text-brand-charcoal flex items-center gap-2">
           <ScrollText size={20} />
           Audit Log
         </h2>
         <button
           onClick={handleExport}
-          className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-[#0f3460] hover:bg-[#f0f2f5] rounded-lg transition-colors"
+          className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-brand-terracotta hover:bg-brand-cream rounded-lg transition-colors"
         >
           <Download size={14} />
           Export CSV
@@ -105,24 +105,24 @@ export default function AuditLogPage() {
       {/* Filters */}
       <div className="flex gap-3">
         <div className="flex-1 relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[#6e6e7e]" size={14} />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-ui-tertiary" size={14} />
           <input
             value={actionFilter}
             onChange={e => { setActionFilter(e.target.value); setPage(1); }}
             placeholder="Filter by action (e.g., auth.login)"
-            className="w-full pl-9 pr-3 py-2 bg-white border border-[#e1e4e8] rounded-lg text-sm text-[#1a1a2e] placeholder-[#6e6e7e] focus:outline-none focus:border-[#0f3460] focus:ring-1 focus:ring-[#0f3460]"
+            className="w-full pl-9 pr-3 py-2 bg-white border border-ui-border rounded-lg text-sm text-brand-charcoal placeholder-ui-tertiary focus:outline-none focus:border-brand-terracotta focus:ring-1 focus:ring-brand-terracotta"
           />
         </div>
         <input
           value={entityTypeFilter}
           onChange={e => { setEntityTypeFilter(e.target.value); setPage(1); }}
           placeholder="Entity type"
-          className="w-40 px-3 py-2 bg-white border border-[#e1e4e8] rounded-lg text-sm text-[#1a1a2e] placeholder-[#6e6e7e] focus:outline-none focus:border-[#0f3460] focus:ring-1 focus:ring-[#0f3460]"
+          className="w-40 px-3 py-2 bg-white border border-ui-border rounded-lg text-sm text-brand-charcoal placeholder-ui-tertiary focus:outline-none focus:border-brand-terracotta focus:ring-1 focus:ring-brand-terracotta"
         />
         {(actionFilter || entityTypeFilter) && (
           <button
             onClick={clearFilters}
-            className="flex items-center gap-1 px-3 py-2 text-sm font-medium text-[#0f3460] hover:text-[#c5a572] transition-colors"
+            className="flex items-center gap-1 px-3 py-2 text-sm font-medium text-brand-terracotta hover:text-brand-terracotta/70 transition-colors"
           >
             <X size={14} />
             Clear
@@ -131,41 +131,41 @@ export default function AuditLogPage() {
       </div>
 
       {/* Table */}
-      <div className="bg-white border border-[#e1e4e8] rounded-lg overflow-hidden">
+      <div className="bg-white border border-ui-border rounded-lg overflow-hidden">
         {loading ? (
           <div className="flex items-center justify-center p-8">
-            <Loader2 size={20} className="animate-spin text-[#6e6e7e]" />
+            <Loader2 size={20} className="animate-spin text-ui-tertiary" />
           </div>
         ) : logs.length === 0 ? (
-          <div className="text-center py-12 text-sm text-[#6e6e7e]">
+          <div className="text-center py-12 text-sm text-ui-tertiary">
             No audit log entries found
           </div>
         ) : (
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-[#e1e4e8] bg-[#f8f9fa]">
-                <th className="text-left px-4 py-3 font-medium text-[#6e6e7e]">Time</th>
-                <th className="text-left px-4 py-3 font-medium text-[#6e6e7e]">Actor</th>
-                <th className="text-left px-4 py-3 font-medium text-[#6e6e7e]">Action</th>
-                <th className="text-left px-4 py-3 font-medium text-[#6e6e7e]">Entity</th>
-                <th className="text-left px-4 py-3 font-medium text-[#6e6e7e]">IP</th>
+              <tr className="border-b border-ui-border bg-brand-cream">
+                <th className="text-left px-4 py-3 font-medium text-ui-tertiary">Time</th>
+                <th className="text-left px-4 py-3 font-medium text-ui-tertiary">Actor</th>
+                <th className="text-left px-4 py-3 font-medium text-ui-tertiary">Action</th>
+                <th className="text-left px-4 py-3 font-medium text-ui-tertiary">Entity</th>
+                <th className="text-left px-4 py-3 font-medium text-ui-tertiary">IP</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#e1e4e8]">
+            <tbody className="divide-y divide-ui-border">
               {logs.map(log => (
-                <tr key={log.id} className="hover:bg-[#f8f9fa]">
-                  <td className="px-4 py-3 text-[#6e6e7e] whitespace-nowrap">{formatDate(log.created_at)}</td>
-                  <td className="px-4 py-3 text-[#1a1a2e]">{log.actor_email || 'system'}</td>
+                <tr key={log.id} className="hover:bg-brand-cream">
+                  <td className="px-4 py-3 text-ui-tertiary whitespace-nowrap">{formatDate(log.created_at)}</td>
+                  <td className="px-4 py-3 text-brand-charcoal">{log.actor_email || 'system'}</td>
                   <td className="px-4 py-3">
                     <span className={`inline-flex px-2 py-0.5 text-xs font-medium rounded ${getActionColor(log.action)}`}>
                       {log.action}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-[#6e6e7e]">
+                  <td className="px-4 py-3 text-ui-tertiary">
                     {log.entity_type}
                     {log.entity_id && <span className="text-xs ml-1">({log.entity_id.slice(0, 8)}...)</span>}
                   </td>
-                  <td className="px-4 py-3 text-[#6e6e7e] font-mono text-xs">{log.ip_address || '—'}</td>
+                  <td className="px-4 py-3 text-ui-tertiary font-mono text-xs">{log.ip_address || '—'}</td>
                 </tr>
               ))}
             </tbody>
@@ -176,21 +176,21 @@ export default function AuditLogPage() {
       {/* Pagination */}
       {pagination && pagination.total_pages > 1 && (
         <div className="flex items-center justify-between text-sm">
-          <span className="text-[#6e6e7e]">
+          <span className="text-ui-tertiary">
             {pagination.total} entries, page {pagination.page} of {pagination.total_pages}
           </span>
           <div className="flex gap-2">
             <button
               onClick={() => setPage(p => Math.max(1, p - 1))}
               disabled={page <= 1}
-              className="px-3 py-1.5 border border-[#e1e4e8] rounded-lg text-[#1a1a2e] hover:bg-[#f0f2f5] disabled:opacity-50 transition-colors"
+              className="px-3 py-1.5 border border-ui-border rounded-lg text-brand-charcoal hover:bg-brand-cream disabled:opacity-50 transition-colors"
             >
               Previous
             </button>
             <button
               onClick={() => setPage(p => p + 1)}
               disabled={page >= pagination.total_pages}
-              className="px-3 py-1.5 border border-[#e1e4e8] rounded-lg text-[#1a1a2e] hover:bg-[#f0f2f5] disabled:opacity-50 transition-colors"
+              className="px-3 py-1.5 border border-ui-border rounded-lg text-brand-charcoal hover:bg-brand-cream disabled:opacity-50 transition-colors"
             >
               Next
             </button>

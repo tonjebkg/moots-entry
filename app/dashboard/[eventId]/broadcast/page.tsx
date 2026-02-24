@@ -61,7 +61,7 @@ export default function BroadcastPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-32">
-        <div className="text-[#6e6e7e] text-sm font-medium">Loading...</div>
+        <div className="text-ui-tertiary text-sm font-medium">Loading...</div>
       </div>
     )
   }
@@ -69,8 +69,8 @@ export default function BroadcastPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-xl font-semibold text-[#1a1a2e] tracking-tight">Broadcast</h2>
-        <p className="text-sm text-[#4a4a5e] mt-1">
+        <h2 className="text-xl font-semibold font-display text-brand-charcoal tracking-tight">Broadcast</h2>
+        <p className="text-sm text-ui-secondary mt-1">
           Send announcements to all confirmed guests for this event.
         </p>
       </div>

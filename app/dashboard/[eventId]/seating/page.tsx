@@ -187,7 +187,7 @@ export default function SeatingPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-32">
-        <div className="text-[#6e6e7e] text-sm font-medium">Loading seating...</div>
+        <div className="text-ui-tertiary text-sm font-medium">Loading seating...</div>
       </div>
     );
   }
@@ -197,8 +197,8 @@ export default function SeatingPage() {
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-[#1a1a2e] tracking-tight mb-1">Seating Management</h1>
-          <p className="text-sm text-[#4a4a5e]">
+          <h1 className="text-2xl font-bold font-display text-brand-charcoal tracking-tight mb-1">Seating Management</h1>
+          <p className="text-sm text-ui-secondary">
             {seatingFormat === 'STANDING'
               ? 'Standing format — no table assignments needed'
               : `${tables.length} tables · ${assignments.length} confirmed guests · ${unassigned.length} unassigned`}
@@ -209,7 +209,7 @@ export default function SeatingPage() {
             <select
               value={strategy}
               onChange={(e) => setStrategy(e.target.value as Strategy)}
-              className="px-3 py-2 text-sm border border-[#e1e4e8] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0f3460]"
+              className="px-3 py-2 text-sm border border-ui-border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-terracotta"
             >
               <option value="MIXED_INTERESTS">Mixed Interests</option>
               <option value="SIMILAR_INTERESTS">Similar Interests</option>
@@ -218,7 +218,7 @@ export default function SeatingPage() {
             <button
               onClick={handleGenerateSuggestions}
               disabled={generating}
-              className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-[#0f3460] rounded-lg hover:bg-[#0a2540] transition-colors disabled:opacity-50"
+              className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-brand-terracotta rounded-lg hover:bg-brand-terracotta/90 transition-colors disabled:opacity-50"
             >
               {generating ? <RotateCw size={14} className="animate-spin" /> : <Sparkles size={14} />}
               {generating ? 'Generating...' : 'AI Suggest'}
@@ -235,13 +235,13 @@ export default function SeatingPage() {
       )}
 
       {/* Tabs */}
-      <div className="flex gap-1 bg-[#f0f2f5] rounded-lg p-1">
+      <div className="flex gap-1 bg-brand-cream rounded-lg p-1">
         <button
           onClick={() => setActiveTab('chart')}
           className={`px-4 py-2 text-sm font-semibold rounded-md transition-colors ${
             activeTab === 'chart'
-              ? 'bg-white text-[#1a1a2e] shadow-sm'
-              : 'text-[#6e6e7e] hover:text-[#1a1a2e]'
+              ? 'bg-white text-brand-charcoal shadow-sm'
+              : 'text-ui-tertiary hover:text-brand-charcoal'
           }`}
         >
           Seating Chart
@@ -250,8 +250,8 @@ export default function SeatingPage() {
           onClick={() => setActiveTab('introductions')}
           className={`px-4 py-2 text-sm font-semibold rounded-md transition-colors ${
             activeTab === 'introductions'
-              ? 'bg-white text-[#1a1a2e] shadow-sm'
-              : 'text-[#6e6e7e] hover:text-[#1a1a2e]'
+              ? 'bg-white text-brand-charcoal shadow-sm'
+              : 'text-ui-tertiary hover:text-brand-charcoal'
           }`}
         >
           Introduction Pairings ({pairings.length})
@@ -261,9 +261,9 @@ export default function SeatingPage() {
       {/* Content */}
       {activeTab === 'chart' ? (
         seatingFormat === 'STANDING' ? (
-          <div className="bg-white border border-[#e1e4e8] rounded-lg p-8 text-center">
-            <Settings size={32} className="mx-auto mb-3 text-[#6e6e7e] opacity-50" />
-            <p className="text-sm text-[#6e6e7e]">
+          <div className="bg-white rounded-card shadow-card p-8 text-center">
+            <Settings size={32} className="mx-auto mb-3 text-ui-tertiary opacity-50" />
+            <p className="text-sm text-ui-tertiary">
               This event uses a standing format. Switch to &quot;Seated&quot; or &quot;Mixed&quot; format in event settings to enable table assignments.
             </p>
           </div>

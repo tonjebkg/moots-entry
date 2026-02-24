@@ -64,8 +64,8 @@ export function BroadcastComposer({ eventId, onSent }: BroadcastComposerProps) {
   }
 
   return (
-    <div className="bg-white border border-[#e1e4e8] rounded-lg p-6">
-      <h3 className="text-sm font-semibold text-[#1a1a2e] mb-4">Compose Broadcast</h3>
+    <div className="bg-white border border-ui-border rounded-lg p-6">
+      <h3 className="text-sm font-semibold text-brand-charcoal mb-4">Compose Broadcast</h3>
 
       {error && (
         <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">{error}</div>
@@ -73,43 +73,43 @@ export function BroadcastComposer({ eventId, onSent }: BroadcastComposerProps) {
 
       <div className="space-y-4">
         <div>
-          <label className="block text-sm font-medium text-[#1a1a2e] mb-1">Subject</label>
+          <label className="block text-sm font-medium text-brand-charcoal mb-1">Subject</label>
           <input
             type="text"
             value={subject}
             onChange={(e) => setSubject(e.target.value)}
-            className="w-full px-3 py-2 border border-[#e1e4e8] rounded-lg text-sm focus:outline-none focus:border-[#B8755E] focus:ring-1 focus:ring-[#B8755E]"
+            className="w-full px-3 py-2 border border-ui-border rounded-lg text-sm focus:outline-none focus:border-brand-terracotta focus:ring-1 focus:ring-brand-terracotta"
             placeholder="Important update about..."
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-[#1a1a2e] mb-1">Message</label>
+          <label className="block text-sm font-medium text-brand-charcoal mb-1">Message</label>
           <textarea
             value={content}
             onChange={(e) => setContent(e.target.value)}
             rows={6}
-            className="w-full px-3 py-2 border border-[#e1e4e8] rounded-lg text-sm focus:outline-none focus:border-[#B8755E] focus:ring-1 focus:ring-[#B8755E] resize-none"
+            className="w-full px-3 py-2 border border-ui-border rounded-lg text-sm focus:outline-none focus:border-brand-terracotta focus:ring-1 focus:ring-brand-terracotta resize-none"
             placeholder="Write your message to all confirmed guests..."
           />
         </div>
 
         <div className="flex items-center justify-between pt-2">
-          <p className="text-xs text-[#6e6e7e]">
+          <p className="text-xs text-ui-tertiary">
             Sent to all confirmed/accepted guests via email.
           </p>
           <div className="flex gap-3">
             <button
               onClick={handleSaveDraft}
               disabled={saving || !subject || !content}
-              className="px-4 py-2 text-sm font-medium text-[#4a4a5e] border border-[#e1e4e8] rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
+              className="px-4 py-2 text-sm font-medium text-ui-secondary border border-ui-border rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
             >
               {saving ? 'Saving...' : 'Save Draft'}
             </button>
             <button
               onClick={handleSendNow}
               disabled={sending || !subject || !content}
-              className="flex items-center gap-2 px-4 py-2 bg-[#2F4F3F] hover:bg-[#1a3a2a] text-white text-sm font-semibold rounded-lg transition-colors disabled:opacity-50"
+              className="flex items-center gap-2 px-4 py-2 bg-brand-forest hover:bg-brand-forest/90 text-white text-sm font-semibold rounded-lg transition-colors disabled:opacity-50"
             >
               <Send className="w-4 h-4" />
               {sending ? 'Sending...' : 'Send Now'}

@@ -181,18 +181,18 @@ export function GuestPipelineTable({
   }
 
   return (
-    <div className="bg-white border border-[#e1e4e8] rounded-lg shadow-sm">
+    <div className="bg-white border border-ui-border rounded-lg shadow-sm">
       {/* Filters and Search */}
-      <div className="p-5 border-b border-[#e1e4e8]">
+      <div className="p-5 border-b border-ui-border">
         <div className="flex gap-3 mb-4">
           <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[#6e6e7e]" size={16} />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-ui-tertiary" size={16} />
             <input
               type="text"
               placeholder="Search by name or email..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-3 py-2 bg-white border border-[#e1e4e8] rounded-lg text-sm text-[#1a1a2e] placeholder-[#6e6e7e] focus:outline-none focus:border-[#0f3460] focus:ring-1 focus:ring-[#0f3460] transition-colors"
+              className="w-full pl-10 pr-3 py-2 bg-white border border-ui-border rounded-lg text-sm text-brand-charcoal placeholder-ui-tertiary focus:outline-none focus:border-brand-terracotta focus:ring-1 focus:ring-brand-terracotta transition-colors"
             />
           </div>
         </div>
@@ -201,7 +201,7 @@ export function GuestPipelineTable({
           <select
             value={filterStatus}
             onChange={(e) => setFilterStatus(e.target.value)}
-            className="px-3 py-2 bg-white border border-[#e1e4e8] rounded-lg text-sm text-[#1a1a2e] focus:outline-none focus:border-[#0f3460] focus:ring-1 focus:ring-[#0f3460] transition-colors"
+            className="px-3 py-2 bg-white border border-ui-border rounded-lg text-sm text-brand-charcoal focus:outline-none focus:border-brand-terracotta focus:ring-1 focus:ring-brand-terracotta transition-colors"
           >
             <option value="">All Status</option>
             <option value="CONSIDERING">Considering</option>
@@ -214,7 +214,7 @@ export function GuestPipelineTable({
           <select
             value={filterTier}
             onChange={(e) => setFilterTier(e.target.value)}
-            className="px-3 py-2 bg-white border border-[#e1e4e8] rounded-lg text-sm text-[#1a1a2e] focus:outline-none focus:border-[#0f3460] focus:ring-1 focus:ring-[#0f3460] transition-colors"
+            className="px-3 py-2 bg-white border border-ui-border rounded-lg text-sm text-brand-charcoal focus:outline-none focus:border-brand-terracotta focus:ring-1 focus:ring-brand-terracotta transition-colors"
           >
             <option value="">All Tiers</option>
             <option value="TIER_1">Tier 1</option>
@@ -226,7 +226,7 @@ export function GuestPipelineTable({
           <select
             value={filterPriority}
             onChange={(e) => setFilterPriority(e.target.value)}
-            className="px-3 py-2 bg-white border border-[#e1e4e8] rounded-lg text-sm text-[#1a1a2e] focus:outline-none focus:border-[#0f3460] focus:ring-1 focus:ring-[#0f3460] transition-colors"
+            className="px-3 py-2 bg-white border border-ui-border rounded-lg text-sm text-brand-charcoal focus:outline-none focus:border-brand-terracotta focus:ring-1 focus:ring-brand-terracotta transition-colors"
           >
             <option value="">All Priorities</option>
             <option value="VIP">VIP</option>
@@ -243,7 +243,7 @@ export function GuestPipelineTable({
                 setFilterPriority('');
                 setSearchQuery('');
               }}
-              className="px-3 py-2 text-sm font-medium text-[#6e6e7e] hover:text-[#0f3460] transition-colors"
+              className="px-3 py-2 text-sm font-medium text-ui-tertiary hover:text-brand-terracotta transition-colors"
             >
               Clear Filters
             </button>
@@ -254,13 +254,13 @@ export function GuestPipelineTable({
       {/* Bulk Actions */}
       {selectedIds.size > 0 && (
         <div className="px-5 py-3 bg-blue-50 border-b border-blue-100 flex items-center justify-between">
-          <span className="text-sm font-semibold text-[#0f3460]">
+          <span className="text-sm font-semibold text-brand-terracotta">
             {selectedIds.size} guest{selectedIds.size === 1 ? '' : 's'} selected
           </span>
           <div className="flex gap-2">
             <button
               onClick={() => onBulkAction('send-rsvp', Array.from(selectedIds))}
-              className="px-3 py-1.5 text-sm font-semibold bg-[#0f3460] text-white rounded-md hover:bg-[#c5a572] active:bg-[#0f3460]/90 transition-colors shadow-sm"
+              className="px-3 py-1.5 text-sm font-semibold bg-brand-terracotta text-white rounded-md hover:bg-brand-terracotta/90 active:bg-brand-terracotta/80 transition-colors shadow-sm"
             >
               Send RSVP
             </button>
@@ -272,7 +272,7 @@ export function GuestPipelineTable({
             </button>
             <button
               onClick={() => setSelectedIds(new Set())}
-              className="px-3 py-1.5 text-sm font-medium text-[#6e6e7e] hover:text-[#1a1a2e] transition-colors"
+              className="px-3 py-1.5 text-sm font-medium text-ui-tertiary hover:text-brand-charcoal transition-colors"
             >
               Clear
             </button>
@@ -283,7 +283,7 @@ export function GuestPipelineTable({
       {/* Table */}
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
-          <thead className="bg-[#f8f9fa] border-b border-[#e1e4e8]">
+          <thead className="bg-brand-cream border-b border-ui-border">
             <tr>
               <th className="px-3 py-3 text-left w-10">
                 <input
@@ -293,48 +293,48 @@ export function GuestPipelineTable({
                     selectedIds.size === filteredInvitations.length
                   }
                   onChange={toggleSelectAll}
-                  className="rounded border-[#e1e4e8] text-[#0f3460] focus:ring-[#0f3460]"
+                  className="rounded border-ui-border text-brand-terracotta focus:ring-brand-terracotta"
                 />
               </th>
-              <th className="px-3 py-3 text-left font-semibold text-[#1a1a2e]">Name</th>
-              <th className="px-3 py-3 text-left font-semibold text-[#1a1a2e]">Email</th>
-              <th className="px-3 py-3 text-left font-semibold text-[#1a1a2e]">Tier</th>
-              <th className="px-3 py-3 text-left font-semibold text-[#1a1a2e]">Priority</th>
-              <th className="px-3 py-3 text-left font-semibold text-[#1a1a2e]">Status</th>
-              <th className="px-3 py-3 text-center font-semibold text-[#1a1a2e]">+1s</th>
-              <th className="px-3 py-3 text-left font-semibold text-[#1a1a2e] text-xs">RSVP Sent</th>
-              <th className="px-3 py-3 text-left font-semibold text-[#1a1a2e] text-xs">Response</th>
-              <th className="px-3 py-3 text-left font-semibold text-[#1a1a2e] text-xs">Join Link</th>
-              <th className="px-3 py-3 text-right font-semibold text-[#1a1a2e]">Actions</th>
+              <th className="px-3 py-3 text-left font-semibold text-brand-charcoal">Name</th>
+              <th className="px-3 py-3 text-left font-semibold text-brand-charcoal">Email</th>
+              <th className="px-3 py-3 text-left font-semibold text-brand-charcoal">Tier</th>
+              <th className="px-3 py-3 text-left font-semibold text-brand-charcoal">Priority</th>
+              <th className="px-3 py-3 text-left font-semibold text-brand-charcoal">Status</th>
+              <th className="px-3 py-3 text-center font-semibold text-brand-charcoal">+1s</th>
+              <th className="px-3 py-3 text-left font-semibold text-brand-charcoal text-xs">RSVP Sent</th>
+              <th className="px-3 py-3 text-left font-semibold text-brand-charcoal text-xs">Response</th>
+              <th className="px-3 py-3 text-left font-semibold text-brand-charcoal text-xs">Join Link</th>
+              <th className="px-3 py-3 text-right font-semibold text-brand-charcoal">Actions</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-[#e1e4e8]">
+          <tbody className="divide-y divide-ui-border">
             {filteredInvitations.length === 0 ? (
               <tr>
-                <td colSpan={11} className="px-3 py-12 text-center text-[#6e6e7e]">
+                <td colSpan={11} className="px-3 py-12 text-center text-ui-tertiary">
                   No guests found matching filters
                 </td>
               </tr>
             ) : (
               filteredInvitations.map((inv) => (
-                <tr key={inv.id} className="hover:bg-[#f8f9fa] transition-colors cursor-pointer" onClick={() => onEditGuest?.(inv.id)}>
+                <tr key={inv.id} className="hover:bg-brand-cream transition-colors cursor-pointer" onClick={() => onEditGuest?.(inv.id)}>
                   <td className="px-3 py-3" onClick={(e) => e.stopPropagation()}>
                     <input
                       type="checkbox"
                       checked={selectedIds.has(inv.id)}
                       onChange={() => toggleSelection(inv.id)}
-                      className="rounded border-[#e1e4e8] text-[#0f3460] focus:ring-[#0f3460]"
+                      className="rounded border-ui-border text-brand-terracotta focus:ring-brand-terracotta"
                     />
                   </td>
-                  <td className="px-3 py-3 font-medium text-[#1a1a2e]">
+                  <td className="px-3 py-3 font-medium text-brand-charcoal">
                     {inv.full_name}
                   </td>
-                  <td className="px-3 py-3 text-[#4a4a5e]">{inv.email}</td>
+                  <td className="px-3 py-3 text-ui-secondary">{inv.email}</td>
                   <td className="px-3 py-3" onClick={(e) => e.stopPropagation()}>
                     <select
                       value={inv.tier}
                       onChange={(e) => handleTierChange(inv.id, e.target.value)}
-                      className="px-2 py-1 border border-[#e1e4e8] rounded text-sm bg-white hover:border-[#0f3460] focus:outline-none focus:border-[#0f3460] focus:ring-1 focus:ring-[#0f3460] transition-colors"
+                      className="px-2 py-1 border border-ui-border rounded text-sm bg-white hover:border-brand-terracotta focus:outline-none focus:border-brand-terracotta focus:ring-1 focus:ring-brand-terracotta transition-colors"
                     >
                       <option value="TIER_1">Tier 1</option>
                       <option value="TIER_2">Tier 2</option>
@@ -346,7 +346,7 @@ export function GuestPipelineTable({
                     <select
                       value={inv.priority}
                       onChange={(e) => handlePriorityChange(inv.id, e.target.value)}
-                      className="px-2 py-1 border border-[#e1e4e8] rounded text-sm bg-white hover:border-[#0f3460] focus:outline-none focus:border-[#0f3460] focus:ring-1 focus:ring-[#0f3460] transition-colors"
+                      className="px-2 py-1 border border-ui-border rounded text-sm bg-white hover:border-brand-terracotta focus:outline-none focus:border-brand-terracotta focus:ring-1 focus:ring-brand-terracotta transition-colors"
                     >
                       <option value="VIP">VIP</option>
                       <option value="HIGH">High</option>
@@ -355,9 +355,9 @@ export function GuestPipelineTable({
                     </select>
                   </td>
                   <td className="px-3 py-3">{getStatusBadge(inv.status)}</td>
-                  <td className="px-3 py-3 text-center text-[#4a4a5e]">{inv.expected_plus_ones || '—'}</td>
-                  <td className="px-3 py-3 text-[#6e6e7e] text-xs">{formatDate(inv.rsvp_email_sent_at)}</td>
-                  <td className="px-3 py-3 text-[#6e6e7e] text-xs">{formatDate(inv.rsvp_responded_at)}</td>
+                  <td className="px-3 py-3 text-center text-ui-secondary">{inv.expected_plus_ones || '—'}</td>
+                  <td className="px-3 py-3 text-ui-tertiary text-xs">{formatDate(inv.rsvp_email_sent_at)}</td>
+                  <td className="px-3 py-3 text-ui-tertiary text-xs">{formatDate(inv.rsvp_responded_at)}</td>
                   <td className="px-3 py-3 text-xs">
                     {inv.join_completed_at ? (
                       <span className="flex items-center gap-1 text-emerald-700 font-semibold">
@@ -365,9 +365,9 @@ export function GuestPipelineTable({
                         Joined
                       </span>
                     ) : inv.join_link_sent_at ? (
-                      <span className="text-[#6e6e7e]">{formatDate(inv.join_link_sent_at)}</span>
+                      <span className="text-ui-tertiary">{formatDate(inv.join_link_sent_at)}</span>
                     ) : (
-                      <span className="text-[#6e6e7e]">—</span>
+                      <span className="text-ui-tertiary">—</span>
                     )}
                   </td>
                   <td className="px-3 py-3 text-right" onClick={(e) => e.stopPropagation()}>
@@ -387,7 +387,7 @@ export function GuestPipelineTable({
       </div>
 
       {/* Footer */}
-      <div className="px-5 py-3 bg-[#f8f9fa] border-t border-[#e1e4e8] text-sm font-medium text-[#6e6e7e]">
+      <div className="px-5 py-3 bg-brand-cream border-t border-ui-border text-sm font-medium text-ui-tertiary">
         Showing {filteredInvitations.length} of {invitations.length} guest{invitations.length === 1 ? '' : 's'}
       </div>
     </div>

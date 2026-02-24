@@ -293,7 +293,7 @@ export function CampaignDetailPanel({ campaignId, eventId, onRefresh }: Campaign
   if (loading) {
     return (
       <div className="flex items-center justify-center py-32">
-        <div className="text-[#6e6e7e] text-sm font-medium">Loading campaign...</div>
+        <div className="text-ui-tertiary text-sm font-medium">Loading campaign...</div>
       </div>
     )
   }
@@ -311,14 +311,14 @@ export function CampaignDetailPanel({ campaignId, eventId, onRefresh }: Campaign
   return (
     <div className="space-y-5">
       {/* Campaign Header */}
-      <div className="bg-white border border-[#e1e4e8] rounded-lg p-5 shadow-sm">
+      <div className="bg-white rounded-card shadow-card p-5">
         <div className="flex items-start justify-between gap-8">
           <div className="flex-1 min-w-0">
-            <h2 className="text-xl font-bold text-[#1a1a2e] mb-2 tracking-tight">
+            <h2 className="text-xl font-bold font-display text-brand-charcoal mb-2 tracking-tight">
               {campaign.name}
             </h2>
             {campaign.description && (
-              <p className="text-sm text-[#4a4a5e] leading-relaxed">
+              <p className="text-sm text-ui-secondary leading-relaxed">
                 {campaign.description}
               </p>
             )}
@@ -337,8 +337,8 @@ export function CampaignDetailPanel({ campaignId, eventId, onRefresh }: Campaign
       {/* Stats Grid */}
       <div className="grid grid-cols-5 gap-3">
         {[
-          { label: 'Considering', value: campaign.total_considering, color: 'text-[#6e6e7e]', bg: 'bg-[#f0f2f5]', border: 'border-[#e1e4e8]' },
-          { label: 'Invited', value: campaign.total_invited, color: 'text-[#0f3460]', bg: 'bg-blue-50', border: 'border-blue-100' },
+          { label: 'Considering', value: campaign.total_considering, color: 'text-ui-tertiary', bg: 'bg-brand-cream', border: 'border-ui-border' },
+          { label: 'Invited', value: campaign.total_invited, color: 'text-brand-terracotta', bg: 'bg-blue-50', border: 'border-blue-100' },
           { label: 'Accepted', value: campaign.total_accepted, color: 'text-emerald-700', bg: 'bg-emerald-50', border: 'border-emerald-100' },
           { label: 'Declined', value: campaign.total_declined, color: 'text-red-700', bg: 'bg-red-50', border: 'border-red-100' },
           { label: 'Joined', value: campaign.total_joined, color: 'text-purple-700', bg: 'bg-purple-50', border: 'border-purple-100' },
@@ -350,7 +350,7 @@ export function CampaignDetailPanel({ campaignId, eventId, onRefresh }: Campaign
             <div className={`text-2xl font-bold mb-0.5 ${stat.color} tracking-tight`}>
               {stat.value}
             </div>
-            <div className="text-xs font-semibold text-[#6e6e7e] uppercase tracking-wide">
+            <div className="text-xs font-semibold text-ui-tertiary uppercase tracking-wide">
               {stat.label}
             </div>
           </div>
@@ -377,12 +377,12 @@ export function CampaignDetailPanel({ campaignId, eventId, onRefresh }: Campaign
           <div className="flex items-center gap-2">
             <button
               onClick={() => setShowAddGuestModal(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-[#0f3460] hover:bg-[#c5a572] active:bg-[#0f3460]/90 text-white text-sm font-semibold rounded-lg transition-all shadow-sm"
+              className="flex items-center gap-2 px-4 py-2 bg-brand-terracotta hover:bg-brand-terracotta/90 active:bg-brand-terracotta/90 text-white text-sm font-semibold rounded-pill shadow-cta transition-all"
             >
               <UserPlus size={16} />
               Add Guest
             </button>
-            <label className="flex items-center gap-2 px-4 py-2 bg-white border border-[#e1e4e8] hover:border-[#0f3460] active:border-[#0f3460] text-[#1a1a2e] text-sm font-semibold rounded-lg cursor-pointer transition-all">
+            <label className="flex items-center gap-2 px-4 py-2 bg-white border border-ui-border hover:border-brand-terracotta active:border-brand-terracotta text-brand-charcoal text-sm font-semibold rounded-pill cursor-pointer transition-all">
               <Upload size={16} />
               {uploading ? 'Uploading...' : 'Upload CSV'}
               <input

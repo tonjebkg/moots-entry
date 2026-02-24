@@ -317,13 +317,13 @@ export function CreateEventModal({ onClose, onSuccess }: CreateEventModalProps) 
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-6 overflow-y-auto">
-      <div className="bg-white rounded-lg shadow-lg w-full max-w-3xl p-6 space-y-6 max-h-[90vh] overflow-y-auto">
+      <div className="bg-white rounded-card shadow-panel w-full max-w-3xl p-6 space-y-6 max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="flex items-center justify-between">
-          <h2 className="text-xl font-semibold text-[#1a1a2e]">Create Event</h2>
+          <h2 className="text-xl font-semibold font-display text-brand-charcoal">Create Event</h2>
           <button
             onClick={onClose}
-            className="px-3 py-1 text-[#6e6e7e] hover:text-[#1a1a2e] text-sm font-medium transition-colors"
+            className="px-3 py-1 text-ui-tertiary hover:text-brand-charcoal text-sm font-medium transition-colors"
           >
             Cancel
           </button>
@@ -339,13 +339,13 @@ export function CreateEventModal({ onClose, onSuccess }: CreateEventModalProps) 
         <div className="space-y-4">
           {/* Event Title */}
           <div>
-            <label className="block text-sm font-semibold text-[#1a1a2e] mb-1">
+            <label className="block text-sm font-semibold text-brand-charcoal mb-1">
               Event Title <span className="text-red-600">*</span>
             </label>
             <input
               value={evName}
               onChange={(e) => setEvName(e.target.value)}
-              className="w-full px-3 py-2 bg-white border border-[#e1e4e8] rounded-lg text-sm text-[#1a1a2e] placeholder-[#6e6e7e] focus:outline-none focus:border-[#0f3460] focus:ring-1 focus:ring-[#0f3460] transition-colors"
+              className="w-full px-3 py-2 bg-white border border-ui-border rounded-lg text-sm text-brand-charcoal placeholder-ui-tertiary focus:outline-none focus:border-brand-terracotta focus:ring-1 focus:ring-brand-terracotta transition-colors"
               placeholder="Enter event title"
               required
             />
@@ -354,13 +354,13 @@ export function CreateEventModal({ onClose, onSuccess }: CreateEventModalProps) 
           {/* Status and Approval Mode */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-semibold text-[#1a1a2e] mb-1">
+              <label className="block text-sm font-semibold text-brand-charcoal mb-1">
                 Status
               </label>
               <select
                 value={evStatus}
                 onChange={(e) => setEvStatus(e.target.value as EventStatus)}
-                className="w-full px-3 py-2 bg-white border border-[#e1e4e8] rounded-lg text-sm text-[#1a1a2e] focus:outline-none focus:border-[#0f3460] focus:ring-1 focus:ring-[#0f3460] transition-colors"
+                className="w-full px-3 py-2 bg-white border border-ui-border rounded-lg text-sm text-brand-charcoal focus:outline-none focus:border-brand-terracotta focus:ring-1 focus:ring-brand-terracotta transition-colors"
               >
                 <option value="DRAFT">Draft</option>
                 <option value="PUBLISHED">Published</option>
@@ -370,13 +370,13 @@ export function CreateEventModal({ onClose, onSuccess }: CreateEventModalProps) 
             </div>
 
             <div>
-              <label className="block text-sm font-semibold text-[#1a1a2e] mb-1">
+              <label className="block text-sm font-semibold text-brand-charcoal mb-1">
                 Approval Mode
               </label>
               <select
                 value={evApproveMode}
                 onChange={(e) => setEvApproveMode(e.target.value as ApproveMode)}
-                className="w-full px-3 py-2 bg-white border border-[#e1e4e8] rounded-lg text-sm text-[#1a1a2e] focus:outline-none focus:border-[#0f3460] focus:ring-1 focus:ring-[#0f3460] transition-colors"
+                className="w-full px-3 py-2 bg-white border border-ui-border rounded-lg text-sm text-brand-charcoal focus:outline-none focus:border-brand-terracotta focus:ring-1 focus:ring-brand-terracotta transition-colors"
               >
                 <option value="MANUAL">Manual</option>
                 <option value="AUTO">Auto</option>
@@ -390,15 +390,15 @@ export function CreateEventModal({ onClose, onSuccess }: CreateEventModalProps) 
               type="checkbox"
               checked={evIsPrivate}
               onChange={(e) => setEvIsPrivate(e.target.checked)}
-              className="w-4 h-4 text-[#0f3460] border-[#e1e4e8] rounded focus:ring-[#0f3460]"
+              className="w-4 h-4 text-brand-terracotta border-ui-border rounded focus:ring-brand-terracotta"
             />
-            <span className="text-sm font-medium text-[#4a4a5e]">Private event</span>
+            <span className="text-sm font-medium text-ui-secondary">Private event</span>
           </label>
 
           {/* Date and Time */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <label className="block text-sm font-semibold text-[#1a1a2e]">
+              <label className="block text-sm font-semibold text-brand-charcoal">
                 Start Date <span className="text-red-600">*</span>
               </label>
               <input
@@ -407,7 +407,7 @@ export function CreateEventModal({ onClose, onSuccess }: CreateEventModalProps) 
                 placeholder="MM/DD/YYYY"
                 onClick={() => startDateRef.current?.showPicker()}
                 readOnly
-                className="w-full px-3 py-2 bg-white border border-[#e1e4e8] rounded-lg text-sm text-[#1a1a2e] cursor-pointer focus:outline-none focus:border-[#0f3460] focus:ring-1 focus:ring-[#0f3460] transition-colors"
+                className="w-full px-3 py-2 bg-white border border-ui-border rounded-lg text-sm text-brand-charcoal cursor-pointer focus:outline-none focus:border-brand-terracotta focus:ring-1 focus:ring-brand-terracotta transition-colors"
                 required
               />
               <input
@@ -417,13 +417,13 @@ export function CreateEventModal({ onClose, onSuccess }: CreateEventModalProps) 
                 onChange={(e) => setEvStartDate(isoDateToUS(e.target.value))}
               />
 
-              <label className="block text-sm font-semibold text-[#1a1a2e]">
+              <label className="block text-sm font-semibold text-brand-charcoal">
                 Start Time <span className="text-red-600">*</span>
               </label>
               <select
                 value={evStartTime}
                 onChange={(e) => setEvStartTime(e.target.value)}
-                className="w-full px-3 py-2 bg-white border border-[#e1e4e8] rounded-lg text-sm text-[#1a1a2e] focus:outline-none focus:border-[#0f3460] focus:ring-1 focus:ring-[#0f3460] transition-colors"
+                className="w-full px-3 py-2 bg-white border border-ui-border rounded-lg text-sm text-brand-charcoal focus:outline-none focus:border-brand-terracotta focus:ring-1 focus:ring-brand-terracotta transition-colors"
                 required
               >
                 {generateTimeOptions().map(t => (
@@ -433,7 +433,7 @@ export function CreateEventModal({ onClose, onSuccess }: CreateEventModalProps) 
             </div>
 
             <div className="space-y-2">
-              <label className="block text-sm font-semibold text-[#1a1a2e]">
+              <label className="block text-sm font-semibold text-brand-charcoal">
                 End Date
               </label>
               <input
@@ -442,7 +442,7 @@ export function CreateEventModal({ onClose, onSuccess }: CreateEventModalProps) 
                 placeholder="MM/DD/YYYY"
                 onClick={() => endDateRef.current?.showPicker()}
                 readOnly
-                className="w-full px-3 py-2 bg-white border border-[#e1e4e8] rounded-lg text-sm text-[#1a1a2e] cursor-pointer focus:outline-none focus:border-[#0f3460] focus:ring-1 focus:ring-[#0f3460] transition-colors"
+                className="w-full px-3 py-2 bg-white border border-ui-border rounded-lg text-sm text-brand-charcoal cursor-pointer focus:outline-none focus:border-brand-terracotta focus:ring-1 focus:ring-brand-terracotta transition-colors"
               />
               <input
                 ref={endDateRef}
@@ -451,13 +451,13 @@ export function CreateEventModal({ onClose, onSuccess }: CreateEventModalProps) 
                 onChange={(e) => setEvEndDate(isoDateToUS(e.target.value))}
               />
 
-              <label className="block text-sm font-semibold text-[#1a1a2e]">
+              <label className="block text-sm font-semibold text-brand-charcoal">
                 End Time
               </label>
               <select
                 value={evEndTime}
                 onChange={(e) => setEvEndTime(e.target.value)}
-                className="w-full px-3 py-2 bg-white border border-[#e1e4e8] rounded-lg text-sm text-[#1a1a2e] focus:outline-none focus:border-[#0f3460] focus:ring-1 focus:ring-[#0f3460] transition-colors"
+                className="w-full px-3 py-2 bg-white border border-ui-border rounded-lg text-sm text-brand-charcoal focus:outline-none focus:border-brand-terracotta focus:ring-1 focus:ring-brand-terracotta transition-colors"
               >
                 {generateTimeOptions().map(t => (
                   <option key={t} value={t}>{t}</option>
@@ -468,13 +468,13 @@ export function CreateEventModal({ onClose, onSuccess }: CreateEventModalProps) 
 
           {/* Timezone */}
           <div>
-            <label className="block text-sm font-semibold text-[#1a1a2e] mb-1">
+            <label className="block text-sm font-semibold text-brand-charcoal mb-1">
               Timezone
             </label>
             <select
               value={evTimezone}
               onChange={(e) => setEvTimezone(e.target.value)}
-              className="w-full px-3 py-2 bg-white border border-[#e1e4e8] rounded-lg text-sm text-[#1a1a2e] focus:outline-none focus:border-[#0f3460] focus:ring-1 focus:ring-[#0f3460] transition-colors"
+              className="w-full px-3 py-2 bg-white border border-ui-border rounded-lg text-sm text-brand-charcoal focus:outline-none focus:border-brand-terracotta focus:ring-1 focus:ring-brand-terracotta transition-colors"
             >
               {TIMEZONES.map(tz => (
                 <option key={tz} value={tz}>{tz}</option>
@@ -484,43 +484,43 @@ export function CreateEventModal({ onClose, onSuccess }: CreateEventModalProps) 
 
           {/* Event URL */}
           <div>
-            <label className="block text-sm font-semibold text-[#1a1a2e] mb-1">
+            <label className="block text-sm font-semibold text-brand-charcoal mb-1">
               Event Link
             </label>
             <input
               value={evEventUrl}
               onChange={(e) => setEvEventUrl(e.target.value)}
-              className="w-full px-3 py-2 bg-white border border-[#e1e4e8] rounded-lg text-sm text-[#1a1a2e] placeholder-[#6e6e7e] focus:outline-none focus:border-[#0f3460] focus:ring-1 focus:ring-[#0f3460] transition-colors"
+              className="w-full px-3 py-2 bg-white border border-ui-border rounded-lg text-sm text-brand-charcoal placeholder-ui-tertiary focus:outline-none focus:border-brand-terracotta focus:ring-1 focus:ring-brand-terracotta transition-colors"
               placeholder="https://..."
             />
           </div>
 
           {/* Location */}
-          <div className="border-t border-[#e1e4e8] pt-4">
-            <h3 className="text-sm font-semibold text-[#1a1a2e] mb-3">Location</h3>
+          <div className="border-t border-ui-border pt-4">
+            <h3 className="text-sm font-semibold text-brand-charcoal mb-3">Location</h3>
             <div className="grid grid-cols-2 gap-3">
               <input
                 value={evLocationVenue}
                 onChange={(e) => setEvLocationVenue(e.target.value)}
                 placeholder="Venue name"
-                className="px-3 py-2 bg-white border border-[#e1e4e8] rounded-lg text-sm text-[#1a1a2e] placeholder-[#6e6e7e] focus:outline-none focus:border-[#0f3460] focus:ring-1 focus:ring-[#0f3460] transition-colors"
+                className="px-3 py-2 bg-white border border-ui-border rounded-lg text-sm text-brand-charcoal placeholder-ui-tertiary focus:outline-none focus:border-brand-terracotta focus:ring-1 focus:ring-brand-terracotta transition-colors"
               />
               <input
                 value={evLocationStreet}
                 onChange={(e) => setEvLocationStreet(e.target.value)}
                 placeholder="Street address"
-                className="px-3 py-2 bg-white border border-[#e1e4e8] rounded-lg text-sm text-[#1a1a2e] placeholder-[#6e6e7e] focus:outline-none focus:border-[#0f3460] focus:ring-1 focus:ring-[#0f3460] transition-colors"
+                className="px-3 py-2 bg-white border border-ui-border rounded-lg text-sm text-brand-charcoal placeholder-ui-tertiary focus:outline-none focus:border-brand-terracotta focus:ring-1 focus:ring-brand-terracotta transition-colors"
               />
               <input
                 value={evLocationCity}
                 onChange={(e) => setEvLocationCity(e.target.value)}
                 placeholder="City"
-                className="px-3 py-2 bg-white border border-[#e1e4e8] rounded-lg text-sm text-[#1a1a2e] placeholder-[#6e6e7e] focus:outline-none focus:border-[#0f3460] focus:ring-1 focus:ring-[#0f3460] transition-colors"
+                className="px-3 py-2 bg-white border border-ui-border rounded-lg text-sm text-brand-charcoal placeholder-ui-tertiary focus:outline-none focus:border-brand-terracotta focus:ring-1 focus:ring-brand-terracotta transition-colors"
               />
               <select
                 value={evLocationState}
                 onChange={(e) => setEvLocationState(e.target.value)}
-                className="px-3 py-2 bg-white border border-[#e1e4e8] rounded-lg text-sm text-[#1a1a2e] focus:outline-none focus:border-[#0f3460] focus:ring-1 focus:ring-[#0f3460] transition-colors"
+                className="px-3 py-2 bg-white border border-ui-border rounded-lg text-sm text-brand-charcoal focus:outline-none focus:border-brand-terracotta focus:ring-1 focus:ring-brand-terracotta transition-colors"
               >
                 <option value="">Select state...</option>
                 {US_STATES.map(state => (
@@ -534,17 +534,17 @@ export function CreateEventModal({ onClose, onSuccess }: CreateEventModalProps) 
         </div>
 
         {/* Actions */}
-        <div className="flex items-center justify-end gap-3 pt-4 border-t border-[#e1e4e8]">
+        <div className="flex items-center justify-end gap-3 pt-4 border-t border-ui-border">
           <button
             onClick={onClose}
-            className="px-4 py-2 bg-white border border-[#e1e4e8] text-[#4a4a5e] text-sm font-semibold rounded-lg hover:bg-[#f8f9fa] transition-colors"
+            className="px-4 py-2 bg-white border border-ui-border text-ui-secondary text-sm font-semibold rounded-lg hover:bg-brand-cream transition-colors"
           >
             Cancel
           </button>
           <button
             onClick={handleSubmit}
             disabled={saving}
-            className="px-4 py-2 bg-[#1a1a2e] hover:bg-[#c5a572] text-white text-sm font-semibold rounded-lg transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-4 py-2 bg-brand-terracotta hover:bg-brand-terracotta/90 text-white text-sm font-semibold rounded-pill shadow-cta transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {saving ? 'Creating...' : 'Create Event'}
           </button>

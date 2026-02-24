@@ -3,6 +3,7 @@ import Image from 'next/image'
 import { ChevronLeft } from 'lucide-react'
 import { EventTabNavigation } from '@/app/components/EventTabNavigation'
 import { EventHeaderActions } from '@/app/components/EventHeaderActions'
+import { DashboardHeader } from '@/app/components/DashboardHeader'
 import { getDb } from '@/lib/db'
 
 type LayoutProps = {
@@ -167,15 +168,15 @@ export default async function EventLayout({ children, params }: LayoutProps) {
 
   if (!event) {
     return (
-      <div className="min-h-screen bg-[#f8f9fa] flex items-center justify-center p-24">
-        <div className="max-w-md text-center bg-white border border-[#e1e4e8] rounded-lg p-8">
-          <h1 className="text-2xl font-semibold text-[#1a1a2e] mb-4">Event not found</h1>
-          <p className="text-[#4a4a5e] mb-8 leading-relaxed">
+      <div className="min-h-screen bg-brand-cream flex items-center justify-center p-24">
+        <div className="max-w-md text-center bg-white rounded-card shadow-card p-8">
+          <h1 className="font-display text-2xl font-semibold text-brand-charcoal mb-4">Event not found</h1>
+          <p className="text-ui-secondary mb-8 leading-relaxed">
             The event you&apos;re looking for doesn&apos;t exist or you don&apos;t have access to it.
           </p>
           <Link
             href="/dashboard"
-            className="inline-flex items-center gap-2 text-[#0f3460] hover:text-[#c5a572] font-medium transition-colors"
+            className="inline-flex items-center gap-2 text-brand-terracotta hover:text-brand-terracotta/70 font-medium transition-colors"
           >
             <span>←</span>
             <span>Back to Events</span>
@@ -186,34 +187,33 @@ export default async function EventLayout({ children, params }: LayoutProps) {
   }
 
   return (
-    <div className="min-h-screen bg-[#f8f9fa]">
-      {/* Fixed Moots Header */}
-      <header className="fixed top-0 left-0 right-0 bg-white/98 backdrop-blur-sm border-b border-[#e1e4e8] z-50">
-        <div className="px-8 py-4 flex items-center justify-between">
-          <Link href="/dashboard" className="text-2xl font-bold text-[#1a1a2e] hover:text-[#0f3460] transition-colors">
-            Moots
-          </Link>
-        </div>
-      </header>
+    <div className="min-h-screen bg-brand-cream">
+      <DashboardHeader activeNav="events" />
 
       {/* Content with top padding for fixed header */}
       <div className="pt-[73px]">
         {/* Event Header */}
-        <div className="border-b border-[#e1e4e8] bg-white">
+        <div className="border-b border-ui-border bg-white">
           <div className="px-8 py-6">
             <div className="flex items-start justify-between gap-8">
               <div className="flex items-start gap-6 flex-1 min-w-0">
                 {/* Event Image */}
-                {event.image_url && (
+                {event.image_url ? (
                   <div className="shrink-0">
                     <Image
                       src={event.image_url}
                       alt={event.title}
                       width={80}
                       height={80}
-                      className="w-20 h-20 rounded-lg object-cover border border-[#e1e4e8]"
+                      className="w-20 h-20 rounded-card object-cover border border-ui-border"
                       unoptimized
                     />
+                  </div>
+                ) : (
+                  <div className="w-20 h-20 shrink-0 rounded-card bg-gradient-to-br from-brand-terracotta/80 to-brand-forest flex items-center justify-center">
+                    <span className="font-display text-white/60 text-2xl font-bold">
+                      {event.title.charAt(0)}
+                    </span>
                   </div>
                 )}
 
@@ -221,15 +221,15 @@ export default async function EventLayout({ children, params }: LayoutProps) {
                 <div className="flex-1 min-w-0">
                   <Link
                     href="/dashboard"
-                    className="inline-flex items-center gap-1.5 text-sm text-[#6e6e7e] hover:text-[#0f3460] transition-colors mb-3 font-medium"
+                    className="inline-flex items-center gap-1.5 text-sm text-ui-tertiary hover:text-brand-terracotta transition-colors mb-3 font-medium"
                   >
                     <ChevronLeft size={16} />
                     <span>Events</span>
                   </Link>
-                  <h1 className="text-2xl font-bold text-[#1a1a2e] mb-2 tracking-tight">
+                  <h1 className="font-display text-2xl font-bold text-brand-charcoal mb-2 tracking-tight">
                     {event.title}
                   </h1>
-                  <p className="text-sm text-[#4a4a5e]">
+                  <p className="text-sm text-ui-secondary">
                     {formatLocation(event.location)} · {formatDate(event.start_date)}
                   </p>
                 </div>
@@ -246,7 +246,7 @@ export default async function EventLayout({ children, params }: LayoutProps) {
         </div>
 
         {/* Tab Navigation */}
-        <div className="border-b border-[#e1e4e8] bg-white">
+        <div className="border-b border-ui-border bg-white">
           <div className="px-8">
             <EventTabNavigation eventId={eventId} />
           </div>

@@ -23,18 +23,18 @@ const STATUS_ICONS: Record<string, React.ComponentType<{ className?: string }>> 
 export function BroadcastHistoryList({ broadcasts, eventId, onSend, onDelete }: BroadcastHistoryListProps) {
   if (broadcasts.length === 0) {
     return (
-      <div className="bg-white border border-[#e1e4e8] rounded-lg p-8 text-center">
-        <p className="text-sm text-[#6e6e7e]">No broadcasts yet. Compose your first message above.</p>
+      <div className="bg-white border border-ui-border rounded-lg p-8 text-center">
+        <p className="text-sm text-ui-tertiary">No broadcasts yet. Compose your first message above.</p>
       </div>
     )
   }
 
   return (
-    <div className="bg-white border border-[#e1e4e8] rounded-lg overflow-hidden">
-      <div className="px-4 py-3 border-b border-[#e1e4e8]">
-        <h3 className="text-sm font-semibold text-[#1a1a2e]">Broadcast History</h3>
+    <div className="bg-white border border-ui-border rounded-lg overflow-hidden">
+      <div className="px-4 py-3 border-b border-ui-border">
+        <h3 className="text-sm font-semibold text-brand-charcoal">Broadcast History</h3>
       </div>
-      <div className="divide-y divide-[#e1e4e8]">
+      <div className="divide-y divide-ui-border">
         {broadcasts.map((b) => {
           const meta = BROADCAST_STATUS_META[b.status]
           const StatusIcon = STATUS_ICONS[b.status] || Clock
@@ -45,14 +45,14 @@ export function BroadcastHistoryList({ broadcasts, eventId, onSend, onDelete }: 
               <div className="flex items-start justify-between">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
-                    <h4 className="text-sm font-medium text-[#1a1a2e] truncate">{b.subject}</h4>
+                    <h4 className="text-sm font-medium text-brand-charcoal truncate">{b.subject}</h4>
                     <span className={`inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded ${meta.color}`}>
                       <StatusIcon className="w-3 h-3" />
                       {meta.label}
                     </span>
                   </div>
-                  <p className="text-xs text-[#6e6e7e] line-clamp-1">{b.content}</p>
-                  <div className="flex items-center gap-4 mt-2 text-xs text-[#6e6e7e]">
+                  <p className="text-xs text-ui-tertiary line-clamp-1">{b.content}</p>
+                  <div className="flex items-center gap-4 mt-2 text-xs text-ui-tertiary">
                     {b.created_by_name && <span>By {b.created_by_name}</span>}
                     <span>{new Date(b.created_at).toLocaleDateString()}</span>
                     {b.status === 'SENT' && (
@@ -66,7 +66,7 @@ export function BroadcastHistoryList({ broadcasts, eventId, onSend, onDelete }: 
                   <div className="flex items-center gap-2 ml-4">
                     <button
                       onClick={() => onSend(b.id)}
-                      className="px-3 py-1.5 bg-[#2F4F3F] hover:bg-[#1a3a2a] text-white text-xs font-semibold rounded-lg transition-colors"
+                      className="px-3 py-1.5 bg-brand-forest hover:bg-brand-forest/90 text-white text-xs font-semibold rounded-lg transition-colors"
                     >
                       Send
                     </button>

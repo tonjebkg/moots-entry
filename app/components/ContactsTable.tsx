@@ -68,38 +68,38 @@ export function ContactsTable({
     <div className="overflow-x-auto">
       <table className="w-full text-sm">
         <thead>
-          <tr className="border-b border-[#e1e4e8]">
+          <tr className="border-b border-ui-border">
             <th className="px-4 py-3 text-left w-10">
               <input
                 type="checkbox"
                 checked={allSelected}
                 onChange={toggleAll}
-                className="rounded border-[#e1e4e8]"
+                className="rounded border-ui-border"
               />
             </th>
             <th
-              className="px-4 py-3 text-left font-semibold text-[#6e6e7e] cursor-pointer hover:text-[#1a1a2e]"
+              className="px-4 py-3 text-left font-semibold text-ui-tertiary cursor-pointer hover:text-brand-charcoal"
               onClick={() => onSortChange('full_name')}
             >
               Name <SortIcon field="full_name" />
             </th>
             <th
-              className="px-4 py-3 text-left font-semibold text-[#6e6e7e] cursor-pointer hover:text-[#1a1a2e]"
+              className="px-4 py-3 text-left font-semibold text-ui-tertiary cursor-pointer hover:text-brand-charcoal"
               onClick={() => onSortChange('company')}
             >
               Company <SortIcon field="company" />
             </th>
-            <th className="px-4 py-3 text-left font-semibold text-[#6e6e7e]">
+            <th className="px-4 py-3 text-left font-semibold text-ui-tertiary">
               Email
             </th>
-            <th className="px-4 py-3 text-left font-semibold text-[#6e6e7e]">
+            <th className="px-4 py-3 text-left font-semibold text-ui-tertiary">
               Tags
             </th>
-            <th className="px-4 py-3 text-left font-semibold text-[#6e6e7e]">
+            <th className="px-4 py-3 text-left font-semibold text-ui-tertiary">
               Enrichment
             </th>
             <th
-              className="px-4 py-3 text-left font-semibold text-[#6e6e7e] cursor-pointer hover:text-[#1a1a2e]"
+              className="px-4 py-3 text-left font-semibold text-ui-tertiary cursor-pointer hover:text-brand-charcoal"
               onClick={() => onSortChange('created_at')}
             >
               Added <SortIcon field="created_at" />
@@ -110,7 +110,7 @@ export function ContactsTable({
           {contacts.map(contact => (
             <tr
               key={contact.id}
-              className="border-b border-[#e1e4e8] hover:bg-[#f8f9fa] cursor-pointer transition-colors"
+              className="border-b border-ui-border hover:bg-brand-cream cursor-pointer transition-colors"
               onClick={() => onContactClick(contact.id)}
             >
               <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
@@ -118,7 +118,7 @@ export function ContactsTable({
                   type="checkbox"
                   checked={selectedIds.has(contact.id)}
                   onChange={() => toggleOne(contact.id)}
-                  className="rounded border-[#e1e4e8]"
+                  className="rounded border-ui-border"
                 />
               </td>
               <td className="px-4 py-3">
@@ -133,22 +133,22 @@ export function ContactsTable({
                       unoptimized
                     />
                   ) : (
-                    <div className="w-8 h-8 rounded-full bg-[#0f3460] flex items-center justify-center text-white text-xs font-bold">
+                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-brand-terracotta to-brand-forest flex items-center justify-center text-white text-xs font-bold">
                       {contact.full_name.charAt(0).toUpperCase()}
                     </div>
                   )}
                   <div>
-                    <div className="font-medium text-[#1a1a2e]">{contact.full_name}</div>
+                    <div className="font-medium text-brand-charcoal">{contact.full_name}</div>
                     {contact.title && (
-                      <div className="text-xs text-[#6e6e7e]">{contact.title}</div>
+                      <div className="text-xs text-ui-tertiary">{contact.title}</div>
                     )}
                   </div>
                 </div>
               </td>
-              <td className="px-4 py-3 text-[#4a4a5e]">
+              <td className="px-4 py-3 text-ui-secondary">
                 {contact.company || '—'}
               </td>
-              <td className="px-4 py-3 text-[#4a4a5e]">
+              <td className="px-4 py-3 text-ui-secondary">
                 {contact.emails?.[0]?.email || '—'}
               </td>
               <td className="px-4 py-3">
@@ -156,13 +156,13 @@ export function ContactsTable({
                   {(contact.tags || []).slice(0, 3).map(tag => (
                     <span
                       key={tag}
-                      className="inline-flex px-1.5 py-0.5 bg-[#f0f2f5] text-[#4a4a5e] text-xs rounded-full"
+                      className="inline-flex px-1.5 py-0.5 bg-brand-cream text-ui-secondary text-xs rounded-full"
                     >
                       {tag}
                     </span>
                   ))}
                   {(contact.tags || []).length > 3 && (
-                    <span className="text-xs text-[#6e6e7e]">
+                    <span className="text-xs text-ui-tertiary">
                       +{contact.tags.length - 3}
                     </span>
                   )}
@@ -171,14 +171,14 @@ export function ContactsTable({
               <td className="px-4 py-3">
                 <EnrichmentStatusBadge status={contact.enrichment_status} />
               </td>
-              <td className="px-4 py-3 text-[#6e6e7e] text-xs">
+              <td className="px-4 py-3 text-ui-tertiary text-xs">
                 {new Date(contact.created_at).toLocaleDateString()}
               </td>
             </tr>
           ))}
           {contacts.length === 0 && (
             <tr>
-              <td colSpan={7} className="px-4 py-12 text-center text-[#6e6e7e]">
+              <td colSpan={7} className="px-4 py-12 text-center text-ui-tertiary">
                 <User size={32} className="mx-auto mb-2 opacity-50" />
                 <div>No contacts found</div>
               </td>

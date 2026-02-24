@@ -68,7 +68,7 @@ export default function BriefingsPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-32">
-        <div className="text-[#6e6e7e] text-sm font-medium">Loading...</div>
+        <div className="text-ui-tertiary text-sm font-medium">Loading...</div>
       </div>
     )
   }
@@ -77,8 +77,8 @@ export default function BriefingsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-semibold text-[#1a1a2e] tracking-tight">Briefings</h2>
-          <p className="text-sm text-[#4a4a5e] mt-1">
+          <h2 className="text-xl font-semibold font-display text-brand-charcoal tracking-tight">Briefings</h2>
+          <p className="text-sm text-ui-secondary mt-1">
             AI-generated personalized briefing packets with guest intel and talking points.
           </p>
         </div>
@@ -110,7 +110,7 @@ export default function BriefingsPage() {
             key={type}
             onClick={() => handleGenerate(type)}
             disabled={generating}
-            className="px-3 py-1.5 text-xs font-medium text-[#4a4a5e] bg-white border border-[#e1e4e8] rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
+            className="px-3 py-1.5 text-xs font-medium text-ui-secondary bg-white border border-ui-border rounded-lg hover:bg-brand-cream transition-colors disabled:opacity-50"
           >
             {type.replace(/_/g, ' ')}
           </button>
@@ -119,10 +119,10 @@ export default function BriefingsPage() {
 
       {/* Briefing list */}
       {briefings.length === 0 ? (
-        <div className="bg-white border border-[#e1e4e8] rounded-lg p-12 text-center">
+        <div className="bg-white rounded-card shadow-card p-12 text-center">
           <Sparkles className="w-10 h-10 text-[#B8755E] mx-auto mb-4" />
-          <h3 className="text-lg font-semibold text-[#1a1a2e] mb-2">No Briefings Yet</h3>
-          <p className="text-sm text-[#6e6e7e] max-w-md mx-auto">
+          <h3 className="text-lg font-semibold font-display text-brand-charcoal mb-2">No Briefings Yet</h3>
+          <p className="text-sm text-ui-tertiary max-w-md mx-auto">
             Generate your first briefing to get AI-powered guest intel, talking points, and conversation starters.
           </p>
         </div>

@@ -74,7 +74,7 @@ export function ScoringJobProgress({ jobId, type, onComplete }: ScoringJobProgre
              `${type === 'scoring' ? 'Scoring' : 'Enriching'} contacts...`}
           </span>
         </div>
-        <span className="text-xs text-[#6e6e7e]">
+        <span className="text-xs text-ui-tertiary">
           {job.completed_count}/{job.total_contacts}
           {job.failed_count > 0 && ` (${job.failed_count} failed)`}
         </span>

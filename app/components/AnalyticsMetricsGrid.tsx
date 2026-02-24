@@ -20,8 +20,8 @@ interface AnalyticsMetricsGridProps {
 
 export function AnalyticsMetricsGrid({ metrics }: AnalyticsMetricsGridProps) {
   const cards = [
-    { label: 'Guest Pool', value: metrics.guest_pool, icon: Users, color: 'text-[#6e6e7e]', bg: 'bg-[#f0f2f5]' },
-    { label: 'AI Scored', value: metrics.scored, icon: Target, color: 'text-[#0f3460]', bg: 'bg-blue-50' },
+    { label: 'Guest Pool', value: metrics.guest_pool, icon: Users, color: 'text-ui-tertiary', bg: 'bg-brand-cream' },
+    { label: 'AI Scored', value: metrics.scored, icon: Target, color: 'text-brand-terracotta', bg: 'bg-blue-50' },
     { label: 'Invited', value: metrics.invited, icon: Mail, color: 'text-blue-600', bg: 'bg-blue-50' },
     { label: 'Accepted', value: metrics.accepted, icon: CheckCircle, color: 'text-emerald-600', bg: 'bg-emerald-50' },
     { label: 'Checked In', value: metrics.checked_in, icon: CheckCircle, color: 'text-green-600', bg: 'bg-green-50' },
@@ -38,11 +38,11 @@ export function AnalyticsMetricsGrid({ metrics }: AnalyticsMetricsGridProps) {
         return (
           <div
             key={card.label}
-            className={`${card.bg} border border-[#e1e4e8] rounded-lg p-4`}
+            className={`${card.bg} border border-ui-border rounded-lg p-4`}
           >
             <div className="flex items-center gap-2 mb-2">
               <Icon size={14} className={card.color} />
-              <span className="text-xs font-semibold text-[#6e6e7e] uppercase">{card.label}</span>
+              <span className="text-xs font-semibold text-ui-tertiary uppercase">{card.label}</span>
             </div>
             <div className={`text-2xl font-bold ${card.color}`}>{card.value}</div>
           </div>

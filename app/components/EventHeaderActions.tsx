@@ -24,7 +24,7 @@ export function EventHeaderActions({ eventId, capacityFilled, totalCapacity }: E
           // TODO: Open edit event modal
           alert('Edit Event modal - to be implemented')
         }}
-        className="flex items-center gap-2 px-4 py-2 bg-white border border-[#e1e4e8] hover:border-[#0f3460] text-[#1a1a2e] text-sm font-semibold rounded-lg transition-colors"
+        className="flex items-center gap-2 px-4 py-2 bg-white border border-ui-border hover:border-brand-terracotta text-brand-charcoal text-sm font-semibold rounded-lg transition-colors"
       >
         <Edit2 size={16} />
         Edit Event

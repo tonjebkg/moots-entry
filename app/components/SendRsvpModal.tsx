@@ -67,14 +67,14 @@ export function SendRsvpModal({
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-6 z-50">
       <div className="bg-white rounded-lg shadow-lg max-w-md w-full">
-        <div className="flex items-center justify-between p-6 border-b border-[#e1e4e8]">
-          <h2 className="text-xl font-semibold text-[#1a1a2e] tracking-tight">
+        <div className="flex items-center justify-between p-6 border-b border-ui-border">
+          <h2 className="text-xl font-semibold text-brand-charcoal tracking-tight">
             Send RSVP Invitations
           </h2>
           <button
             onClick={onCancel}
             disabled={sending}
-            className="text-[#6e6e7e] hover:text-[#1a1a2e] transition-colors disabled:opacity-50"
+            className="text-ui-tertiary hover:text-brand-charcoal transition-colors disabled:opacity-50"
           >
             <X size={20} />
           </button>
@@ -84,7 +84,7 @@ export function SendRsvpModal({
 
           {!result ? (
             <>
-              <p className="text-[#4a4a5e] mb-6 leading-relaxed">{description}</p>
+              <p className="text-ui-secondary mb-6 leading-relaxed">{description}</p>
 
               {error && (
                 <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
@@ -92,12 +92,12 @@ export function SendRsvpModal({
                 </div>
               )}
 
-              <div className="bg-blue-50/50 border border-[#0f3460]/20 rounded-lg p-4 mb-6">
+              <div className="bg-blue-50/50 border border-brand-terracotta/20 rounded-lg p-4 mb-6">
                 <div className="flex items-start gap-3">
-                  <Info className="text-[#0f3460] shrink-0 mt-0.5" size={18} />
-                  <div className="text-sm text-[#4a4a5e]">
-                    <p className="font-semibold text-[#1a1a2e] mb-2">What happens next?</p>
-                    <ul className="list-disc list-inside space-y-1.5 text-[#4a4a5e]">
+                  <Info className="text-brand-terracotta shrink-0 mt-0.5" size={18} />
+                  <div className="text-sm text-ui-secondary">
+                    <p className="font-semibold text-brand-charcoal mb-2">What happens next?</p>
+                    <ul className="list-disc list-inside space-y-1.5 text-ui-secondary">
                       <li>Guests will receive an RSVP email with a unique link</li>
                       <li>They can accept or decline the invitation</li>
                       <li>Status will be updated in the guest pipeline</li>
@@ -111,7 +111,7 @@ export function SendRsvpModal({
                 <button
                   onClick={handleSend}
                   disabled={sending}
-                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-[#0f3460] hover:bg-[#c5a572] text-white rounded-lg transition-colors shadow-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-brand-terracotta hover:bg-brand-terracotta/90 text-white rounded-lg transition-colors shadow-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {sending ? (
                     'Sending...'
@@ -125,7 +125,7 @@ export function SendRsvpModal({
                 <button
                   onClick={onCancel}
                   disabled={sending}
-                  className="px-4 py-2 bg-white border border-[#e1e4e8] rounded-lg text-[#4a4a5e] hover:bg-[#f8f9fa] transition-colors font-medium disabled:opacity-50"
+                  className="px-4 py-2 bg-white border border-ui-border rounded-lg text-ui-secondary hover:bg-brand-cream transition-colors font-medium disabled:opacity-50"
                 >
                   Cancel
                 </button>
@@ -139,10 +139,10 @@ export function SendRsvpModal({
                     <CheckCircle className="text-emerald-600" size={24} />
                   </div>
                   <div>
-                    <h3 className="text-lg font-semibold text-[#1a1a2e]">
+                    <h3 className="text-lg font-semibold text-brand-charcoal">
                       Invitations Sent!
                     </h3>
-                    <p className="text-[#4a4a5e] text-sm">
+                    <p className="text-ui-secondary text-sm">
                       Successfully sent {result.sent} RSVP invitation{result.sent === 1 ? '' : 's'}
                     </p>
                   </div>
@@ -160,7 +160,7 @@ export function SendRsvpModal({
 
               <button
                 onClick={onSuccess}
-                className="w-full px-4 py-2 bg-[#0f3460] hover:bg-[#c5a572] text-white rounded-lg transition-colors shadow-sm font-semibold"
+                className="w-full px-4 py-2 bg-brand-terracotta hover:bg-brand-terracotta/90 text-white rounded-lg transition-colors shadow-sm font-semibold"
               >
                 Close
               </button>

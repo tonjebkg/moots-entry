@@ -43,7 +43,7 @@ export default function AnalyticsPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-32">
-        <div className="text-[#6e6e7e] text-sm font-medium">Loading analytics...</div>
+        <div className="text-ui-tertiary text-sm font-medium">Loading analytics...</div>
       </div>
     );
   }
@@ -61,21 +61,21 @@ export default function AnalyticsPage() {
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-[#1a1a2e] tracking-tight mb-1">Analytics & ROI</h1>
-          <p className="text-sm text-[#4a4a5e]">Event performance metrics, funnel analysis, and team stats</p>
+          <h1 className="text-2xl font-bold font-display text-brand-charcoal tracking-tight mb-1">Analytics & ROI</h1>
+          <p className="text-sm text-ui-secondary">Event performance metrics, funnel analysis, and team stats</p>
         </div>
         <div className="flex items-center gap-2">
           <select
             value={exportFormat}
             onChange={(e) => setExportFormat(e.target.value as 'csv' | 'json')}
-            className="px-3 py-2 text-sm border border-[#e1e4e8] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0f3460]"
+            className="px-3 py-2 text-sm border border-ui-border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-terracotta"
           >
             <option value="csv">CSV</option>
             <option value="json">JSON</option>
           </select>
           <button
             onClick={handleExport}
-            className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-[#0f3460] border border-[#0f3460] rounded-lg hover:bg-[#0f3460]/5 transition-colors"
+            className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-brand-terracotta border border-brand-terracotta rounded-lg hover:bg-brand-terracotta/5 transition-colors"
           >
             <Download size={14} />
             Export
@@ -91,22 +91,22 @@ export default function AnalyticsPage() {
         <div className="lg:col-span-2">
           <AnalyticsFunnel stages={metrics.funnel} />
         </div>
-        <div className="bg-white border border-[#e1e4e8] rounded-lg p-6 shadow-sm">
-          <h3 className="font-semibold text-[#1a1a2e] mb-4">Score Distribution</h3>
+        <div className="bg-white rounded-card shadow-card p-6">
+          <h3 className="font-semibold text-brand-charcoal mb-4">Score Distribution</h3>
           <div className="space-y-3">
             {metrics.score_distribution.map(bucket => {
               const maxCount = Math.max(...metrics.score_distribution.map(b => b.count), 1);
               const width = Math.max((bucket.count / maxCount) * 100, 2);
               const color = bucket.range === '76-100' ? '#059669' :
-                bucket.range === '51-75' ? '#0f3460' :
+                bucket.range === '51-75' ? '#B8755E' :
                 bucket.range === '26-50' ? '#f59e0b' : '#ef4444';
               return (
                 <div key={bucket.range}>
                   <div className="flex items-center justify-between text-xs mb-1">
-                    <span className="font-semibold text-[#6e6e7e]">{bucket.range}</span>
-                    <span className="text-[#4a4a5e]">{bucket.count}</span>
+                    <span className="font-semibold text-ui-tertiary">{bucket.range}</span>
+                    <span className="text-ui-secondary">{bucket.count}</span>
                   </div>
-                  <div className="h-4 bg-[#f0f2f5] rounded overflow-hidden">
+                  <div className="h-4 bg-brand-cream rounded overflow-hidden">
                     <div
                       className="h-full rounded transition-all duration-300"
                       style={{ width: `${width}%`, backgroundColor: color }}
@@ -121,25 +121,25 @@ export default function AnalyticsPage() {
 
       {/* Campaign Summary */}
       {metrics.campaign_summary.length > 0 && (
-        <div className="bg-white border border-[#e1e4e8] rounded-lg shadow-sm overflow-hidden">
-          <div className="p-4 border-b border-[#e1e4e8]">
-            <h3 className="font-semibold text-[#1a1a2e]">Campaign Performance</h3>
+        <div className="bg-white rounded-card shadow-card overflow-hidden">
+          <div className="p-4 border-b border-ui-border">
+            <h3 className="font-semibold text-brand-charcoal">Campaign Performance</h3>
           </div>
           <table className="w-full text-sm">
-            <thead className="bg-[#f8f9fa] border-b border-[#e1e4e8]">
+            <thead className="bg-brand-cream border-b border-ui-border">
               <tr>
-                <th className="px-4 py-3 text-left font-semibold text-[#1a1a2e]">Campaign</th>
-                <th className="px-4 py-3 text-right font-semibold text-[#1a1a2e]">Invited</th>
-                <th className="px-4 py-3 text-right font-semibold text-[#1a1a2e]">Accepted</th>
-                <th className="px-4 py-3 text-right font-semibold text-[#1a1a2e]">Declined</th>
-                <th className="px-4 py-3 text-right font-semibold text-[#1a1a2e]">Rate</th>
+                <th className="px-4 py-3 text-left font-semibold text-brand-charcoal">Campaign</th>
+                <th className="px-4 py-3 text-right font-semibold text-brand-charcoal">Invited</th>
+                <th className="px-4 py-3 text-right font-semibold text-brand-charcoal">Accepted</th>
+                <th className="px-4 py-3 text-right font-semibold text-brand-charcoal">Declined</th>
+                <th className="px-4 py-3 text-right font-semibold text-brand-charcoal">Rate</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#e1e4e8]">
+            <tbody className="divide-y divide-ui-border">
               {metrics.campaign_summary.map(c => (
-                <tr key={c.campaign_id} className="hover:bg-[#f8f9fa] transition-colors">
-                  <td className="px-4 py-3 font-medium text-[#1a1a2e]">{c.campaign_name}</td>
-                  <td className="px-4 py-3 text-right text-[#4a4a5e]">{c.total_invited}</td>
+                <tr key={c.campaign_id} className="hover:bg-brand-cream transition-colors">
+                  <td className="px-4 py-3 font-medium text-brand-charcoal">{c.campaign_name}</td>
+                  <td className="px-4 py-3 text-right text-ui-secondary">{c.total_invited}</td>
                   <td className="px-4 py-3 text-right text-emerald-600 font-semibold">{c.total_accepted}</td>
                   <td className="px-4 py-3 text-right text-red-600">{c.total_declined}</td>
                   <td className="px-4 py-3 text-right">

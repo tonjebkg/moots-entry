@@ -134,7 +134,7 @@ export default function WorkspaceSettingsPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center gap-2 text-[#6e6e7e] text-sm">
+      <div className="flex items-center gap-2 text-ui-tertiary text-sm">
         <Loader2 size={16} className="animate-spin" />
         Loading...
       </div>
@@ -151,26 +151,26 @@ export default function WorkspaceSettingsPage() {
     <div className="space-y-8">
       {/* Workspace Info */}
       <section>
-        <h2 className="text-lg font-semibold text-[#1a1a2e] mb-4 flex items-center gap-2">
+        <h2 className="text-lg font-semibold font-display text-brand-charcoal mb-4 flex items-center gap-2">
           <Building2 size={20} />
           Workspace
         </h2>
-        <div className="bg-white border border-[#e1e4e8] rounded-lg p-6 space-y-4">
+        <div className="bg-white border border-ui-border rounded-card shadow-card p-6 space-y-4">
           <div>
-            <label className="block text-sm font-medium text-[#1a1a2e] mb-1.5">Name</label>
+            <label className="block text-sm font-medium text-brand-charcoal mb-1.5">Name</label>
             <div className="flex gap-3">
               <input
                 type="text"
                 value={workspaceName}
                 onChange={e => setWorkspaceName(e.target.value)}
                 disabled={!isAdmin}
-                className="flex-1 px-3 py-2 border border-[#e1e4e8] rounded-lg text-sm text-[#1a1a2e] focus:outline-none focus:border-[#0f3460] focus:ring-1 focus:ring-[#0f3460] disabled:bg-[#f0f2f5]"
+                className="flex-1 px-3 py-2 border border-ui-border rounded-lg text-sm text-brand-charcoal focus:outline-none focus:border-brand-terracotta focus:ring-1 focus:ring-brand-terracotta disabled:bg-brand-cream"
               />
               {isAdmin && (
                 <button
                   onClick={handleSaveName}
                   disabled={saving || workspaceName === session.workspace.name}
-                  className="px-4 py-2 bg-[#0f3460] hover:bg-[#1a2d4a] text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50"
+                  className="px-4 py-2 bg-brand-terracotta hover:bg-brand-terracotta/90 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50"
                 >
                   {saving ? 'Saving...' : 'Save'}
                 </button>
@@ -179,12 +179,12 @@ export default function WorkspaceSettingsPage() {
           </div>
           <div className="flex gap-8 text-sm">
             <div>
-              <span className="text-[#6e6e7e]">Slug:</span>{' '}
-              <span className="font-medium text-[#1a1a2e]">{session.workspace.slug}</span>
+              <span className="text-ui-tertiary">Slug:</span>{' '}
+              <span className="font-medium text-brand-charcoal">{session.workspace.slug}</span>
             </div>
             <div>
-              <span className="text-[#6e6e7e]">Plan:</span>{' '}
-              <span className="font-medium text-[#1a1a2e]">{session.workspace.plan}</span>
+              <span className="text-ui-tertiary">Plan:</span>{' '}
+              <span className="font-medium text-brand-charcoal">{session.workspace.plan}</span>
             </div>
           </div>
         </div>
@@ -192,27 +192,27 @@ export default function WorkspaceSettingsPage() {
 
       {/* Members */}
       <section>
-        <h2 className="text-lg font-semibold text-[#1a1a2e] mb-4 flex items-center gap-2">
+        <h2 className="text-lg font-semibold font-display text-brand-charcoal mb-4 flex items-center gap-2">
           <Users size={20} />
           Team Members
         </h2>
-        <div className="bg-white border border-[#e1e4e8] rounded-lg divide-y divide-[#e1e4e8]">
+        <div className="bg-white border border-ui-border rounded-card shadow-card divide-y divide-ui-border">
           {members.map(member => (
             <div key={member.id} className="flex items-center justify-between p-4">
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-[#f0f2f5] flex items-center justify-center text-sm font-medium text-[#6e6e7e]">
+                <div className="w-8 h-8 rounded-full bg-brand-cream flex items-center justify-center text-sm font-medium text-ui-tertiary">
                   {member.user_full_name?.charAt(0)?.toUpperCase() || '?'}
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-[#1a1a2e]">{member.user_full_name}</p>
-                  <p className="text-xs text-[#6e6e7e]">{member.user_email}</p>
+                  <p className="text-sm font-medium text-brand-charcoal">{member.user_full_name}</p>
+                  <p className="text-xs text-ui-tertiary">{member.user_email}</p>
                 </div>
               </div>
               <div className="flex items-center gap-3">
                 <span className={`inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded ${
                   member.role === 'OWNER' ? 'bg-amber-50 text-amber-700' :
                   member.role === 'ADMIN' ? 'bg-blue-50 text-blue-700' :
-                  'bg-gray-100 text-[#6e6e7e]'
+                  'bg-brand-cream text-ui-tertiary'
                 }`}>
                   {member.role === 'OWNER' && <Shield size={10} />}
                   {member.role.replace('_', ' ')}
@@ -220,7 +220,7 @@ export default function WorkspaceSettingsPage() {
                 {isAdmin && member.role !== 'OWNER' && member.user_id !== session.user.id && (
                   <button
                     onClick={() => handleRemoveMember(member.id)}
-                    className="p-1 text-[#6e6e7e] hover:text-red-600 transition-colors"
+                    className="p-1 text-ui-tertiary hover:text-red-600 transition-colors"
                     title="Remove member"
                   >
                     <Trash2 size={14} />
@@ -235,11 +235,11 @@ export default function WorkspaceSettingsPage() {
       {/* Invite */}
       {isAdmin && (
         <section>
-          <h2 className="text-lg font-semibold text-[#1a1a2e] mb-4 flex items-center gap-2">
+          <h2 className="text-lg font-semibold font-display text-brand-charcoal mb-4 flex items-center gap-2">
             <Plus size={20} />
             Invite Member
           </h2>
-          <div className="bg-white border border-[#e1e4e8] rounded-lg p-6">
+          <div className="bg-white border border-ui-border rounded-card shadow-card p-6">
             {inviteMessage && (
               <div className={`mb-4 p-3 text-sm rounded-lg border ${
                 inviteMessage.includes('success')
@@ -256,12 +256,12 @@ export default function WorkspaceSettingsPage() {
                 onChange={e => setInviteEmail(e.target.value)}
                 placeholder="colleague@company.com"
                 required
-                className="flex-1 px-3 py-2 border border-[#e1e4e8] rounded-lg text-sm text-[#1a1a2e] placeholder-[#6e6e7e] focus:outline-none focus:border-[#0f3460] focus:ring-1 focus:ring-[#0f3460]"
+                className="flex-1 px-3 py-2 border border-ui-border rounded-lg text-sm text-brand-charcoal placeholder-ui-tertiary focus:outline-none focus:border-brand-terracotta focus:ring-1 focus:ring-brand-terracotta"
               />
               <select
                 value={inviteRole}
                 onChange={e => setInviteRole(e.target.value)}
-                className="px-3 py-2 border border-[#e1e4e8] rounded-lg text-sm text-[#1a1a2e] focus:outline-none focus:border-[#0f3460]"
+                className="px-3 py-2 border border-ui-border rounded-lg text-sm text-brand-charcoal focus:outline-none focus:border-brand-terracotta"
               >
                 <option value="ADMIN">Admin</option>
                 <option value="TEAM_MEMBER">Team Member</option>
@@ -271,7 +271,7 @@ export default function WorkspaceSettingsPage() {
               <button
                 type="submit"
                 disabled={inviting}
-                className="px-4 py-2 bg-[#0f3460] hover:bg-[#1a2d4a] text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50"
+                className="px-4 py-2 bg-brand-terracotta hover:bg-brand-terracotta/90 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50"
               >
                 {inviting ? 'Inviting...' : 'Invite'}
               </button>

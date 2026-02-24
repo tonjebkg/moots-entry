@@ -43,20 +43,20 @@ export function DossierPanel({ eventId, contactId, onClose }: DossierPanelProps)
       <div className="absolute inset-0 bg-black/30" onClick={onClose} />
       <div className="relative w-full max-w-[700px] bg-white shadow-2xl overflow-y-auto">
         {/* Header */}
-        <div className="sticky top-0 bg-white border-b border-[#e1e4e8] px-6 py-4 flex items-center justify-between z-10">
-          <h3 className="text-lg font-semibold text-[#1a1a2e]">Guest Dossier</h3>
-          <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded-lg">
-            <X className="w-5 h-5 text-[#6e6e7e]" />
+        <div className="sticky top-0 bg-white border-b border-ui-border px-6 py-4 flex items-center justify-between z-10">
+          <h3 className="text-lg font-semibold text-brand-charcoal">Guest Dossier</h3>
+          <button onClick={onClose} className="p-1 hover:bg-brand-cream rounded-lg">
+            <X className="w-5 h-5 text-ui-tertiary" />
           </button>
         </div>
 
         {loading ? (
           <div className="flex items-center justify-center py-32">
-            <div className="text-[#6e6e7e] text-sm">Loading dossier...</div>
+            <div className="text-ui-tertiary text-sm">Loading dossier...</div>
           </div>
         ) : !dossier ? (
           <div className="flex items-center justify-center py-32">
-            <div className="text-[#6e6e7e] text-sm">Dossier not found</div>
+            <div className="text-ui-tertiary text-sm">Dossier not found</div>
           </div>
         ) : (
           <div className="p-6 space-y-6">
@@ -70,20 +70,20 @@ export function DossierPanel({ eventId, contactId, onClose }: DossierPanelProps)
                 )}
               </div>
               <div className="flex-1 min-w-0">
-                <h2 className="text-xl font-semibold text-[#1a1a2e] truncate">{dossier.full_name}</h2>
+                <h2 className="text-xl font-semibold font-display text-brand-charcoal truncate">{dossier.full_name}</h2>
                 {(dossier.title || dossier.company) && (
-                  <p className="text-sm text-[#4a4a5e] mt-0.5">
+                  <p className="text-sm text-ui-secondary mt-0.5">
                     {dossier.title}{dossier.title && dossier.company ? ' at ' : ''}{dossier.company}
                   </p>
                 )}
                 <div className="flex items-center gap-3 mt-2">
                   {dossier.email && (
-                    <a href={`mailto:${dossier.email}`} className="text-[#6e6e7e] hover:text-[#1a1a2e]">
+                    <a href={`mailto:${dossier.email}`} className="text-ui-tertiary hover:text-brand-charcoal">
                       <Mail className="w-4 h-4" />
                     </a>
                   )}
                   {dossier.linkedin_url && (
-                    <a href={dossier.linkedin_url} target="_blank" rel="noopener noreferrer" className="text-[#6e6e7e] hover:text-[#0077b5]">
+                    <a href={dossier.linkedin_url} target="_blank" rel="noopener noreferrer" className="text-ui-tertiary hover:text-[#0077b5]">
                       <Linkedin className="w-4 h-4" />
                     </a>
                   )}
@@ -101,7 +101,7 @@ export function DossierPanel({ eventId, contactId, onClose }: DossierPanelProps)
             {dossier.tags.length > 0 && (
               <div className="flex flex-wrap gap-1.5">
                 {dossier.tags.map((tag, i) => (
-                  <span key={i} className="px-2 py-0.5 bg-gray-100 text-[#4a4a5e] text-xs font-medium rounded">
+                  <span key={i} className="px-2 py-0.5 bg-brand-cream text-ui-secondary text-xs font-medium rounded">
                     {tag}
                   </span>
                 ))}
@@ -110,38 +110,38 @@ export function DossierPanel({ eventId, contactId, onClose }: DossierPanelProps)
 
             {/* AI Summary */}
             {dossier.ai_summary && (
-              <div className="bg-[#FAF9F7] border border-[#e1e4e8] rounded-lg p-4">
+              <div className="bg-brand-cream rounded-card shadow-card p-4">
                 <div className="flex items-center gap-2 mb-2">
                   <Star className="w-4 h-4 text-[#B8755E]" />
-                  <h4 className="text-sm font-semibold text-[#1a1a2e]">AI Summary</h4>
+                  <h4 className="text-sm font-semibold text-brand-charcoal">AI Summary</h4>
                 </div>
-                <p className="text-sm text-[#4a4a5e] leading-relaxed">{dossier.ai_summary}</p>
+                <p className="text-sm text-ui-secondary leading-relaxed">{dossier.ai_summary}</p>
               </div>
             )}
 
             {/* Score Rationale */}
             {dossier.score_rationale && (
-              <div className="bg-white border border-[#e1e4e8] rounded-lg p-4">
+              <div className="bg-white rounded-card shadow-card p-4">
                 <div className="flex items-center gap-2 mb-2">
                   <Target className="w-4 h-4 text-[#2F4F3F]" />
-                  <h4 className="text-sm font-semibold text-[#1a1a2e]">Why They Match</h4>
+                  <h4 className="text-sm font-semibold text-brand-charcoal">Why They Match</h4>
                 </div>
-                <p className="text-sm text-[#4a4a5e] leading-relaxed">{dossier.score_rationale}</p>
+                <p className="text-sm text-ui-secondary leading-relaxed">{dossier.score_rationale}</p>
               </div>
             )}
 
             {/* Talking Points */}
             {dossier.talking_points.length > 0 && (
-              <div className="bg-white border border-[#e1e4e8] rounded-lg p-4">
+              <div className="bg-white rounded-card shadow-card p-4">
                 <div className="flex items-center gap-2 mb-3">
                   <MessageSquare className="w-4 h-4 text-[#B8755E]" />
-                  <h4 className="text-sm font-semibold text-[#1a1a2e]">Talking Points</h4>
+                  <h4 className="text-sm font-semibold text-brand-charcoal">Talking Points</h4>
                 </div>
                 <ul className="space-y-2">
                   {dossier.talking_points.map((point, i) => (
                     <li key={i} className="flex items-start gap-2">
                       <span className="w-1.5 h-1.5 rounded-full bg-[#B8755E] mt-1.5 shrink-0" />
-                      <span className="text-sm text-[#4a4a5e]">{point}</span>
+                      <span className="text-sm text-ui-secondary">{point}</span>
                     </li>
                   ))}
                 </ul>
@@ -150,10 +150,10 @@ export function DossierPanel({ eventId, contactId, onClose }: DossierPanelProps)
 
             {/* Matched Objectives */}
             {dossier.matched_objectives.length > 0 && (
-              <div className="bg-white border border-[#e1e4e8] rounded-lg p-4">
+              <div className="bg-white rounded-card shadow-card p-4">
                 <div className="flex items-center gap-2 mb-3">
                   <Target className="w-4 h-4 text-[#2F4F3F]" />
-                  <h4 className="text-sm font-semibold text-[#1a1a2e]">Objective Match</h4>
+                  <h4 className="text-sm font-semibold text-brand-charcoal">Objective Match</h4>
                 </div>
                 <div className="space-y-3">
                   {dossier.matched_objectives.map((obj, i) => (
@@ -162,8 +162,8 @@ export function DossierPanel({ eventId, contactId, onClose }: DossierPanelProps)
                         {obj.match_score}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <div className="text-sm font-medium text-[#1a1a2e]">{obj.objective_text}</div>
-                        <div className="text-xs text-[#6e6e7e] mt-0.5">{obj.explanation}</div>
+                        <div className="text-sm font-medium text-brand-charcoal">{obj.objective_text}</div>
+                        <div className="text-xs text-ui-tertiary mt-0.5">{obj.explanation}</div>
                       </div>
                     </div>
                   ))}
@@ -173,18 +173,18 @@ export function DossierPanel({ eventId, contactId, onClose }: DossierPanelProps)
 
             {/* Team Assignments */}
             {dossier.team_assignments.length > 0 && (
-              <div className="bg-white border border-[#e1e4e8] rounded-lg p-4">
+              <div className="bg-white rounded-card shadow-card p-4">
                 <div className="flex items-center gap-2 mb-3">
                   <Users className="w-4 h-4 text-[#2F4F3F]" />
-                  <h4 className="text-sm font-semibold text-[#1a1a2e]">Team Assignments</h4>
+                  <h4 className="text-sm font-semibold text-brand-charcoal">Team Assignments</h4>
                 </div>
                 <div className="space-y-2">
                   {dossier.team_assignments.map((a) => (
                     <div key={a.id} className="flex items-center justify-between py-1">
-                      <div className="text-sm text-[#4a4a5e]">
+                      <div className="text-sm text-ui-secondary">
                         {a.assigned_to_name || a.assigned_to_email}
                       </div>
-                      <span className="text-xs font-medium text-[#6e6e7e] bg-gray-100 px-2 py-0.5 rounded">
+                      <span className="text-xs font-medium text-ui-tertiary bg-brand-cream px-2 py-0.5 rounded">
                         {a.role}
                       </span>
                     </div>

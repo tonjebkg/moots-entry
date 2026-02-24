@@ -161,7 +161,7 @@ export default function OverviewPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-32">
-        <div className="text-[#6e6e7e] text-sm font-medium">Loading overview...</div>
+        <div className="text-ui-tertiary text-sm font-medium">Loading overview...</div>
       </div>
     )
   }
@@ -170,28 +170,28 @@ export default function OverviewPage() {
     <div className="space-y-8">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-[#1a1a2e] tracking-tight mb-2">Event Overview</h1>
-        <p className="text-sm text-[#4a4a5e]">Real-time insights and recent guest activity for this event</p>
+        <h1 className="font-display text-2xl font-bold text-brand-charcoal tracking-tight mb-2">Event Overview</h1>
+        <p className="text-sm text-ui-secondary">Real-time insights and recent guest activity for this event</p>
       </div>
 
       {/* Capacity Section */}
       {capacity && capacity.total_capacity > 0 && (
-        <div className="bg-white border border-[#e1e4e8] rounded-lg p-6 shadow-sm">
+        <div className="bg-white border border-ui-border rounded-card shadow-card p-6">
           <div className="flex items-start justify-between gap-6">
             <div className="flex-1">
-              <h2 className="text-lg font-semibold text-[#1a1a2e] mb-2">Event Capacity</h2>
+              <h2 className="font-display text-lg font-semibold text-brand-charcoal mb-2">Event Capacity</h2>
               <div className="space-y-2">
                 <div className="flex items-center gap-2 text-sm">
-                  <span className="text-[#6e6e7e]">Total capacity:</span>
-                  <span className="font-semibold text-[#1a1a2e]">{capacity.total_capacity}</span>
+                  <span className="text-ui-tertiary">Total capacity:</span>
+                  <span className="font-semibold text-brand-charcoal">{capacity.total_capacity}</span>
                 </div>
                 <div className="flex items-center gap-2 text-sm">
-                  <span className="text-[#6e6e7e]">Seats filled:</span>
+                  <span className="text-ui-tertiary">Seats filled:</span>
                   <span className="font-semibold text-emerald-700">{capacity.seats_filled}</span>
                 </div>
                 <div className="flex items-center gap-2 text-sm">
-                  <span className="text-[#6e6e7e]">Remaining:</span>
-                  <span className="font-semibold text-[#0f3460]">{capacity.seats_remaining}</span>
+                  <span className="text-ui-tertiary">Remaining:</span>
+                  <span className="font-semibold text-brand-terracotta">{capacity.seats_remaining}</span>
                 </div>
               </div>
             </div>
@@ -208,49 +208,49 @@ export default function OverviewPage() {
       {/* Guest Stats Grid */}
       {stats && (
         <div>
-          <h2 className="text-lg font-semibold text-[#1a1a2e] mb-4">Guest Status</h2>
+          <h2 className="font-display text-lg font-semibold text-brand-charcoal mb-4">Guest Status</h2>
           <div className="grid grid-cols-5 gap-4">
             {/* Total */}
-            <div className="bg-[#f0f2f5] border border-[#e1e4e8] rounded-lg p-4">
+            <div className="bg-brand-cream border border-ui-border rounded-card shadow-card p-4">
               <div className="flex items-center gap-2 mb-2">
-                <Users size={16} className="text-[#6e6e7e]" />
-                <div className="text-xs font-semibold text-[#6e6e7e] uppercase">Total</div>
+                <Users size={16} className="text-ui-tertiary" />
+                <div className="text-xs font-semibold text-ui-tertiary uppercase">Total</div>
               </div>
-              <div className="text-2xl font-bold text-[#1a1a2e]">{stats.total}</div>
+              <div className="text-2xl font-bold text-brand-charcoal">{stats.total}</div>
             </div>
 
             {/* Pending */}
-            <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+            <div className="bg-amber-50 border border-amber-200 rounded-card shadow-card p-4">
               <div className="flex items-center gap-2 mb-2">
                 <Clock size={16} className="text-amber-700" />
-                <div className="text-xs font-semibold text-[#6e6e7e] uppercase">Pending</div>
+                <div className="text-xs font-semibold text-ui-tertiary uppercase">Pending</div>
               </div>
               <div className="text-2xl font-bold text-amber-700">{stats.pending}</div>
             </div>
 
             {/* Approved */}
-            <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4">
+            <div className="bg-emerald-50 border border-emerald-200 rounded-card shadow-card p-4">
               <div className="flex items-center gap-2 mb-2">
                 <CheckCircle size={16} className="text-emerald-700" />
-                <div className="text-xs font-semibold text-[#6e6e7e] uppercase">Approved</div>
+                <div className="text-xs font-semibold text-ui-tertiary uppercase">Approved</div>
               </div>
               <div className="text-2xl font-bold text-emerald-700">{stats.approved}</div>
             </div>
 
             {/* Rejected */}
-            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+            <div className="bg-red-50 border border-red-200 rounded-card shadow-card p-4">
               <div className="flex items-center gap-2 mb-2">
                 <XCircle size={16} className="text-red-700" />
-                <div className="text-xs font-semibold text-[#6e6e7e] uppercase">Rejected</div>
+                <div className="text-xs font-semibold text-ui-tertiary uppercase">Rejected</div>
               </div>
               <div className="text-2xl font-bold text-red-700">{stats.rejected}</div>
             </div>
 
             {/* Cancelled */}
-            <div className="bg-slate-50 border border-slate-200 rounded-lg p-4">
+            <div className="bg-slate-50 border border-slate-200 rounded-card shadow-card p-4">
               <div className="flex items-center gap-2 mb-2">
                 <XCircle size={16} className="text-slate-600" />
-                <div className="text-xs font-semibold text-[#6e6e7e] uppercase">Cancelled</div>
+                <div className="text-xs font-semibold text-ui-tertiary uppercase">Cancelled</div>
               </div>
               <div className="text-2xl font-bold text-slate-700">{stats.cancelled}</div>
             </div>
@@ -262,41 +262,41 @@ export default function OverviewPage() {
       {analyticsSummary && (
         <div>
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-[#1a1a2e]">Event Intelligence</h2>
+            <h2 className="font-display text-lg font-semibold text-brand-charcoal">Event Intelligence</h2>
             <Link
               href={`/dashboard/${eventId}/analytics`}
-              className="text-sm font-semibold text-[#0f3460] hover:underline flex items-center gap-1"
+              className="text-sm font-semibold text-brand-terracotta hover:underline flex items-center gap-1"
             >
               <BarChart3 size={14} />
               Full Analytics
             </Link>
           </div>
           <div className="grid grid-cols-4 gap-4">
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <div className="bg-blue-50 border border-blue-200 rounded-card shadow-card p-4">
               <div className="flex items-center gap-2 mb-2">
                 <Target size={16} className="text-blue-700" />
-                <div className="text-xs font-semibold text-[#6e6e7e] uppercase">AI Scored</div>
+                <div className="text-xs font-semibold text-ui-tertiary uppercase">AI Scored</div>
               </div>
               <div className="text-2xl font-bold text-blue-700">{analyticsSummary.scored}</div>
             </div>
-            <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+            <div className="bg-green-50 border border-green-200 rounded-card shadow-card p-4">
               <div className="flex items-center gap-2 mb-2">
                 <CheckCircle size={16} className="text-green-700" />
-                <div className="text-xs font-semibold text-[#6e6e7e] uppercase">Checked In</div>
+                <div className="text-xs font-semibold text-ui-tertiary uppercase">Checked In</div>
               </div>
               <div className="text-2xl font-bold text-green-700">{analyticsSummary.checked_in}</div>
             </div>
-            <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+            <div className="bg-purple-50 border border-purple-200 rounded-card shadow-card p-4">
               <div className="flex items-center gap-2 mb-2">
                 <MessageSquare size={16} className="text-purple-700" />
-                <div className="text-xs font-semibold text-[#6e6e7e] uppercase">Follow-ups</div>
+                <div className="text-xs font-semibold text-ui-tertiary uppercase">Follow-ups</div>
               </div>
               <div className="text-2xl font-bold text-purple-700">{analyticsSummary.follow_ups_sent}</div>
             </div>
-            <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+            <div className="bg-amber-50 border border-amber-200 rounded-card shadow-card p-4">
               <div className="flex items-center gap-2 mb-2">
                 <Calendar size={16} className="text-amber-700" />
-                <div className="text-xs font-semibold text-[#6e6e7e] uppercase">Meetings</div>
+                <div className="text-xs font-semibold text-ui-tertiary uppercase">Meetings</div>
               </div>
               <div className="text-2xl font-bold text-amber-700">{analyticsSummary.meetings_booked}</div>
             </div>
@@ -308,33 +308,33 @@ export default function OverviewPage() {
       <div>
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h2 className="text-lg font-semibold text-[#1a1a2e]">Recent Activity</h2>
-            <p className="text-sm text-[#6e6e7e] mt-1">Latest join requests for this event</p>
+            <h2 className="font-display text-lg font-semibold text-brand-charcoal">Recent Activity</h2>
+            <p className="text-sm text-ui-tertiary mt-1">Latest join requests for this event</p>
           </div>
-          <div className="flex items-center gap-2 text-sm text-[#6e6e7e]">
+          <div className="flex items-center gap-2 text-sm text-ui-tertiary">
             <TrendingUp size={16} />
             <span>Showing last 10</span>
           </div>
         </div>
 
-        <div className="bg-white border border-[#e1e4e8] rounded-lg shadow-sm overflow-hidden">
+        <div className="bg-white border border-ui-border rounded-card shadow-card overflow-hidden">
           <table className="w-full text-sm">
-            <thead className="bg-[#f8f9fa] border-b border-[#e1e4e8]">
+            <thead className="bg-brand-cream border-b border-ui-border">
               <tr>
-                <th className="px-4 py-3 text-left font-semibold text-[#1a1a2e]">Name</th>
-                <th className="px-4 py-3 text-left font-semibold text-[#1a1a2e]">Email</th>
-                <th className="px-4 py-3 text-left font-semibold text-[#1a1a2e]">Status</th>
-                <th className="px-4 py-3 text-left font-semibold text-[#1a1a2e]">+1s</th>
-                <th className="px-4 py-3 text-left font-semibold text-[#1a1a2e]">Requested</th>
+                <th className="px-4 py-3 text-left font-semibold text-brand-charcoal">Name</th>
+                <th className="px-4 py-3 text-left font-semibold text-brand-charcoal">Email</th>
+                <th className="px-4 py-3 text-left font-semibold text-brand-charcoal">Status</th>
+                <th className="px-4 py-3 text-left font-semibold text-brand-charcoal">+1s</th>
+                <th className="px-4 py-3 text-left font-semibold text-brand-charcoal">Requested</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#e1e4e8]">
+            <tbody className="divide-y divide-ui-border">
               {recentGuests.length === 0 ? (
                 <tr>
                   <td colSpan={5} className="px-4 py-8 text-center">
                     <div className="flex flex-col items-center gap-2">
-                      <Calendar size={32} className="text-[#6e6e7e]" />
-                      <div className="text-sm text-[#6e6e7e]">No recent activity yet</div>
+                      <Calendar size={32} className="text-ui-tertiary" />
+                      <div className="text-sm text-ui-tertiary">No recent activity yet</div>
                     </div>
                   </td>
                 </tr>
@@ -343,10 +343,10 @@ export default function OverviewPage() {
                   <tr
                     key={guest.id}
                     onClick={() => handleGuestClick(guest.id)}
-                    className="hover:bg-[#f8f9fa] transition-colors cursor-pointer"
+                    className="hover:bg-brand-cream transition-colors cursor-pointer"
                   >
-                    <td className="px-4 py-3 font-medium text-[#1a1a2e]">{guest.full_name}</td>
-                    <td className="px-4 py-3 text-[#4a4a5e]">{guest.email}</td>
+                    <td className="px-4 py-3 font-medium text-brand-charcoal">{guest.full_name}</td>
+                    <td className="px-4 py-3 text-ui-secondary">{guest.email}</td>
                     <td className="px-4 py-3">
                       {guest.status === 'PENDING' && (
                         <span className="inline-flex px-2 py-0.5 text-xs font-medium rounded bg-amber-50 text-amber-700 border border-amber-200">
@@ -369,8 +369,8 @@ export default function OverviewPage() {
                         </span>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-[#4a4a5e]">{guest.plus_ones || 0}</td>
-                    <td className="px-4 py-3 text-[#6e6e7e]">
+                    <td className="px-4 py-3 text-ui-secondary">{guest.plus_ones || 0}</td>
+                    <td className="px-4 py-3 text-ui-tertiary">
                       {new Date(guest.created_at).toLocaleDateString('en-US', {
                         month: 'short',
                         day: 'numeric',

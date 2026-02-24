@@ -24,8 +24,8 @@ const STATUS_BG: Record<NeonStatus, string> = {
   PENDING: 'bg-amber-50 text-amber-700 border border-amber-200',
   APPROVED: 'bg-blue-50 text-blue-700 border border-blue-200',
   REJECTED: 'bg-red-50 text-red-700 border border-red-200',
-  CANCELLED: 'bg-gray-100 text-[#6e6e7e] border border-gray-200',
-  DRAFT: 'bg-gray-100 text-[#6e6e7e] border border-gray-200',
+  CANCELLED: 'bg-gray-100 text-ui-tertiary border border-gray-200',
+  DRAFT: 'bg-gray-100 text-ui-tertiary border border-gray-200',
 }
 
 export default function GuestsTabPage() {
@@ -183,47 +183,47 @@ export default function GuestsTabPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-32">
-        <div className="text-[#6e6e7e] text-sm font-medium">Loading guests...</div>
+        <div className="text-ui-tertiary text-sm font-medium">Loading guests...</div>
       </div>
     )
   }
 
   return (
     <div className="space-y-6">
-      <div className="bg-white border border-[#e1e4e8] rounded-lg p-6">
-        <h2 className="text-xl font-semibold text-[#1a1a2e] mb-2 tracking-tight">
+      <div className="bg-white border border-ui-border rounded-card shadow-card p-6">
+        <h2 className="font-display text-xl font-semibold text-brand-charcoal mb-2 tracking-tight">
           Guest Management
         </h2>
-        <p className="text-sm text-[#4a4a5e]">
+        <p className="text-sm text-ui-secondary">
           Review and approve RSVP requests. Click any row to view full guest details.
         </p>
       </div>
 
       {/* Stats */}
       <div className="grid grid-cols-4 gap-4">
-        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+        <div className="bg-amber-50 border border-amber-200 rounded-card shadow-card p-4">
           <div className="text-2xl font-bold text-amber-700 mb-1">
             {stats.pending}
           </div>
-          <div className="text-xs font-medium text-[#6e6e7e]">Pending Review</div>
+          <div className="text-xs font-medium text-ui-tertiary">Pending Review</div>
         </div>
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <div className="text-2xl font-bold text-[#0f3460] mb-1">
+        <div className="bg-blue-50 border border-blue-200 rounded-card shadow-card p-4">
+          <div className="text-2xl font-bold text-brand-terracotta mb-1">
             {stats.approved}
           </div>
-          <div className="text-xs font-medium text-[#6e6e7e]">Approved</div>
+          <div className="text-xs font-medium text-ui-tertiary">Approved</div>
         </div>
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+        <div className="bg-red-50 border border-red-200 rounded-card shadow-card p-4">
           <div className="text-2xl font-bold text-red-700 mb-1">
             {stats.rejected}
           </div>
-          <div className="text-xs font-medium text-[#6e6e7e]">Rejected</div>
+          <div className="text-xs font-medium text-ui-tertiary">Rejected</div>
         </div>
-        <div className="bg-[#f0f2f5] border border-[#e1e4e8] rounded-lg p-4">
-          <div className="text-2xl font-bold text-[#1a1a2e] mb-1">
+        <div className="bg-brand-cream border border-ui-border rounded-card shadow-card p-4">
+          <div className="text-2xl font-bold text-brand-charcoal mb-1">
             {stats.total}
           </div>
-          <div className="text-xs font-medium text-[#6e6e7e]">Total Guests</div>
+          <div className="text-xs font-medium text-ui-tertiary">Total Guests</div>
         </div>
       </div>
 
@@ -234,12 +234,12 @@ export default function GuestsTabPage() {
           placeholder="Search by name or email..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="flex-1 px-3 py-2 bg-white border border-[#e1e4e8] rounded-lg text-sm text-[#1a1a2e] placeholder-[#6e6e7e] focus:outline-none focus:border-[#0f3460] focus:ring-1 focus:ring-[#0f3460] transition-colors"
+          className="flex-1 px-3 py-2 bg-white border border-ui-border rounded-lg text-sm text-brand-charcoal placeholder-ui-tertiary focus:outline-none focus:border-brand-terracotta focus:ring-1 focus:ring-brand-terracotta transition-colors"
         />
         <select
           value={filterStatus}
           onChange={(e) => setFilterStatus(e.target.value)}
-          className="px-3 py-2 bg-white border border-[#e1e4e8] rounded-lg text-sm text-[#1a1a2e] focus:outline-none focus:border-[#0f3460] focus:ring-1 focus:ring-[#0f3460] transition-colors"
+          className="px-3 py-2 bg-white border border-ui-border rounded-lg text-sm text-brand-charcoal focus:outline-none focus:border-brand-terracotta focus:ring-1 focus:ring-brand-terracotta transition-colors"
         >
           <option value="">All Status</option>
           <option value="PENDING">Pending</option>
@@ -252,7 +252,7 @@ export default function GuestsTabPage() {
               setFilterStatus('')
               setSearchQuery('')
             }}
-            className="px-3 py-2 text-sm font-medium text-[#0f3460] hover:text-[#c5a572] transition-colors"
+            className="px-3 py-2 text-sm font-medium text-brand-terracotta hover:text-brand-terracotta/70 transition-colors"
           >
             Clear
           </button>
@@ -260,23 +260,23 @@ export default function GuestsTabPage() {
       </div>
 
       {/* Guests Table */}
-      <div className="bg-white border border-[#e1e4e8] rounded-lg overflow-hidden shadow-sm">
+      <div className="bg-white border border-ui-border rounded-card shadow-card overflow-hidden">
         <table className="w-full text-sm">
-          <thead className="bg-[#f8f9fa] border-b border-[#e1e4e8]">
+          <thead className="bg-brand-cream border-b border-ui-border">
             <tr>
-              <th className="px-4 py-3 text-center font-semibold text-[#1a1a2e] w-16">Score</th>
-              <th className="px-4 py-3 text-left font-semibold text-[#1a1a2e]">Name</th>
-              <th className="px-4 py-3 text-left font-semibold text-[#1a1a2e]">Email</th>
-              <th className="px-4 py-3 text-center font-semibold text-[#1a1a2e]">Plus Ones</th>
-              <th className="px-4 py-3 text-left font-semibold text-[#1a1a2e]">Status</th>
-              <th className="px-4 py-3 text-left font-semibold text-[#1a1a2e]">Requested</th>
-              <th className="px-4 py-3 text-right font-semibold text-[#1a1a2e]">Actions</th>
+              <th className="px-4 py-3 text-center font-semibold text-brand-charcoal w-16">Score</th>
+              <th className="px-4 py-3 text-left font-semibold text-brand-charcoal">Name</th>
+              <th className="px-4 py-3 text-left font-semibold text-brand-charcoal">Email</th>
+              <th className="px-4 py-3 text-center font-semibold text-brand-charcoal">Plus Ones</th>
+              <th className="px-4 py-3 text-left font-semibold text-brand-charcoal">Status</th>
+              <th className="px-4 py-3 text-left font-semibold text-brand-charcoal">Requested</th>
+              <th className="px-4 py-3 text-right font-semibold text-brand-charcoal">Actions</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-[#e1e4e8]">
+          <tbody className="divide-y divide-ui-border">
             {filteredGuests.length === 0 ? (
               <tr>
-                <td colSpan={6} className="px-4 py-12 text-center text-[#6e6e7e] text-sm">
+                <td colSpan={6} className="px-4 py-12 text-center text-ui-tertiary text-sm">
                   No guests found
                 </td>
               </tr>
@@ -285,12 +285,12 @@ export default function GuestsTabPage() {
                 <tr
                   key={guest.id}
                   onClick={() => handleGuestClick(guest.id)}
-                  className="hover:bg-[#f8f9fa] transition-colors cursor-pointer"
+                  className="hover:bg-brand-cream transition-colors cursor-pointer"
                 >
                   <td className="px-4 py-3 text-center">
                     {(() => {
                       const match = dossierScores[guest.full_name?.toLowerCase()]
-                      if (!match) return <span className="text-xs text-[#6e6e7e]">—</span>
+                      if (!match) return <span className="text-xs text-ui-tertiary">—</span>
                       const s = match.score
                       const color = s >= 80 ? 'bg-green-50 text-green-700' : s >= 60 ? 'bg-blue-50 text-blue-700' : s >= 40 ? 'bg-amber-50 text-amber-700' : 'bg-red-50 text-red-700'
                       return (
@@ -304,15 +304,15 @@ export default function GuestsTabPage() {
                       )
                     })()}
                   </td>
-                  <td className="px-4 py-3 font-medium text-[#1a1a2e]">{guest.full_name}</td>
-                  <td className="px-4 py-3 text-[#4a4a5e]">{guest.email}</td>
-                  <td className="px-4 py-3 text-center text-[#4a4a5e]">{guest.plus_ones || 0}</td>
+                  <td className="px-4 py-3 font-medium text-brand-charcoal">{guest.full_name}</td>
+                  <td className="px-4 py-3 text-ui-secondary">{guest.email}</td>
+                  <td className="px-4 py-3 text-center text-ui-secondary">{guest.plus_ones || 0}</td>
                   <td className="px-4 py-3">
                     <span className={`inline-flex px-2 py-0.5 text-xs font-medium rounded ${STATUS_BG[guest.status]}`}>
                       {guest.status}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-[#6e6e7e] text-xs">
+                  <td className="px-4 py-3 text-ui-tertiary text-xs">
                     {guest.created_at ? new Date(guest.created_at).toLocaleDateString() : '—'}
                   </td>
                   <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
@@ -321,7 +321,7 @@ export default function GuestsTabPage() {
                         <>
                           <button
                             onClick={(e) => handleStatusChange(guest.id, 'APPROVED', e)}
-                            className="px-3 py-1 bg-[#0f3460] hover:bg-[#c5a572] text-white text-xs font-semibold rounded-md transition-colors"
+                            className="px-3 py-1 bg-brand-terracotta hover:bg-brand-terracotta/90 text-white text-xs font-semibold rounded-md transition-colors"
                           >
                             Approve
                           </button>
@@ -344,7 +344,7 @@ export default function GuestsTabPage() {
                       {guest.status === 'REJECTED' && (
                         <button
                           onClick={(e) => handleStatusChange(guest.id, 'APPROVED', e)}
-                          className="px-3 py-1 text-[#0f3460] hover:text-[#c5a572] text-xs font-semibold transition-colors"
+                          className="px-3 py-1 text-brand-terracotta hover:text-brand-terracotta/70 text-xs font-semibold transition-colors"
                         >
                           Approve
                         </button>
@@ -358,7 +358,7 @@ export default function GuestsTabPage() {
         </table>
 
         {filteredGuests.length > 0 && (
-          <div className="px-4 py-3 bg-[#f8f9fa] border-t border-[#e1e4e8] text-xs font-medium text-[#6e6e7e]">
+          <div className="px-4 py-3 bg-brand-cream border-t border-ui-border text-xs font-medium text-ui-tertiary">
             Showing {filteredGuests.length} of {guests.length} guest{guests.length === 1 ? '' : 's'}
           </div>
         )}

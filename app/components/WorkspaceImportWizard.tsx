@@ -149,25 +149,25 @@ export function WorkspaceImportWizard({ workspaceId, source, onComplete, onCance
   }
 
   return (
-    <div className="bg-white border border-[#e1e4e8] rounded-lg shadow-sm">
+    <div className="bg-white border border-ui-border rounded-lg shadow-sm">
       {/* Header */}
-      <div className="p-5 border-b border-[#e1e4e8]">
+      <div className="p-5 border-b border-ui-border">
         <div className="flex items-center gap-3 mb-2">
-          {isAirtable ? <FileSpreadsheet size={20} className="text-[#0f3460]" /> : <Database size={20} className="text-[#0f3460]" />}
-          <h2 className="text-lg font-semibold text-[#1a1a2e]">Import from {sourceName}</h2>
+          {isAirtable ? <FileSpreadsheet size={20} className="text-brand-terracotta" /> : <Database size={20} className="text-brand-terracotta" />}
+          <h2 className="text-lg font-semibold text-brand-charcoal">Import from {sourceName}</h2>
         </div>
         {/* Steps indicator */}
         <div className="flex items-center gap-2 mt-3">
           {(['connect', 'select', 'map', 'import'] as Step[]).map((s, i) => (
             <div key={s} className="flex items-center gap-2">
               <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
-                step === s ? 'bg-[#0f3460] text-white' :
+                step === s ? 'bg-brand-terracotta text-white' :
                 ['connect', 'select', 'map', 'import'].indexOf(step) > i ? 'bg-emerald-500 text-white' :
-                'bg-[#f0f2f5] text-[#6e6e7e]'
+                'bg-brand-cream text-ui-tertiary'
               }`}>
                 {['connect', 'select', 'map', 'import'].indexOf(step) > i ? <Check size={12} /> : i + 1}
               </div>
-              {i < 3 && <div className="w-8 h-px bg-[#e1e4e8]" />}
+              {i < 3 && <div className="w-8 h-px bg-ui-border" />}
             </div>
           ))}
         </div>
@@ -185,7 +185,7 @@ export function WorkspaceImportWizard({ workspaceId, source, onComplete, onCance
         {step === 'connect' && (
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-[#1a1a2e] mb-1">
+              <label className="block text-sm font-medium text-brand-charcoal mb-1">
                 {sourceName} API Key
               </label>
               <input
@@ -193,20 +193,20 @@ export function WorkspaceImportWizard({ workspaceId, source, onComplete, onCance
                 value={apiKey}
                 onChange={(e) => setApiKey(e.target.value)}
                 placeholder={`Enter your ${sourceName} API key`}
-                className="w-full px-4 py-2.5 text-sm border border-[#e1e4e8] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0f3460] focus:border-transparent"
+                className="w-full px-4 py-2.5 text-sm border border-ui-border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-terracotta focus:border-transparent"
               />
-              <p className="text-xs text-[#6e6e7e] mt-1">
+              <p className="text-xs text-ui-tertiary mt-1">
                 {isAirtable
                   ? 'Find your API key at airtable.com/account'
                   : 'Create an integration at notion.so/my-integrations'}
               </p>
             </div>
             <div className="flex justify-end gap-3">
-              <button onClick={onCancel} className="px-4 py-2 text-sm text-[#6e6e7e] hover:text-[#1a1a2e]">Cancel</button>
+              <button onClick={onCancel} className="px-4 py-2 text-sm text-ui-tertiary hover:text-brand-charcoal">Cancel</button>
               <button
                 onClick={handleConnect}
                 disabled={!apiKey || loading}
-                className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-[#0f3460] rounded-lg hover:bg-[#0a2540] disabled:opacity-50"
+                className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-brand-terracotta rounded-lg hover:bg-brand-terracotta/90 disabled:opacity-50"
               >
                 {loading ? 'Connecting...' : 'Connect'}
                 <ArrowRight size={14} />
@@ -221,11 +221,11 @@ export function WorkspaceImportWizard({ workspaceId, source, onComplete, onCance
             {isAirtable ? (
               <>
                 <div>
-                  <label className="block text-sm font-medium text-[#1a1a2e] mb-1">Base</label>
+                  <label className="block text-sm font-medium text-brand-charcoal mb-1">Base</label>
                   <select
                     value={selectedBase}
                     onChange={(e) => { setSelectedBase(e.target.value); setSelectedTable(''); }}
-                    className="w-full px-4 py-2.5 text-sm border border-[#e1e4e8] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0f3460]"
+                    className="w-full px-4 py-2.5 text-sm border border-ui-border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-terracotta"
                   >
                     <option value="">Select a base...</option>
                     {bases.map((b: any) => (
@@ -235,11 +235,11 @@ export function WorkspaceImportWizard({ workspaceId, source, onComplete, onCance
                 </div>
                 {selectedBase && (
                   <div>
-                    <label className="block text-sm font-medium text-[#1a1a2e] mb-1">Table</label>
+                    <label className="block text-sm font-medium text-brand-charcoal mb-1">Table</label>
                     <select
                       value={selectedTable}
                       onChange={(e) => setSelectedTable(e.target.value)}
-                      className="w-full px-4 py-2.5 text-sm border border-[#e1e4e8] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0f3460]"
+                      className="w-full px-4 py-2.5 text-sm border border-ui-border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-terracotta"
                     >
                       <option value="">Select a table...</option>
                       {bases.find((b: any) => b.id === selectedBase)?.tables?.map((t: any) => (
@@ -251,11 +251,11 @@ export function WorkspaceImportWizard({ workspaceId, source, onComplete, onCance
               </>
             ) : (
               <div>
-                <label className="block text-sm font-medium text-[#1a1a2e] mb-1">Database</label>
+                <label className="block text-sm font-medium text-brand-charcoal mb-1">Database</label>
                 <select
                   value={selectedDatabase}
                   onChange={(e) => setSelectedDatabase(e.target.value)}
-                  className="w-full px-4 py-2.5 text-sm border border-[#e1e4e8] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0f3460]"
+                  className="w-full px-4 py-2.5 text-sm border border-ui-border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-terracotta"
                 >
                   <option value="">Select a database...</option>
                   {databases.map((d: any) => (
@@ -265,13 +265,13 @@ export function WorkspaceImportWizard({ workspaceId, source, onComplete, onCance
               </div>
             )}
             <div className="flex justify-between">
-              <button onClick={() => setStep('connect')} className="flex items-center gap-1 px-4 py-2 text-sm text-[#6e6e7e] hover:text-[#1a1a2e]">
+              <button onClick={() => setStep('connect')} className="flex items-center gap-1 px-4 py-2 text-sm text-ui-tertiary hover:text-brand-charcoal">
                 <ArrowLeft size={14} /> Back
               </button>
               <button
                 onClick={handlePreview}
                 disabled={loading || (isAirtable ? !selectedTable : !selectedDatabase)}
-                className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-[#0f3460] rounded-lg hover:bg-[#0a2540] disabled:opacity-50"
+                className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-brand-terracotta rounded-lg hover:bg-brand-terracotta/90 disabled:opacity-50"
               >
                 {loading ? 'Loading...' : 'Preview & Map Fields'}
                 <ArrowRight size={14} />
@@ -283,18 +283,18 @@ export function WorkspaceImportWizard({ workspaceId, source, onComplete, onCance
         {/* Step 3: Field mapping */}
         {step === 'map' && (
           <div className="space-y-4">
-            <p className="text-sm text-[#4a4a5e]">Map each source field to a Moots contact field, or skip it.</p>
+            <p className="text-sm text-ui-secondary">Map each source field to a Moots contact field, or skip it.</p>
             <div className="space-y-2 max-h-[300px] overflow-y-auto">
               {fieldMapping.map((m, i) => (
                 <div key={i} className="grid grid-cols-[1fr_24px_1fr] gap-2 items-center">
-                  <div className="px-3 py-2 text-sm bg-[#f8f9fa] border border-[#e1e4e8] rounded-md text-[#1a1a2e]">
+                  <div className="px-3 py-2 text-sm bg-brand-cream border border-ui-border rounded-md text-brand-charcoal">
                     {m.source_field}
                   </div>
-                  <span className="text-center text-[#6e6e7e]">&rarr;</span>
+                  <span className="text-center text-ui-tertiary">&rarr;</span>
                   <select
                     value={m.target_field}
                     onChange={(e) => updateMapping(i, e.target.value)}
-                    className="px-3 py-2 text-sm border border-[#e1e4e8] rounded-md focus:outline-none focus:ring-2 focus:ring-[#0f3460]"
+                    className="px-3 py-2 text-sm border border-ui-border rounded-md focus:outline-none focus:ring-2 focus:ring-brand-terracotta"
                   >
                     {TARGET_FIELDS.map(f => (
                       <option key={f.value} value={f.value}>{f.label}</option>
@@ -304,23 +304,23 @@ export function WorkspaceImportWizard({ workspaceId, source, onComplete, onCance
               ))}
             </div>
             <div>
-              <label className="block text-sm font-medium text-[#1a1a2e] mb-1">Additional Tags (comma-separated)</label>
+              <label className="block text-sm font-medium text-brand-charcoal mb-1">Additional Tags (comma-separated)</label>
               <input
                 type="text"
                 value={tags}
                 onChange={(e) => setTags(e.target.value)}
                 placeholder="e.g., airtable-import, q1-leads"
-                className="w-full px-4 py-2 text-sm border border-[#e1e4e8] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0f3460]"
+                className="w-full px-4 py-2 text-sm border border-ui-border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-terracotta"
               />
             </div>
             <div className="flex justify-between">
-              <button onClick={() => setStep('select')} className="flex items-center gap-1 px-4 py-2 text-sm text-[#6e6e7e] hover:text-[#1a1a2e]">
+              <button onClick={() => setStep('select')} className="flex items-center gap-1 px-4 py-2 text-sm text-ui-tertiary hover:text-brand-charcoal">
                 <ArrowLeft size={14} /> Back
               </button>
               <button
                 onClick={handleImport}
                 disabled={loading}
-                className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-[#0f3460] rounded-lg hover:bg-[#0a2540] disabled:opacity-50"
+                className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-brand-terracotta rounded-lg hover:bg-brand-terracotta/90 disabled:opacity-50"
               >
                 {loading ? 'Importing...' : 'Import Contacts'}
                 <Upload size={14} />
@@ -335,13 +335,13 @@ export function WorkspaceImportWizard({ workspaceId, source, onComplete, onCance
             <div className="w-12 h-12 bg-emerald-50 rounded-full flex items-center justify-center mx-auto mb-4">
               <Check size={24} className="text-emerald-600" />
             </div>
-            <h3 className="text-lg font-semibold text-[#1a1a2e] mb-2">Import Complete</h3>
-            <p className="text-sm text-[#4a4a5e] mb-4">
+            <h3 className="text-lg font-semibold text-brand-charcoal mb-2">Import Complete</h3>
+            <p className="text-sm text-ui-secondary mb-4">
               <strong>{result.imported}</strong> contacts imported, <strong>{result.skipped}</strong> duplicates skipped
             </p>
             <button
               onClick={() => onComplete(result)}
-              className="px-6 py-2 text-sm font-semibold text-white bg-[#0f3460] rounded-lg hover:bg-[#0a2540]"
+              className="px-6 py-2 text-sm font-semibold text-white bg-brand-terracotta rounded-lg hover:bg-brand-terracotta/90"
             >
               Done
             </button>

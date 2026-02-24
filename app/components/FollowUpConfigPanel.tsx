@@ -42,8 +42,8 @@ export function FollowUpConfigPanel({ eventId, onTriggered }: FollowUpConfigPane
   }
 
   return (
-    <div className="bg-white border border-[#e1e4e8] rounded-lg p-6">
-      <h3 className="text-sm font-semibold text-[#1a1a2e] mb-4">Generate Follow-ups</h3>
+    <div className="bg-white border border-ui-border rounded-lg p-6">
+      <h3 className="text-sm font-semibold text-brand-charcoal mb-4">Generate Follow-ups</h3>
 
       {error && (
         <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">{error}</div>
@@ -63,30 +63,30 @@ export function FollowUpConfigPanel({ eventId, onTriggered }: FollowUpConfigPane
             onChange={(e) => setAutoGenerate(e.target.checked)}
             className="rounded border-gray-300"
           />
-          <span className="text-sm text-[#4a4a5e]">
-            <Sparkles className="w-3.5 h-3.5 inline mr-1 text-[#B8755E]" />
+          <span className="text-sm text-ui-secondary">
+            <Sparkles className="w-3.5 h-3.5 inline mr-1 text-brand-terracotta" />
             AI-personalize each follow-up
           </span>
         </label>
 
         <div>
-          <label className="block text-sm font-medium text-[#1a1a2e] mb-1">Subject Template (optional)</label>
+          <label className="block text-sm font-medium text-brand-charcoal mb-1">Subject Template (optional)</label>
           <input
             type="text"
             value={subjectTemplate}
             onChange={(e) => setSubjectTemplate(e.target.value)}
-            className="w-full px-3 py-2 border border-[#e1e4e8] rounded-lg text-sm focus:outline-none focus:border-[#B8755E] focus:ring-1 focus:ring-[#B8755E]"
+            className="w-full px-3 py-2 border border-ui-border rounded-lg text-sm focus:outline-none focus:border-brand-terracotta focus:ring-1 focus:ring-brand-terracotta"
             placeholder="AI will generate if left empty"
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-[#1a1a2e] mb-1">Content Template (optional)</label>
+          <label className="block text-sm font-medium text-brand-charcoal mb-1">Content Template (optional)</label>
           <textarea
             value={contentTemplate}
             onChange={(e) => setContentTemplate(e.target.value)}
             rows={3}
-            className="w-full px-3 py-2 border border-[#e1e4e8] rounded-lg text-sm focus:outline-none focus:border-[#B8755E] focus:ring-1 focus:ring-[#B8755E] resize-none"
+            className="w-full px-3 py-2 border border-ui-border rounded-lg text-sm focus:outline-none focus:border-brand-terracotta focus:ring-1 focus:ring-brand-terracotta resize-none"
             placeholder="AI will personalize based on guest profile if left empty"
           />
         </div>
@@ -94,7 +94,7 @@ export function FollowUpConfigPanel({ eventId, onTriggered }: FollowUpConfigPane
         <button
           onClick={handleTrigger}
           disabled={triggering}
-          className="flex items-center gap-2 px-4 py-2.5 bg-[#2F4F3F] hover:bg-[#1a3a2a] text-white text-sm font-semibold rounded-lg transition-colors disabled:opacity-50"
+          className="flex items-center gap-2 px-4 py-2.5 bg-brand-forest hover:bg-brand-forest/90 text-white text-sm font-semibold rounded-lg transition-colors disabled:opacity-50"
         >
           {triggering ? (
             <>
@@ -109,7 +109,7 @@ export function FollowUpConfigPanel({ eventId, onTriggered }: FollowUpConfigPane
           )}
         </button>
 
-        <p className="text-xs text-[#6e6e7e]">
+        <p className="text-xs text-ui-tertiary">
           This will create follow-up drafts for all scored contacts. You can review and send them individually.
         </p>
       </div>

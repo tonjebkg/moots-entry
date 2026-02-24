@@ -68,17 +68,17 @@ export function FieldMappingEditor({
       {/* Contact Fields */}
       <div>
         <div className="flex items-center justify-between mb-3">
-          <h4 className="font-semibold text-[#1a1a2e]">Contact Field Mapping</h4>
+          <h4 className="font-semibold text-brand-charcoal">Contact Field Mapping</h4>
           <button
             onClick={addContactField}
-            className="flex items-center gap-1 text-xs font-semibold text-[#0f3460] hover:underline"
+            className="flex items-center gap-1 text-xs font-semibold text-brand-terracotta hover:underline"
           >
             <Plus size={12} /> Add Field
           </button>
         </div>
 
         <div className="space-y-2">
-          <div className="grid grid-cols-[1fr_16px_1fr_32px] gap-2 text-xs font-semibold text-[#6e6e7e] uppercase">
+          <div className="grid grid-cols-[1fr_16px_1fr_32px] gap-2 text-xs font-semibold text-ui-tertiary uppercase">
             <span>Moots Field</span>
             <span />
             <span>{provider} Field</span>
@@ -89,20 +89,20 @@ export function FieldMappingEditor({
               <select
                 value={field.moots_field}
                 onChange={(e) => updateContactField(i, 'moots_field', e.target.value)}
-                className="px-3 py-2 text-sm border border-[#e1e4e8] rounded-md focus:outline-none focus:ring-2 focus:ring-[#0f3460]"
+                className="px-3 py-2 text-sm border border-ui-border rounded-md focus:outline-none focus:ring-2 focus:ring-brand-terracotta"
               >
                 <option value="">Select...</option>
                 {MOOTS_CONTACT_FIELDS.map(f => (
                   <option key={f} value={f}>{f}</option>
                 ))}
               </select>
-              <span className="text-center text-[#6e6e7e]">&rarr;</span>
+              <span className="text-center text-ui-tertiary">&rarr;</span>
               <input
                 type="text"
                 value={field.crm_field}
                 onChange={(e) => updateContactField(i, 'crm_field', e.target.value)}
                 placeholder={`${provider} field name`}
-                className="px-3 py-2 text-sm border border-[#e1e4e8] rounded-md focus:outline-none focus:ring-2 focus:ring-[#0f3460]"
+                className="px-3 py-2 text-sm border border-ui-border rounded-md focus:outline-none focus:ring-2 focus:ring-brand-terracotta"
               />
               <button
                 onClick={() => removeContactField(i)}
@@ -118,10 +118,10 @@ export function FieldMappingEditor({
       {/* Follow-Up Fields */}
       <div>
         <div className="flex items-center justify-between mb-3">
-          <h4 className="font-semibold text-[#1a1a2e]">Follow-Up Field Mapping</h4>
+          <h4 className="font-semibold text-brand-charcoal">Follow-Up Field Mapping</h4>
           <button
             onClick={addFollowUpField}
-            className="flex items-center gap-1 text-xs font-semibold text-[#0f3460] hover:underline"
+            className="flex items-center gap-1 text-xs font-semibold text-brand-terracotta hover:underline"
           >
             <Plus size={12} /> Add Field
           </button>
@@ -133,20 +133,20 @@ export function FieldMappingEditor({
               <select
                 value={field.moots_field}
                 onChange={(e) => updateFollowUpField(i, 'moots_field', e.target.value)}
-                className="px-3 py-2 text-sm border border-[#e1e4e8] rounded-md focus:outline-none focus:ring-2 focus:ring-[#0f3460]"
+                className="px-3 py-2 text-sm border border-ui-border rounded-md focus:outline-none focus:ring-2 focus:ring-brand-terracotta"
               >
                 <option value="">Select...</option>
                 {MOOTS_FOLLOW_UP_FIELDS.map(f => (
                   <option key={f} value={f}>{f}</option>
                 ))}
               </select>
-              <span className="text-center text-[#6e6e7e]">&rarr;</span>
+              <span className="text-center text-ui-tertiary">&rarr;</span>
               <input
                 type="text"
                 value={field.crm_field}
                 onChange={(e) => updateFollowUpField(i, 'crm_field', e.target.value)}
                 placeholder={`${provider} field name`}
-                className="px-3 py-2 text-sm border border-[#e1e4e8] rounded-md focus:outline-none focus:ring-2 focus:ring-[#0f3460]"
+                className="px-3 py-2 text-sm border border-ui-border rounded-md focus:outline-none focus:ring-2 focus:ring-brand-terracotta"
               />
               <button
                 onClick={() => removeFollowUpField(i)}
@@ -163,7 +163,7 @@ export function FieldMappingEditor({
       <button
         onClick={() => onSave(contactFields, followUpFields)}
         disabled={saving}
-        className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-[#0f3460] rounded-lg hover:bg-[#0a2540] transition-colors disabled:opacity-50"
+        className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-brand-terracotta rounded-lg hover:bg-brand-terracotta/90 transition-colors disabled:opacity-50"
       >
         <Save size={14} />
         {saving ? 'Saving...' : 'Save Mapping'}

@@ -74,68 +74,68 @@ export function RsvpPageConfigForm({ eventId, page, onSave }: RsvpPageConfigForm
       )}
 
       <div>
-        <label className="block text-sm font-medium text-[#1a1a2e] mb-1">
+        <label className="block text-sm font-medium text-brand-charcoal mb-1">
           URL Slug *
         </label>
         <div className="flex items-center gap-1">
-          <span className="text-sm text-[#6e6e7e]">/e/</span>
+          <span className="text-sm text-ui-tertiary">/e/</span>
           <input
             type="text"
             required
             value={form.slug}
             onChange={(e) => setForm({ ...form, slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '') })}
-            className="flex-1 px-3 py-2 border border-[#e1e4e8] rounded-lg text-sm focus:outline-none focus:border-[#B8755E] focus:ring-1 focus:ring-[#B8755E]"
+            className="flex-1 px-3 py-2 border border-ui-border rounded-lg text-sm focus:outline-none focus:border-brand-terracotta focus:ring-1 focus:ring-brand-terracotta"
             placeholder="my-event-2025"
           />
         </div>
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-[#1a1a2e] mb-1">Headline</label>
+        <label className="block text-sm font-medium text-brand-charcoal mb-1">Headline</label>
         <input
           type="text"
           value={form.headline}
           onChange={(e) => setForm({ ...form, headline: e.target.value })}
-          className="w-full px-3 py-2 border border-[#e1e4e8] rounded-lg text-sm focus:outline-none focus:border-[#B8755E] focus:ring-1 focus:ring-[#B8755E]"
+          className="w-full px-3 py-2 border border-ui-border rounded-lg text-sm focus:outline-none focus:border-brand-terracotta focus:ring-1 focus:ring-brand-terracotta"
         />
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-[#1a1a2e] mb-1">Description</label>
+        <label className="block text-sm font-medium text-brand-charcoal mb-1">Description</label>
         <textarea
           value={form.description}
           onChange={(e) => setForm({ ...form, description: e.target.value })}
           rows={3}
-          className="w-full px-3 py-2 border border-[#e1e4e8] rounded-lg text-sm focus:outline-none focus:border-[#B8755E] focus:ring-1 focus:ring-[#B8755E] resize-none"
+          className="w-full px-3 py-2 border border-ui-border rounded-lg text-sm focus:outline-none focus:border-brand-terracotta focus:ring-1 focus:ring-brand-terracotta resize-none"
           placeholder="Tell guests about this event..."
         />
       </div>
 
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium text-[#1a1a2e] mb-1">Accent Color</label>
+          <label className="block text-sm font-medium text-brand-charcoal mb-1">Accent Color</label>
           <div className="flex items-center gap-2">
             <input
               type="color"
               value={form.accent_color}
               onChange={(e) => setForm({ ...form, accent_color: e.target.value })}
-              className="w-10 h-10 rounded border border-[#e1e4e8] cursor-pointer"
+              className="w-10 h-10 rounded border border-ui-border cursor-pointer"
             />
             <input
               type="text"
               value={form.accent_color}
               onChange={(e) => setForm({ ...form, accent_color: e.target.value })}
-              className="flex-1 px-3 py-2 border border-[#e1e4e8] rounded-lg text-sm focus:outline-none focus:border-[#B8755E] focus:ring-1 focus:ring-[#B8755E]"
+              className="flex-1 px-3 py-2 border border-ui-border rounded-lg text-sm focus:outline-none focus:border-brand-terracotta focus:ring-1 focus:ring-brand-terracotta"
             />
           </div>
         </div>
         <div>
-          <label className="block text-sm font-medium text-[#1a1a2e] mb-1">Max Submissions</label>
+          <label className="block text-sm font-medium text-brand-charcoal mb-1">Max Submissions</label>
           <input
             type="number"
             value={form.max_submissions}
             onChange={(e) => setForm({ ...form, max_submissions: e.target.value })}
-            className="w-full px-3 py-2 border border-[#e1e4e8] rounded-lg text-sm focus:outline-none focus:border-[#B8755E] focus:ring-1 focus:ring-[#B8755E]"
+            className="w-full px-3 py-2 border border-ui-border rounded-lg text-sm focus:outline-none focus:border-brand-terracotta focus:ring-1 focus:ring-brand-terracotta"
             placeholder="Unlimited"
             min="1"
           />
@@ -143,12 +143,12 @@ export function RsvpPageConfigForm({ eventId, page, onSave }: RsvpPageConfigForm
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-[#1a1a2e] mb-1">Access Code (optional)</label>
+        <label className="block text-sm font-medium text-brand-charcoal mb-1">Access Code (optional)</label>
         <input
           type="text"
           value={form.access_code}
           onChange={(e) => setForm({ ...form, access_code: e.target.value })}
-          className="w-full px-3 py-2 border border-[#e1e4e8] rounded-lg text-sm focus:outline-none focus:border-[#B8755E] focus:ring-1 focus:ring-[#B8755E]"
+          className="w-full px-3 py-2 border border-ui-border rounded-lg text-sm focus:outline-none focus:border-brand-terracotta focus:ring-1 focus:ring-brand-terracotta"
           placeholder="Leave empty for public access"
         />
       </div>
@@ -156,20 +156,20 @@ export function RsvpPageConfigForm({ eventId, page, onSave }: RsvpPageConfigForm
       <div className="space-y-3">
         <label className="flex items-center gap-2">
           <input type="checkbox" checked={form.show_date} onChange={(e) => setForm({ ...form, show_date: e.target.checked })} className="rounded border-gray-300" />
-          <span className="text-sm text-[#4a4a5e]">Show event date</span>
+          <span className="text-sm text-ui-secondary">Show event date</span>
         </label>
         <label className="flex items-center gap-2">
           <input type="checkbox" checked={form.show_location} onChange={(e) => setForm({ ...form, show_location: e.target.checked })} className="rounded border-gray-300" />
-          <span className="text-sm text-[#4a4a5e]">Show event location</span>
+          <span className="text-sm text-ui-secondary">Show event location</span>
         </label>
         <label className="flex items-center gap-2">
           <input type="checkbox" checked={form.show_capacity} onChange={(e) => setForm({ ...form, show_capacity: e.target.checked })} className="rounded border-gray-300" />
-          <span className="text-sm text-[#4a4a5e]">Show remaining capacity</span>
+          <span className="text-sm text-ui-secondary">Show remaining capacity</span>
         </label>
         {page && (
           <label className="flex items-center gap-2">
             <input type="checkbox" checked={form.is_active} onChange={(e) => setForm({ ...form, is_active: e.target.checked })} className="rounded border-gray-300" />
-            <span className="text-sm text-[#4a4a5e]">Page is active (accepting submissions)</span>
+            <span className="text-sm text-ui-secondary">Page is active (accepting submissions)</span>
           </label>
         )}
       </div>
@@ -177,7 +177,7 @@ export function RsvpPageConfigForm({ eventId, page, onSave }: RsvpPageConfigForm
       <button
         type="submit"
         disabled={saving || !form.slug}
-        className="w-full py-2.5 bg-[#2F4F3F] hover:bg-[#1a3a2a] text-white text-sm font-semibold rounded-lg transition-colors disabled:opacity-50"
+        className="w-full py-2.5 bg-brand-forest hover:bg-brand-forest/90 text-white text-sm font-semibold rounded-lg transition-colors disabled:opacity-50"
       >
         {saving ? 'Saving...' : page ? 'Update RSVP Page' : 'Create RSVP Page'}
       </button>

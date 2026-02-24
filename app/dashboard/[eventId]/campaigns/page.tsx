@@ -94,19 +94,19 @@ export default function CampaignsTabPage() {
 
   function getStatusColor(status: Campaign['status']) {
     switch (status) {
-      case 'DRAFT': return 'bg-gray-100 text-[#6e6e7e] border border-gray-200'
+      case 'DRAFT': return 'bg-brand-cream text-ui-tertiary border border-gray-200'
       case 'ACTIVE': return 'bg-emerald-50 text-emerald-700 border border-emerald-200'
       case 'PAUSED': return 'bg-amber-50 text-amber-700 border border-amber-200'
       case 'COMPLETED': return 'bg-blue-50 text-blue-700 border border-blue-200'
       case 'CANCELLED': return 'bg-red-50 text-red-700 border border-red-200'
-      default: return 'bg-gray-100 text-[#6e6e7e] border border-gray-200'
+      default: return 'bg-brand-cream text-ui-tertiary border border-gray-200'
     }
   }
 
   if (loading) {
     return (
       <div className="flex items-center justify-center py-32">
-        <div className="text-[#6e6e7e] text-sm font-medium">Loading campaigns...</div>
+        <div className="text-ui-tertiary text-sm font-medium">Loading campaigns...</div>
       </div>
     )
   }
@@ -117,7 +117,7 @@ export default function CampaignsTabPage() {
       <div className="w-[280px] shrink-0 space-y-2">
         <button
           onClick={() => setShowCreateForm(true)}
-          className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-[#0f3460] hover:bg-[#c5a572] active:bg-[#0f3460]/90 text-white text-sm font-semibold rounded-lg transition-all shadow-sm"
+          className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-brand-terracotta hover:bg-brand-terracotta/90 active:bg-brand-terracotta/90 text-white text-sm font-semibold rounded-pill shadow-cta transition-all"
         >
           <Plus size={16} />
           New Campaign
@@ -125,11 +125,11 @@ export default function CampaignsTabPage() {
 
         <div className="space-y-2">
           {campaigns.length === 0 ? (
-            <div className="bg-white border border-[#e1e4e8] rounded-lg p-6 text-center shadow-sm">
-              <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-[#f8f9fa] flex items-center justify-center">
-                <Clipboard className="text-[#6e6e7e]" size={20} />
+            <div className="bg-white rounded-card shadow-card p-6 text-center">
+              <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-brand-cream flex items-center justify-center">
+                <Clipboard className="text-ui-tertiary" size={20} />
               </div>
-              <p className="text-sm text-[#4a4a5e] leading-relaxed">
+              <p className="text-sm text-ui-secondary leading-relaxed">
                 No campaigns yet. Create one to start managing invitations.
               </p>
             </div>
@@ -141,13 +141,13 @@ export default function CampaignsTabPage() {
                 className={`
                   w-full text-left p-3 rounded-lg border transition-all
                   ${selectedCampaignId === campaign.id
-                    ? 'bg-white border-[#0f3460] shadow-md'
-                    : 'bg-white border-[#e1e4e8] hover:border-[#c5a572] hover:shadow-sm'
+                    ? 'bg-white border-brand-terracotta shadow-md'
+                    : 'bg-white border-ui-border hover:border-brand-terracotta/70 hover:shadow-sm'
                   }
                 `}
               >
                 <div className="flex items-start justify-between gap-2 mb-2">
-                  <h3 className="font-bold text-[#1a1a2e] text-sm leading-tight">
+                  <h3 className="font-bold text-brand-charcoal text-sm leading-tight">
                     {campaign.name}
                   </h3>
                   <span className={`px-2 py-0.5 text-xs font-semibold rounded shrink-0 ${getStatusColor(campaign.status)}`}>
@@ -156,22 +156,22 @@ export default function CampaignsTabPage() {
                 </div>
 
                 {campaign.description && (
-                  <p className="text-xs text-[#6e6e7e] mb-2 line-clamp-2 leading-relaxed">
+                  <p className="text-xs text-ui-tertiary mb-2 line-clamp-2 leading-relaxed">
                     {campaign.description}
                   </p>
                 )}
 
                 <div className="grid grid-cols-3 gap-2 text-xs">
                   <div>
-                    <div className="text-[#6e6e7e] mb-0.5 uppercase tracking-wide" style={{ fontSize: '10px' }}>Considering</div>
-                    <div className="text-[#1a1a2e] font-bold">{campaign.total_considering}</div>
+                    <div className="text-ui-tertiary mb-0.5 uppercase tracking-wide" style={{ fontSize: '10px' }}>Considering</div>
+                    <div className="text-brand-charcoal font-bold">{campaign.total_considering}</div>
                   </div>
                   <div>
-                    <div className="text-[#6e6e7e] mb-0.5 uppercase tracking-wide" style={{ fontSize: '10px' }}>Invited</div>
-                    <div className="text-[#0f3460] font-bold">{campaign.total_invited}</div>
+                    <div className="text-ui-tertiary mb-0.5 uppercase tracking-wide" style={{ fontSize: '10px' }}>Invited</div>
+                    <div className="text-brand-terracotta font-bold">{campaign.total_invited}</div>
                   </div>
                   <div>
-                    <div className="text-[#6e6e7e] mb-0.5 uppercase tracking-wide" style={{ fontSize: '10px' }}>Accepted</div>
+                    <div className="text-ui-tertiary mb-0.5 uppercase tracking-wide" style={{ fontSize: '10px' }}>Accepted</div>
                     <div className="text-emerald-700 font-bold">{campaign.total_accepted}</div>
                   </div>
                 </div>
@@ -192,13 +192,13 @@ export default function CampaignsTabPage() {
         ) : (
           <div className="flex items-center justify-center h-full">
             <div className="text-center max-w-sm">
-              <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-[#f8f9fa] flex items-center justify-center">
-                <ChevronRight className="text-[#6e6e7e]" size={32} />
+              <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-brand-cream flex items-center justify-center">
+                <ChevronRight className="text-ui-tertiary" size={32} />
               </div>
-              <h3 className="text-xl font-bold text-[#1a1a2e] mb-2 tracking-tight">
+              <h3 className="text-xl font-bold font-display text-brand-charcoal mb-2 tracking-tight">
                 Select a campaign
               </h3>
-              <p className="text-sm text-[#6e6e7e] leading-relaxed">
+              <p className="text-sm text-ui-tertiary leading-relaxed">
                 Choose a campaign from the list to view details and manage guest invitations.
               </p>
             </div>

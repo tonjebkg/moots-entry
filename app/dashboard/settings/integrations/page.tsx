@@ -183,7 +183,7 @@ export default function IntegrationsPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-32">
-        <div className="text-[#6e6e7e] text-sm font-medium">Loading integrations...</div>
+        <div className="text-ui-tertiary text-sm font-medium">Loading integrations...</div>
       </div>
     );
   }
@@ -191,8 +191,8 @@ export default function IntegrationsPage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-2xl font-bold text-[#1a1a2e] tracking-tight mb-2">Integrations</h1>
-        <p className="text-sm text-[#4a4a5e]">Connect your CRM and import contacts from external tools</p>
+        <h1 className="text-2xl font-bold font-display text-brand-charcoal tracking-tight mb-2">Integrations</h1>
+        <p className="text-sm text-ui-secondary">Connect your CRM and import contacts from external tools</p>
       </div>
 
       {error && (
@@ -206,12 +206,12 @@ export default function IntegrationsPage() {
       <section>
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h2 className="text-lg font-semibold text-[#1a1a2e]">CRM Connections</h2>
-            <p className="text-xs text-[#6e6e7e] mt-1">Push contacts and follow-up data to your CRM</p>
+            <h2 className="text-lg font-semibold font-display text-brand-charcoal">CRM Connections</h2>
+            <p className="text-xs text-ui-tertiary mt-1">Push contacts and follow-up data to your CRM</p>
           </div>
           <button
             onClick={() => setShowAddCrm(true)}
-            className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-[#0f3460] rounded-lg hover:bg-[#0a2540] transition-colors"
+            className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-brand-terracotta rounded-lg hover:bg-brand-terracotta/90 transition-colors"
           >
             <Plus size={14} />
             Add Connection
@@ -220,58 +220,58 @@ export default function IntegrationsPage() {
 
         {/* Add CRM form */}
         {showAddCrm && (
-          <div className="bg-white border border-[#e1e4e8] rounded-lg p-5 mb-4 shadow-sm space-y-4">
-            <h3 className="font-semibold text-[#1a1a2e]">New CRM Connection</h3>
+          <div className="bg-white border border-ui-border rounded-lg p-5 mb-4 shadow-sm space-y-4">
+            <h3 className="font-semibold text-brand-charcoal">New CRM Connection</h3>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-[#1a1a2e] mb-1">Provider</label>
+                <label className="block text-sm font-medium text-brand-charcoal mb-1">Provider</label>
                 <select
                   value={newCrmProvider}
                   onChange={(e) => setNewCrmProvider(e.target.value as 'SALESFORCE' | 'HUBSPOT')}
-                  className="w-full px-3 py-2 text-sm border border-[#e1e4e8] rounded-md"
+                  className="w-full px-3 py-2 text-sm border border-ui-border rounded-md"
                 >
                   <option value="SALESFORCE">Salesforce</option>
                   <option value="HUBSPOT">HubSpot</option>
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-[#1a1a2e] mb-1">Connection Name</label>
+                <label className="block text-sm font-medium text-brand-charcoal mb-1">Connection Name</label>
                 <input
                   type="text"
                   value={newCrmName}
                   onChange={(e) => setNewCrmName(e.target.value)}
                   placeholder="e.g., Production Salesforce"
-                  className="w-full px-3 py-2 text-sm border border-[#e1e4e8] rounded-md"
+                  className="w-full px-3 py-2 text-sm border border-ui-border rounded-md"
                 />
               </div>
             </div>
             <div>
-              <label className="block text-sm font-medium text-[#1a1a2e] mb-1">Access Token</label>
+              <label className="block text-sm font-medium text-brand-charcoal mb-1">Access Token</label>
               <input
                 type="password"
                 value={newCrmToken}
                 onChange={(e) => setNewCrmToken(e.target.value)}
-                className="w-full px-3 py-2 text-sm border border-[#e1e4e8] rounded-md"
+                className="w-full px-3 py-2 text-sm border border-ui-border rounded-md"
               />
             </div>
             {newCrmProvider === 'SALESFORCE' && (
               <div>
-                <label className="block text-sm font-medium text-[#1a1a2e] mb-1">Instance URL</label>
+                <label className="block text-sm font-medium text-brand-charcoal mb-1">Instance URL</label>
                 <input
                   type="url"
                   value={newCrmInstanceUrl}
                   onChange={(e) => setNewCrmInstanceUrl(e.target.value)}
                   placeholder="https://yourorg.my.salesforce.com"
-                  className="w-full px-3 py-2 text-sm border border-[#e1e4e8] rounded-md"
+                  className="w-full px-3 py-2 text-sm border border-ui-border rounded-md"
                 />
               </div>
             )}
             <div className="flex justify-end gap-3">
-              <button onClick={() => setShowAddCrm(false)} className="px-4 py-2 text-sm text-[#6e6e7e]">Cancel</button>
+              <button onClick={() => setShowAddCrm(false)} className="px-4 py-2 text-sm text-ui-tertiary">Cancel</button>
               <button
                 onClick={handleAddCrm}
                 disabled={!newCrmToken || addingCrm}
-                className="px-4 py-2 text-sm font-semibold text-white bg-[#0f3460] rounded-lg hover:bg-[#0a2540] disabled:opacity-50"
+                className="px-4 py-2 text-sm font-semibold text-white bg-brand-terracotta rounded-lg hover:bg-brand-terracotta/90 disabled:opacity-50"
               >
                 {addingCrm ? 'Adding...' : 'Add Connection'}
               </button>
@@ -281,9 +281,9 @@ export default function IntegrationsPage() {
 
         {/* Connection cards */}
         {connections.length === 0 && !showAddCrm ? (
-          <div className="bg-white border border-[#e1e4e8] rounded-lg p-8 text-center">
-            <Link2 size={28} className="mx-auto mb-3 text-[#6e6e7e] opacity-50" />
-            <p className="text-sm text-[#6e6e7e]">No CRM connections yet. Add one to start syncing contacts.</p>
+          <div className="bg-white border border-ui-border rounded-lg p-8 text-center">
+            <Link2 size={28} className="mx-auto mb-3 text-ui-tertiary opacity-50" />
+            <p className="text-sm text-ui-tertiary">No CRM connections yet. Add one to start syncing contacts.</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -305,7 +305,7 @@ export default function IntegrationsPage() {
         {editingMapping && mappingData && (
           <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[80vh] overflow-y-auto p-6">
-              <h3 className="text-lg font-semibold text-[#1a1a2e] mb-4">
+              <h3 className="text-lg font-semibold text-brand-charcoal mb-4">
                 Edit Field Mapping — {mappingData.provider}
               </h3>
               <FieldMappingEditor
@@ -317,7 +317,7 @@ export default function IntegrationsPage() {
               />
               <button
                 onClick={() => { setEditingMapping(null); setMappingData(null); }}
-                className="mt-4 text-sm text-[#6e6e7e] hover:text-[#1a1a2e]"
+                className="mt-4 text-sm text-ui-tertiary hover:text-brand-charcoal"
               >
                 Cancel
               </button>
@@ -329,8 +329,8 @@ export default function IntegrationsPage() {
       {/* Import Tools */}
       <section>
         <div className="mb-4">
-          <h2 className="text-lg font-semibold text-[#1a1a2e]">Import Contacts</h2>
-          <p className="text-xs text-[#6e6e7e] mt-1">Import contacts from Airtable or Notion databases</p>
+          <h2 className="text-lg font-semibold font-display text-brand-charcoal">Import Contacts</h2>
+          <p className="text-xs text-ui-tertiary mt-1">Import contacts from Airtable or Notion databases</p>
         </div>
 
         {importSource ? (
@@ -344,28 +344,28 @@ export default function IntegrationsPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <button
               onClick={() => setImportSource('airtable')}
-              className="bg-white border border-[#e1e4e8] rounded-lg p-6 text-left hover:border-[#0f3460] hover:shadow-sm transition-all group"
+              className="bg-white border border-ui-border rounded-lg p-6 text-left hover:border-brand-terracotta hover:shadow-sm transition-all group"
             >
               <div className="flex items-center gap-3 mb-3">
                 <div className="w-10 h-10 bg-yellow-50 rounded-lg flex items-center justify-center">
                   <FileSpreadsheet size={20} className="text-yellow-600" />
                 </div>
-                <h3 className="font-semibold text-[#1a1a2e] group-hover:text-[#0f3460] transition-colors">Airtable</h3>
+                <h3 className="font-semibold text-brand-charcoal group-hover:text-brand-terracotta transition-colors">Airtable</h3>
               </div>
-              <p className="text-sm text-[#6e6e7e]">Import contacts from an Airtable base with automatic field detection</p>
+              <p className="text-sm text-ui-tertiary">Import contacts from an Airtable base with automatic field detection</p>
             </button>
 
             <button
               onClick={() => setImportSource('notion')}
-              className="bg-white border border-[#e1e4e8] rounded-lg p-6 text-left hover:border-[#0f3460] hover:shadow-sm transition-all group"
+              className="bg-white border border-ui-border rounded-lg p-6 text-left hover:border-brand-terracotta hover:shadow-sm transition-all group"
             >
               <div className="flex items-center gap-3 mb-3">
-                <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
+                <div className="w-10 h-10 bg-brand-cream rounded-lg flex items-center justify-center">
                   <Database size={20} className="text-gray-700" />
                 </div>
-                <h3 className="font-semibold text-[#1a1a2e] group-hover:text-[#0f3460] transition-colors">Notion</h3>
+                <h3 className="font-semibold text-brand-charcoal group-hover:text-brand-terracotta transition-colors">Notion</h3>
               </div>
-              <p className="text-sm text-[#6e6e7e]">Import contacts from a Notion database with field mapping</p>
+              <p className="text-sm text-ui-tertiary">Import contacts from a Notion database with field mapping</p>
             </button>
           </div>
         )}

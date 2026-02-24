@@ -10,8 +10,8 @@ type Tab = 'password' | 'magic-link';
 export default function LoginPage() {
   return (
     <Suspense fallback={
-      <main className="min-h-screen bg-[#FAF9F7] flex items-center justify-center">
-        <Loader2 className="animate-spin text-[#6e6e7e]" size={32} />
+      <main className="min-h-screen bg-brand-cream flex items-center justify-center">
+        <Loader2 className="animate-spin text-ui-tertiary" size={32} />
       </main>
     }>
       <LoginContent />
@@ -90,24 +90,24 @@ function LoginContent() {
   }
 
   return (
-    <main className="min-h-screen bg-[#FAF9F7] flex items-center justify-center px-4">
+    <main className="min-h-screen bg-brand-cream flex items-center justify-center px-4">
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-[#1C1C1E] tracking-tight">Moots</h1>
-          <p className="text-sm text-[#6e6e7e] mt-2">Sign in to your dashboard</p>
+          <h1 className="font-display text-3xl font-bold text-brand-charcoal tracking-tight">Moots</h1>
+          <p className="text-sm text-ui-tertiary mt-2">Sign in to your dashboard</p>
         </div>
 
         {/* Card */}
-        <div className="bg-white border border-[#e1e4e8] rounded-2xl p-8 shadow-sm">
+        <div className="bg-white border border-ui-border rounded-2xl p-8 shadow-sm">
           {/* Tabs */}
-          <div className="flex gap-1 mb-6 bg-[#f0f2f5] rounded-lg p-1">
+          <div className="flex gap-1 mb-6 bg-brand-cream rounded-lg p-1">
             <button
               onClick={() => { setTab('password'); setError(''); setMagicLinkSent(false); }}
               className={`flex-1 py-2 text-sm font-medium rounded-md transition-colors ${
                 tab === 'password'
-                  ? 'bg-white text-[#1C1C1E] shadow-sm'
-                  : 'text-[#6e6e7e] hover:text-[#1C1C1E]'
+                  ? 'bg-white text-brand-charcoal shadow-sm'
+                  : 'text-ui-tertiary hover:text-brand-charcoal'
               }`}
             >
               Password
@@ -116,8 +116,8 @@ function LoginContent() {
               onClick={() => { setTab('magic-link'); setError(''); setMagicLinkSent(false); }}
               className={`flex-1 py-2 text-sm font-medium rounded-md transition-colors ${
                 tab === 'magic-link'
-                  ? 'bg-white text-[#1C1C1E] shadow-sm'
-                  : 'text-[#6e6e7e] hover:text-[#1C1C1E]'
+                  ? 'bg-white text-brand-charcoal shadow-sm'
+                  : 'text-ui-tertiary hover:text-brand-charcoal'
               }`}
             >
               Magic Link
@@ -133,42 +133,42 @@ function LoginContent() {
           {tab === 'password' ? (
             <form onSubmit={handlePasswordLogin} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-[#1C1C1E] mb-1.5">Email</label>
+                <label className="block text-sm font-medium text-brand-charcoal mb-1.5">Email</label>
                 <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-[#6e6e7e]" size={16} />
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-ui-tertiary" size={16} />
                   <input
                     type="email"
                     value={email}
                     onChange={e => setEmail(e.target.value)}
                     placeholder="you@company.com"
                     required
-                    className="w-full pl-10 pr-3 py-2.5 border border-[#e1e4e8] rounded-lg text-sm text-[#1C1C1E] placeholder-[#6e6e7e] focus:outline-none focus:border-[#2F4F3F] focus:ring-1 focus:ring-[#2F4F3F]"
+                    className="w-full pl-10 pr-3 py-2.5 border border-ui-border rounded-lg text-sm text-brand-charcoal placeholder-ui-tertiary focus:outline-none focus:border-brand-terracotta focus:ring-1 focus:ring-brand-terracotta"
                   />
                 </div>
               </div>
               <div>
                 <div className="flex items-center justify-between mb-1.5">
-                  <label className="text-sm font-medium text-[#1C1C1E]">Password</label>
-                  <Link href="/reset-password" className="text-xs text-[#2F4F3F] hover:underline">
+                  <label className="text-sm font-medium text-brand-charcoal">Password</label>
+                  <Link href="/reset-password" className="text-xs text-brand-terracotta hover:underline">
                     Forgot password?
                   </Link>
                 </div>
                 <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-[#6e6e7e]" size={16} />
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-ui-tertiary" size={16} />
                   <input
                     type="password"
                     value={password}
                     onChange={e => setPassword(e.target.value)}
                     placeholder="Enter your password"
                     required
-                    className="w-full pl-10 pr-3 py-2.5 border border-[#e1e4e8] rounded-lg text-sm text-[#1C1C1E] placeholder-[#6e6e7e] focus:outline-none focus:border-[#2F4F3F] focus:ring-1 focus:ring-[#2F4F3F]"
+                    className="w-full pl-10 pr-3 py-2.5 border border-ui-border rounded-lg text-sm text-brand-charcoal placeholder-ui-tertiary focus:outline-none focus:border-brand-terracotta focus:ring-1 focus:ring-brand-terracotta"
                   />
                 </div>
               </div>
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full flex items-center justify-center gap-2 py-2.5 bg-[#2F4F3F] hover:bg-[#3a6349] text-white text-sm font-semibold rounded-lg transition-colors disabled:opacity-50"
+                className="w-full flex items-center justify-center gap-2 py-2.5 bg-brand-terracotta hover:bg-brand-terracotta/90 text-white text-sm font-semibold rounded-pill shadow-cta transition-colors disabled:opacity-50"
               >
                 {loading ? <Loader2 size={16} className="animate-spin" /> : <ArrowRight size={16} />}
                 Sign In
@@ -176,32 +176,32 @@ function LoginContent() {
             </form>
           ) : magicLinkSent ? (
             <div className="text-center py-4">
-              <Mail className="mx-auto mb-3 text-[#2F4F3F]" size={32} />
-              <h3 className="text-lg font-semibold text-[#1C1C1E] mb-2">Check your email</h3>
-              <p className="text-sm text-[#6e6e7e]">
+              <Mail className="mx-auto mb-3 text-brand-terracotta" size={32} />
+              <h3 className="text-lg font-semibold text-brand-charcoal mb-2">Check your email</h3>
+              <p className="text-sm text-ui-tertiary">
                 If an account exists for <strong>{email}</strong>, we sent a magic link to sign in.
               </p>
             </div>
           ) : (
             <form onSubmit={handleMagicLink} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-[#1C1C1E] mb-1.5">Email</label>
+                <label className="block text-sm font-medium text-brand-charcoal mb-1.5">Email</label>
                 <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-[#6e6e7e]" size={16} />
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-ui-tertiary" size={16} />
                   <input
                     type="email"
                     value={email}
                     onChange={e => setEmail(e.target.value)}
                     placeholder="you@company.com"
                     required
-                    className="w-full pl-10 pr-3 py-2.5 border border-[#e1e4e8] rounded-lg text-sm text-[#1C1C1E] placeholder-[#6e6e7e] focus:outline-none focus:border-[#2F4F3F] focus:ring-1 focus:ring-[#2F4F3F]"
+                    className="w-full pl-10 pr-3 py-2.5 border border-ui-border rounded-lg text-sm text-brand-charcoal placeholder-ui-tertiary focus:outline-none focus:border-brand-terracotta focus:ring-1 focus:ring-brand-terracotta"
                   />
                 </div>
               </div>
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full flex items-center justify-center gap-2 py-2.5 bg-[#2F4F3F] hover:bg-[#3a6349] text-white text-sm font-semibold rounded-lg transition-colors disabled:opacity-50"
+                className="w-full flex items-center justify-center gap-2 py-2.5 bg-brand-terracotta hover:bg-brand-terracotta/90 text-white text-sm font-semibold rounded-pill shadow-cta transition-colors disabled:opacity-50"
               >
                 {loading ? <Loader2 size={16} className="animate-spin" /> : <Mail size={16} />}
                 Send Magic Link
@@ -211,9 +211,9 @@ function LoginContent() {
         </div>
 
         {/* Footer */}
-        <p className="text-center text-sm text-[#6e6e7e] mt-6">
+        <p className="text-center text-sm text-ui-tertiary mt-6">
           Don&apos;t have an account?{' '}
-          <Link href="/signup" className="text-[#2F4F3F] font-medium hover:underline">
+          <Link href="/signup" className="text-brand-terracotta font-medium hover:underline">
             Sign up
           </Link>
         </p>

@@ -80,19 +80,19 @@ export function ContactImportModal({ onClose, onSuccess, events = [] }: ContactI
       <div className="fixed inset-0 flex items-center justify-center z-50 p-4">
         <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg">
           {/* Header */}
-          <div className="flex items-center justify-between p-6 border-b border-[#e1e4e8]">
-            <h2 className="text-lg font-semibold text-[#1a1a2e]">Import Contacts</h2>
-            <button onClick={onClose} className="text-[#6e6e7e] hover:text-[#1a1a2e]">
+          <div className="flex items-center justify-between p-6 border-b border-ui-border">
+            <h2 className="text-lg font-semibold text-brand-charcoal">Import Contacts</h2>
+            <button onClick={onClose} className="text-ui-tertiary hover:text-brand-charcoal">
               <X size={20} />
             </button>
           </div>
 
           {/* Tabs */}
-          <div className="flex border-b border-[#e1e4e8]">
+          <div className="flex border-b border-ui-border">
             <button
               onClick={() => setTab('csv')}
               className={`flex-1 px-4 py-3 text-sm font-semibold border-b-2 ${
-                tab === 'csv' ? 'border-[#0f3460] text-[#0f3460]' : 'border-transparent text-[#6e6e7e]'
+                tab === 'csv' ? 'border-brand-terracotta text-brand-terracotta' : 'border-transparent text-ui-tertiary'
               }`}
             >
               <Upload size={14} className="inline mr-1.5" />
@@ -101,7 +101,7 @@ export function ContactImportModal({ onClose, onSuccess, events = [] }: ContactI
             <button
               onClick={() => setTab('event')}
               className={`flex-1 px-4 py-3 text-sm font-semibold border-b-2 ${
-                tab === 'event' ? 'border-[#0f3460] text-[#0f3460]' : 'border-transparent text-[#6e6e7e]'
+                tab === 'event' ? 'border-brand-terracotta text-brand-terracotta' : 'border-transparent text-ui-tertiary'
               }`}
             >
               <ArrowRight size={14} className="inline mr-1.5" />
@@ -116,21 +116,21 @@ export function ContactImportModal({ onClose, onSuccess, events = [] }: ContactI
                 <div className="text-emerald-600 font-semibold text-lg mb-2">
                   Import Complete
                 </div>
-                <div className="text-sm text-[#4a4a5e]">
+                <div className="text-sm text-ui-secondary">
                   {result.imported} imported, {result.skipped} skipped
                 </div>
               </div>
             ) : tab === 'csv' ? (
               <>
                 <div
-                  className="border-2 border-dashed border-[#e1e4e8] rounded-lg p-8 text-center cursor-pointer hover:border-[#0f3460] transition-colors"
+                  className="border-2 border-dashed border-ui-border rounded-lg p-8 text-center cursor-pointer hover:border-brand-terracotta transition-colors"
                   onClick={() => fileRef.current?.click()}
                 >
-                  <FileText size={32} className="mx-auto mb-2 text-[#6e6e7e]" />
-                  <div className="text-sm text-[#4a4a5e]">
+                  <FileText size={32} className="mx-auto mb-2 text-ui-tertiary" />
+                  <div className="text-sm text-ui-secondary">
                     {file ? file.name : 'Click to select CSV file'}
                   </div>
-                  <div className="text-xs text-[#6e6e7e] mt-1">
+                  <div className="text-xs text-ui-tertiary mt-1">
                     Required columns: full_name, email
                   </div>
                   <input
@@ -146,18 +146,18 @@ export function ContactImportModal({ onClose, onSuccess, events = [] }: ContactI
             ) : (
               <>
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-[#1a1a2e]">Select Event</label>
+                  <label className="text-sm font-medium text-brand-charcoal">Select Event</label>
                   <select
                     value={selectedEventId || ''}
                     onChange={(e) => setSelectedEventId(e.target.value ? parseInt(e.target.value) : null)}
-                    className="w-full px-3 py-2 border border-[#e1e4e8] rounded-lg text-sm focus:outline-none focus:border-[#0f3460]"
+                    className="w-full px-3 py-2 border border-ui-border rounded-lg text-sm focus:outline-none focus:border-brand-terracotta"
                   >
                     <option value="">Choose an event...</option>
                     {events.map(e => (
                       <option key={e.id} value={e.id}>{e.title}</option>
                     ))}
                   </select>
-                  <p className="text-xs text-[#6e6e7e]">
+                  <p className="text-xs text-ui-tertiary">
                     Import guests from campaign invitations into your People Database.
                   </p>
                 </div>
@@ -168,17 +168,17 @@ export function ContactImportModal({ onClose, onSuccess, events = [] }: ContactI
 
           {/* Footer */}
           {!result && (
-            <div className="flex gap-3 p-6 border-t border-[#e1e4e8]">
+            <div className="flex gap-3 p-6 border-t border-ui-border">
               <button
                 onClick={onClose}
-                className="flex-1 px-4 py-2.5 border border-[#e1e4e8] rounded-lg text-sm font-medium text-[#4a4a5e] hover:bg-[#f8f9fa]"
+                className="flex-1 px-4 py-2.5 border border-ui-border rounded-lg text-sm font-medium text-ui-secondary hover:bg-brand-cream"
               >
                 Cancel
               </button>
               <button
                 onClick={tab === 'csv' ? handleCsvUpload : handleEventImport}
                 disabled={loading || (tab === 'csv' ? !file : !selectedEventId)}
-                className="flex-1 px-4 py-2.5 bg-[#0f3460] hover:bg-[#c5a572] text-white text-sm font-semibold rounded-lg transition-colors disabled:opacity-50"
+                className="flex-1 px-4 py-2.5 bg-brand-terracotta hover:bg-brand-terracotta/90 text-white text-sm font-semibold rounded-lg transition-colors disabled:opacity-50"
               >
                 {loading ? 'Importing...' : 'Import'}
               </button>

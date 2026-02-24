@@ -14,7 +14,7 @@ export function CapacityGauge({ filled, total, className = '' }: CapacityGaugePr
   const overCapacity = filled > total;
 
   // Color based on capacity
-  let color = '#10b981'; // green
+  let color = '#2F4F3F'; // forest green
   if (percentage >= 100) {
     color = '#ef4444'; // red
   } else if (percentage >= 80) {
@@ -24,7 +24,7 @@ export function CapacityGauge({ filled, total, className = '' }: CapacityGaugePr
   return (
     <div className={`capacity-gauge ${className}`}>
       <div className="flex items-center justify-between mb-2">
-        <span className="text-sm font-semibold text-[#1a1a2e]">
+        <span className="text-sm font-semibold text-brand-charcoal">
           Capacity
         </span>
         <span className="text-sm font-semibold" style={{ color }}>
@@ -32,7 +32,7 @@ export function CapacityGauge({ filled, total, className = '' }: CapacityGaugePr
         </span>
       </div>
 
-      <div className="w-full h-3 bg-[#f8f9fa] rounded-full overflow-hidden border border-[#e1e4e8]">
+      <div className="w-full h-3 bg-brand-cream rounded-full overflow-hidden border border-ui-border">
         <div
           className="h-full rounded-full transition-all duration-300"
           style={{

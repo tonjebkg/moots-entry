@@ -14,15 +14,15 @@ export function BriefingCard({ briefing, onView, onDelete }: BriefingCardProps) 
   const meta = BRIEFING_STATUS_META[briefing.status]
 
   return (
-    <div className="bg-white border border-[#e1e4e8] rounded-lg p-4 hover:shadow-sm transition-shadow">
+    <div className="bg-white border border-ui-border rounded-lg p-4 hover:shadow-sm transition-shadow">
       <div className="flex items-start justify-between">
         <div className="flex items-start gap-3 flex-1 min-w-0">
-          <div className="w-10 h-10 rounded-lg bg-[#FAF9F7] border border-[#e1e4e8] flex items-center justify-center shrink-0">
-            <FileText className="w-5 h-5 text-[#B8755E]" />
+          <div className="w-10 h-10 rounded-lg bg-brand-cream border border-ui-border flex items-center justify-center shrink-0">
+            <FileText className="w-5 h-5 text-brand-terracotta" />
           </div>
           <div className="flex-1 min-w-0">
-            <h4 className="text-sm font-semibold text-[#1a1a2e] truncate">{briefing.title}</h4>
-            <div className="flex items-center gap-3 mt-1 text-xs text-[#6e6e7e]">
+            <h4 className="text-sm font-semibold text-brand-charcoal truncate">{briefing.title}</h4>
+            <div className="flex items-center gap-3 mt-1 text-xs text-ui-tertiary">
               <span className="flex items-center gap-1">
                 <Users className="w-3 h-3" />
                 {briefing.guest_count} guests
@@ -45,7 +45,7 @@ export function BriefingCard({ briefing, onView, onDelete }: BriefingCardProps) 
           {briefing.status === 'READY' && (
             <button
               onClick={() => onView(briefing.id)}
-              className="px-3 py-1 text-xs font-medium text-[#2F4F3F] border border-[#2F4F3F] rounded-lg hover:bg-[#2F4F3F] hover:text-white transition-colors"
+              className="px-3 py-1 text-xs font-medium text-brand-forest border border-brand-forest rounded-lg hover:bg-brand-forest hover:text-white transition-colors"
             >
               View
             </button>

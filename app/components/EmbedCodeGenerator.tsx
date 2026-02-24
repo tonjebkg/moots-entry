@@ -21,29 +21,29 @@ export function EmbedCodeGenerator({ slug }: EmbedCodeGeneratorProps) {
   }
 
   return (
-    <div className="bg-white border border-[#e1e4e8] rounded-lg overflow-hidden">
-      <div className="px-4 py-3 border-b border-[#e1e4e8]">
-        <h3 className="text-sm font-semibold text-[#1a1a2e]">Share & Embed</h3>
+    <div className="bg-white border border-ui-border rounded-lg overflow-hidden">
+      <div className="px-4 py-3 border-b border-ui-border">
+        <h3 className="text-sm font-semibold text-brand-charcoal">Share & Embed</h3>
       </div>
       <div className="p-4 space-y-4">
         {/* Direct Link */}
         <div>
           <div className="flex items-center gap-2 mb-1.5">
-            <Link className="w-3.5 h-3.5 text-[#6e6e7e]" />
-            <span className="text-xs font-medium text-[#6e6e7e] uppercase tracking-wide">Direct Link</span>
+            <Link className="w-3.5 h-3.5 text-ui-tertiary" />
+            <span className="text-xs font-medium text-ui-tertiary uppercase tracking-wide">Direct Link</span>
           </div>
           <div className="flex items-center gap-2">
-            <code className="flex-1 px-3 py-2 bg-gray-50 border border-[#e1e4e8] rounded-lg text-xs text-[#4a4a5e] truncate">
+            <code className="flex-1 px-3 py-2 bg-gray-50 border border-ui-border rounded-lg text-xs text-ui-secondary truncate">
               {directUrl}
             </code>
             <button
               onClick={() => copyToClipboard(directUrl, 'link')}
-              className="px-3 py-2 border border-[#e1e4e8] rounded-lg hover:bg-gray-50 transition-colors"
+              className="px-3 py-2 border border-ui-border rounded-lg hover:bg-gray-50 transition-colors"
             >
               {copied === 'link' ? (
                 <Check className="w-4 h-4 text-green-600" />
               ) : (
-                <Copy className="w-4 h-4 text-[#6e6e7e]" />
+                <Copy className="w-4 h-4 text-ui-tertiary" />
               )}
             </button>
           </div>
@@ -52,21 +52,21 @@ export function EmbedCodeGenerator({ slug }: EmbedCodeGeneratorProps) {
         {/* Iframe Embed */}
         <div>
           <div className="flex items-center gap-2 mb-1.5">
-            <Code className="w-3.5 h-3.5 text-[#6e6e7e]" />
-            <span className="text-xs font-medium text-[#6e6e7e] uppercase tracking-wide">Iframe Embed</span>
+            <Code className="w-3.5 h-3.5 text-ui-tertiary" />
+            <span className="text-xs font-medium text-ui-tertiary uppercase tracking-wide">Iframe Embed</span>
           </div>
           <div className="flex items-center gap-2">
-            <code className="flex-1 px-3 py-2 bg-gray-50 border border-[#e1e4e8] rounded-lg text-xs text-[#4a4a5e] truncate">
+            <code className="flex-1 px-3 py-2 bg-gray-50 border border-ui-border rounded-lg text-xs text-ui-secondary truncate">
               {iframeCode}
             </code>
             <button
               onClick={() => copyToClipboard(iframeCode, 'iframe')}
-              className="px-3 py-2 border border-[#e1e4e8] rounded-lg hover:bg-gray-50 transition-colors"
+              className="px-3 py-2 border border-ui-border rounded-lg hover:bg-gray-50 transition-colors"
             >
               {copied === 'iframe' ? (
                 <Check className="w-4 h-4 text-green-600" />
               ) : (
-                <Copy className="w-4 h-4 text-[#6e6e7e]" />
+                <Copy className="w-4 h-4 text-ui-tertiary" />
               )}
             </button>
           </div>

@@ -99,34 +99,34 @@ export function ContactDetailPanel({ contactId, onClose, onUpdate, onEnrich }: C
   return (
     <>
       <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40" onClick={onClose} />
-      <div className="fixed right-0 top-0 bottom-0 w-[600px] bg-white shadow-2xl z-50 overflow-y-auto border-l border-[#e1e4e8]">
+      <div className="fixed right-0 top-0 bottom-0 w-[600px] bg-white shadow-2xl z-50 overflow-y-auto border-l border-ui-border">
         {/* Header */}
-        <div className="sticky top-0 bg-white border-b border-[#e1e4e8] p-6 flex items-start justify-between z-10">
+        <div className="sticky top-0 bg-white border-b border-ui-border p-6 flex items-start justify-between z-10">
           <div>
-            <h2 className="text-lg font-semibold text-[#1a1a2e]">Contact Profile</h2>
-            {contact && <p className="text-sm text-[#6e6e7e]">{contact.full_name}</p>}
+            <h2 className="text-lg font-semibold text-brand-charcoal">Contact Profile</h2>
+            {contact && <p className="text-sm text-ui-tertiary">{contact.full_name}</p>}
           </div>
-          <button onClick={onClose} className="text-[#6e6e7e] hover:text-[#1a1a2e]">
+          <button onClick={onClose} className="text-ui-tertiary hover:text-brand-charcoal">
             <X size={20} />
           </button>
         </div>
 
         {loading ? (
-          <div className="p-6 text-center text-[#6e6e7e]">Loading...</div>
+          <div className="p-6 text-center text-ui-tertiary">Loading...</div>
         ) : contact ? (
           <div className="p-6 space-y-6">
             {/* Profile Header */}
             <div className="text-center">
               {contact.photo_url ? (
-                <Image src={contact.photo_url} alt={contact.full_name} width={80} height={80} className="w-20 h-20 rounded-full mx-auto mb-3 border-2 border-[#e1e4e8] object-cover" unoptimized />
+                <Image src={contact.photo_url} alt={contact.full_name} width={80} height={80} className="w-20 h-20 rounded-full mx-auto mb-3 border-2 border-ui-border object-cover" unoptimized />
               ) : (
-                <div className="w-20 h-20 rounded-full mx-auto mb-3 bg-gradient-to-br from-[#0f3460] to-[#1a1a2e] flex items-center justify-center">
+                <div className="w-20 h-20 rounded-full mx-auto mb-3 bg-gradient-to-br from-brand-terracotta/80 to-brand-forest flex items-center justify-center">
                   <span className="text-2xl font-bold text-white">{contact.full_name.charAt(0)}</span>
                 </div>
               )}
-              <h3 className="text-xl font-semibold text-[#1a1a2e]">{contact.full_name}</h3>
+              <h3 className="text-xl font-semibold font-display text-brand-charcoal">{contact.full_name}</h3>
               {contact.title && contact.company && (
-                <p className="text-sm text-[#4a4a5e] mt-1">{contact.title} @ {contact.company}</p>
+                <p className="text-sm text-ui-secondary mt-1">{contact.title} @ {contact.company}</p>
               )}
             </div>
 
@@ -134,14 +134,14 @@ export function ContactDetailPanel({ contactId, onClose, onUpdate, onEnrich }: C
             <div className="flex gap-2">
               <button
                 onClick={() => onEnrich?.(contact.id)}
-                className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-[#0f3460] hover:bg-[#c5a572] text-white text-sm font-semibold rounded-lg transition-colors"
+                className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-brand-terracotta hover:bg-brand-terracotta/90 text-white text-sm font-semibold rounded-lg transition-colors"
               >
                 <Sparkles size={14} />
                 Enrich
               </button>
               <button
                 onClick={() => setIsEditing(!isEditing)}
-                className="flex items-center gap-2 px-3 py-2 border border-[#e1e4e8] rounded-lg text-sm font-medium text-[#4a4a5e] hover:bg-[#f8f9fa]"
+                className="flex items-center gap-2 px-3 py-2 border border-ui-border rounded-lg text-sm font-medium text-ui-secondary hover:bg-brand-cream"
               >
                 <Edit3 size={14} />
                 Edit
@@ -150,24 +150,24 @@ export function ContactDetailPanel({ contactId, onClose, onUpdate, onEnrich }: C
 
             {/* Contact Info */}
             <div className="space-y-3">
-              <h4 className="text-xs font-semibold text-[#6e6e7e] uppercase tracking-wider">Contact Info</h4>
+              <h4 className="text-xs font-semibold text-ui-tertiary uppercase tracking-wider">Contact Info</h4>
               {contact.emails?.map((e, i) => (
-                <div key={i} className="flex items-center gap-2 text-sm text-[#4a4a5e]">
-                  <Mail size={14} className="text-[#6e6e7e]" />
+                <div key={i} className="flex items-center gap-2 text-sm text-ui-secondary">
+                  <Mail size={14} className="text-ui-tertiary" />
                   <span>{e.email}</span>
-                  {e.type && <span className="text-xs text-[#6e6e7e]">({e.type})</span>}
+                  {e.type && <span className="text-xs text-ui-tertiary">({e.type})</span>}
                 </div>
               ))}
               {contact.phones?.map((p, i) => (
-                <div key={i} className="flex items-center gap-2 text-sm text-[#4a4a5e]">
-                  <Phone size={14} className="text-[#6e6e7e]" />
+                <div key={i} className="flex items-center gap-2 text-sm text-ui-secondary">
+                  <Phone size={14} className="text-ui-tertiary" />
                   <span>{p.phone}</span>
                 </div>
               ))}
               {contact.linkedin_url && (
                 <div className="flex items-center gap-2 text-sm">
-                  <Linkedin size={14} className="text-[#6e6e7e]" />
-                  <a href={contact.linkedin_url} target="_blank" rel="noopener noreferrer" className="text-[#0f3460] hover:underline">
+                  <Linkedin size={14} className="text-ui-tertiary" />
+                  <a href={contact.linkedin_url} target="_blank" rel="noopener noreferrer" className="text-brand-terracotta hover:underline">
                     LinkedIn Profile
                   </a>
                 </div>
@@ -176,22 +176,22 @@ export function ContactDetailPanel({ contactId, onClose, onUpdate, onEnrich }: C
 
             {/* Professional */}
             <div className="space-y-3">
-              <h4 className="text-xs font-semibold text-[#6e6e7e] uppercase tracking-wider">Professional</h4>
+              <h4 className="text-xs font-semibold text-ui-tertiary uppercase tracking-wider">Professional</h4>
               {contact.company && (
-                <div className="flex items-center gap-2 text-sm text-[#4a4a5e]">
-                  <Building2 size={14} className="text-[#6e6e7e]" />
+                <div className="flex items-center gap-2 text-sm text-ui-secondary">
+                  <Building2 size={14} className="text-ui-tertiary" />
                   <span>{contact.company}</span>
                 </div>
               )}
               {contact.title && (
-                <div className="flex items-center gap-2 text-sm text-[#4a4a5e]">
-                  <Briefcase size={14} className="text-[#6e6e7e]" />
+                <div className="flex items-center gap-2 text-sm text-ui-secondary">
+                  <Briefcase size={14} className="text-ui-tertiary" />
                   <span>{contact.title}</span>
                 </div>
               )}
               {contact.industry && (
-                <div className="flex items-center gap-2 text-sm text-[#4a4a5e]">
-                  <Globe size={14} className="text-[#6e6e7e]" />
+                <div className="flex items-center gap-2 text-sm text-ui-secondary">
+                  <Globe size={14} className="text-ui-tertiary" />
                   <span>{contact.industry}</span>
                 </div>
               )}
@@ -200,33 +200,33 @@ export function ContactDetailPanel({ contactId, onClose, onUpdate, onEnrich }: C
             {/* Enrichment */}
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <h4 className="text-xs font-semibold text-[#6e6e7e] uppercase tracking-wider">Enrichment</h4>
+                <h4 className="text-xs font-semibold text-ui-tertiary uppercase tracking-wider">Enrichment</h4>
                 <EnrichmentStatusBadge status={contact.enrichment_status} />
               </div>
               {contact.ai_summary && (
-                <div className="bg-[#f8f9fa] rounded-lg p-3">
-                  <div className="flex items-center gap-1.5 text-xs font-semibold text-[#6e6e7e] mb-2">
+                <div className="bg-brand-cream rounded-lg p-3">
+                  <div className="flex items-center gap-1.5 text-xs font-semibold text-ui-tertiary mb-2">
                     <Sparkles size={12} />
                     AI Summary
                   </div>
-                  <p className="text-sm text-[#4a4a5e] leading-relaxed">{contact.ai_summary}</p>
+                  <p className="text-sm text-ui-secondary leading-relaxed">{contact.ai_summary}</p>
                 </div>
               )}
             </div>
 
             {/* Tags */}
             <div className="space-y-3">
-              <h4 className="text-xs font-semibold text-[#6e6e7e] uppercase tracking-wider">Tags</h4>
+              <h4 className="text-xs font-semibold text-ui-tertiary uppercase tracking-wider">Tags</h4>
               {isEditing ? (
                 <TagEditor tags={editTags} onChange={setEditTags} />
               ) : (
                 <div className="flex flex-wrap gap-1.5">
                   {contact.tags?.length > 0 ? contact.tags.map(tag => (
-                    <span key={tag} className="px-2 py-0.5 bg-[#f0f2f5] text-[#4a4a5e] text-xs rounded-full">
+                    <span key={tag} className="px-2 py-0.5 bg-brand-cream text-ui-secondary text-xs rounded-full">
                       {tag}
                     </span>
                   )) : (
-                    <span className="text-sm text-[#6e6e7e]">No tags</span>
+                    <span className="text-sm text-ui-tertiary">No tags</span>
                   )}
                 </div>
               )}
@@ -234,16 +234,16 @@ export function ContactDetailPanel({ contactId, onClose, onUpdate, onEnrich }: C
 
             {/* Notes */}
             <div className="space-y-3">
-              <h4 className="text-xs font-semibold text-[#6e6e7e] uppercase tracking-wider">Internal Notes</h4>
+              <h4 className="text-xs font-semibold text-ui-tertiary uppercase tracking-wider">Internal Notes</h4>
               {isEditing ? (
                 <textarea
                   value={editNotes}
                   onChange={(e) => setEditNotes(e.target.value)}
                   rows={3}
-                  className="w-full px-3 py-2 text-sm border border-[#e1e4e8] rounded-lg focus:outline-none focus:border-[#0f3460]"
+                  className="w-full px-3 py-2 text-sm border border-ui-border rounded-lg focus:outline-none focus:border-brand-terracotta"
                 />
               ) : (
-                <p className="text-sm text-[#4a4a5e]">
+                <p className="text-sm text-ui-secondary">
                   {contact.internal_notes || 'No notes'}
                 </p>
               )}
@@ -252,12 +252,12 @@ export function ContactDetailPanel({ contactId, onClose, onUpdate, onEnrich }: C
             {/* Event Scores */}
             {contact.scores && contact.scores.length > 0 && (
               <div className="space-y-3">
-                <h4 className="text-xs font-semibold text-[#6e6e7e] uppercase tracking-wider">Scores Across Events</h4>
+                <h4 className="text-xs font-semibold text-ui-tertiary uppercase tracking-wider">Scores Across Events</h4>
                 {contact.scores.map(score => (
-                  <div key={score.id} className="flex items-center justify-between p-3 bg-[#f8f9fa] rounded-lg">
+                  <div key={score.id} className="flex items-center justify-between p-3 bg-brand-cream rounded-lg">
                     <div>
-                      <div className="text-sm font-medium text-[#1a1a2e]">{score.event_title}</div>
-                      <div className="text-xs text-[#6e6e7e]">
+                      <div className="text-sm font-medium text-brand-charcoal">{score.event_title}</div>
+                      <div className="text-xs text-ui-tertiary">
                         {new Date(score.scored_at).toLocaleDateString()}
                       </div>
                     </div>
@@ -266,7 +266,7 @@ export function ContactDetailPanel({ contactId, onClose, onUpdate, onEnrich }: C
                         className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm ${
                           score.relevance_score >= 70 ? 'bg-emerald-100 text-emerald-700'
                             : score.relevance_score >= 40 ? 'bg-amber-100 text-amber-700'
-                            : 'bg-gray-100 text-[#6e6e7e]'
+                            : 'bg-gray-100 text-ui-tertiary'
                         }`}
                       >
                         {score.relevance_score}
@@ -279,17 +279,17 @@ export function ContactDetailPanel({ contactId, onClose, onUpdate, onEnrich }: C
 
             {/* Edit Actions */}
             {isEditing && (
-              <div className="flex gap-2 pt-4 border-t border-[#e1e4e8]">
+              <div className="flex gap-2 pt-4 border-t border-ui-border">
                 <button
                   onClick={() => setIsEditing(false)}
-                  className="flex-1 px-4 py-2.5 border border-[#e1e4e8] rounded-lg text-sm font-medium text-[#4a4a5e]"
+                  className="flex-1 px-4 py-2.5 border border-ui-border rounded-lg text-sm font-medium text-ui-secondary"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleSave}
                   disabled={saving}
-                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-[#0f3460] hover:bg-[#c5a572] text-white text-sm font-semibold rounded-lg transition-colors"
+                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-brand-terracotta hover:bg-brand-terracotta/90 text-white text-sm font-semibold rounded-lg transition-colors"
                 >
                   <Save size={14} />
                   {saving ? 'Saving...' : 'Save'}
@@ -298,14 +298,14 @@ export function ContactDetailPanel({ contactId, onClose, onUpdate, onEnrich }: C
             )}
 
             {/* Metadata */}
-            <div className="pt-4 border-t border-[#e1e4e8] text-xs text-[#6e6e7e] space-y-1">
+            <div className="pt-4 border-t border-ui-border text-xs text-ui-tertiary space-y-1">
               <div>Source: {contact.source}</div>
               <div>Created: {new Date(contact.created_at).toLocaleString()}</div>
               <div>Updated: {new Date(contact.updated_at).toLocaleString()}</div>
             </div>
           </div>
         ) : (
-          <div className="p-6 text-center text-[#6e6e7e]">Contact not found</div>
+          <div className="p-6 text-center text-ui-tertiary">Contact not found</div>
         )}
       </div>
     </>

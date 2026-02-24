@@ -4,7 +4,8 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { CreateEventModal } from '@/app/components/CreateEventModal'
-import { Calendar, MapPin, Users, Lock, Plus, Search, X, Mail, CheckCircle2, Clock, UserCheck, Settings, LogOut } from 'lucide-react'
+import { DashboardHeader } from '@/app/components/DashboardHeader'
+import { Calendar, MapPin, Users, Lock, Plus, Search, X, Mail, CheckCircle2, Clock, UserCheck } from 'lucide-react'
 
 type ApproveMode = 'MANUAL' | 'AUTO'
 type EventStatus = 'DRAFT' | 'PUBLISHED' | 'COMPLETE' | 'CANCELLED'
@@ -77,7 +78,7 @@ function formatDateTime(iso: string): string {
 function getStatusColor(status: EventStatus): string {
   switch (status) {
     case 'DRAFT':
-      return 'bg-gray-100 text-[#6e6e7e] border border-gray-200'
+      return 'bg-gray-100 text-ui-tertiary border border-gray-200'
     case 'PUBLISHED':
       return 'bg-emerald-50 text-emerald-700 border border-emerald-200'
     case 'COMPLETE':
@@ -85,7 +86,7 @@ function getStatusColor(status: EventStatus): string {
     case 'CANCELLED':
       return 'bg-red-50 text-red-700 border border-red-200'
     default:
-      return 'bg-gray-100 text-[#6e6e7e] border border-gray-200'
+      return 'bg-gray-100 text-ui-tertiary border border-gray-200'
   }
 }
 
@@ -183,9 +184,9 @@ export default function DashboardPage() {
 
   if (loading) {
     return (
-      <main className="min-h-screen bg-[#f8f9fa] p-8">
+      <main className="min-h-screen bg-brand-cream p-8">
         <div className="max-w-7xl mx-auto">
-          <div className="text-[#6e6e7e] text-sm font-medium">Loading events...</div>
+          <div className="text-ui-tertiary text-sm font-medium">Loading events...</div>
         </div>
       </main>
     )
@@ -193,14 +194,14 @@ export default function DashboardPage() {
 
   if (error) {
     return (
-      <main className="min-h-screen bg-[#f8f9fa] p-8">
+      <main className="min-h-screen bg-brand-cream p-8">
         <div className="max-w-7xl mx-auto">
           <div className="bg-white border border-red-200 rounded-lg p-6">
             <h1 className="text-xl font-semibold text-red-700 mb-2">Error</h1>
-            <p className="text-[#4a4a5e] mb-4">{error}</p>
+            <p className="text-ui-secondary mb-4">{error}</p>
             <Link
               href="/"
-              className="text-[#0f3460] hover:text-[#c5a572] font-medium transition-colors"
+              className="text-brand-terracotta hover:text-brand-terracotta/70 font-medium transition-colors"
             >
               Return home
             </Link>
@@ -211,46 +212,16 @@ export default function DashboardPage() {
   }
 
   return (
-    <main className="min-h-screen bg-[#f8f9fa]">
-      {/* Fixed Moots Header */}
-      <header className="fixed top-0 left-0 right-0 bg-white/98 backdrop-blur-sm border-b border-[#e1e4e8] z-50">
-        <div className="max-w-7xl mx-auto px-8 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-8">
-            {/* Moots Logo */}
-            <div className="text-2xl font-bold text-[#1a1a2e]">Moots</div>
-
-            {/* Navigation */}
-            <nav className="flex items-center gap-6">
-              <span className="text-sm font-semibold text-[#0f3460]">Events</span>
-              <Link href="/dashboard/people" className="text-sm font-medium text-[#6e6e7e] hover:text-[#1a1a2e]">People</Link>
-            </nav>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <Link
-              href="/dashboard/settings"
-              className="p-2 text-[#6e6e7e] hover:text-[#0f3460] transition-colors rounded-lg hover:bg-[#f0f2f5]"
-              title="Settings"
-            >
-              <Settings size={18} />
-            </Link>
-            <button
-              onClick={() => setShowCreateModal(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-[#0f3460] hover:bg-[#c5a572] text-white text-sm font-semibold rounded-lg transition-colors shadow-sm"
-            >
-              <Plus size={16} />
-              New Event
-            </button>
-          </div>
-        </div>
-      </header>
+    <main className="min-h-screen bg-brand-cream">
+      {/* DashboardHeader */}
+      <DashboardHeader activeNav="events" rightSlot={<button onClick={() => setShowCreateModal(true)} className="flex items-center gap-2 px-5 py-2.5 bg-brand-terracotta hover:bg-brand-terracotta/90 text-white text-sm font-semibold rounded-pill transition-colors shadow-cta"><Plus size={16} />New Event</button>} />
 
       {/* Main Content with top padding to account for fixed header */}
       <div className="pt-[73px]">
         <div className="max-w-7xl mx-auto p-8 space-y-6">
 
         {/* Tabs */}
-        <div className="flex items-center gap-1 border-b border-[#e1e4e8] bg-white rounded-t-lg px-6">
+        <div className="flex items-center gap-1 border-b border-ui-border bg-white rounded-t-lg px-6">
           {[
             { key: 'upcoming' as TabFilter, label: 'Upcoming' },
             { key: 'past' as TabFilter, label: 'Past' },
@@ -262,8 +233,8 @@ export default function DashboardPage() {
               className={`
                 px-4 py-3 text-sm font-semibold border-b-2 transition-colors
                 ${activeTab === tab.key
-                  ? 'border-[#0f3460] text-[#0f3460]'
-                  : 'border-transparent text-[#6e6e7e] hover:text-[#1a1a2e]'
+                  ? 'border-brand-terracotta text-brand-terracotta'
+                  : 'border-transparent text-ui-tertiary hover:text-brand-charcoal'
                 }
               `}
             >
@@ -275,18 +246,18 @@ export default function DashboardPage() {
         {/* Filters */}
         <div className="flex gap-3">
           <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[#6e6e7e]" size={16} />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-ui-tertiary" size={16} />
             <input
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search by title, location, or URL..."
-              className="w-full pl-10 pr-3 py-2 bg-white border border-[#e1e4e8] rounded-lg text-sm text-[#1a1a2e] placeholder-[#6e6e7e] focus:outline-none focus:border-[#0f3460] focus:ring-1 focus:ring-[#0f3460] transition-colors"
+              className="w-full pl-10 pr-3 py-2 bg-white border border-ui-border rounded-lg text-sm text-brand-charcoal placeholder-ui-tertiary focus:outline-none focus:border-brand-terracotta focus:ring-1 focus:ring-brand-terracotta transition-colors"
             />
           </div>
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value as EventStatus | 'ALL')}
-            className="px-3 py-2 bg-white border border-[#e1e4e8] rounded-lg text-sm text-[#1a1a2e] focus:outline-none focus:border-[#0f3460] focus:ring-1 focus:ring-[#0f3460] transition-colors"
+            className="px-3 py-2 bg-white border border-ui-border rounded-lg text-sm text-brand-charcoal focus:outline-none focus:border-brand-terracotta focus:ring-1 focus:ring-brand-terracotta transition-colors"
           >
             <option value="ALL">All Statuses</option>
             <option value="DRAFT">Draft</option>
@@ -300,7 +271,7 @@ export default function DashboardPage() {
                 setSearchQuery('')
                 setStatusFilter('ALL')
               }}
-              className="flex items-center gap-1 px-3 py-2 text-sm font-medium text-[#0f3460] hover:text-[#c5a572] transition-colors"
+              className="flex items-center gap-1 px-3 py-2 text-sm font-medium text-brand-terracotta hover:text-brand-terracotta/70 transition-colors"
             >
               <X size={14} />
               Clear
@@ -310,14 +281,14 @@ export default function DashboardPage() {
 
         {/* Events Grid - 2 columns max */}
         {filteredEvents.length === 0 ? (
-          <div className="bg-white border border-[#e1e4e8] rounded-lg p-12 text-center">
-            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-[#f0f2f5] flex items-center justify-center">
-              <Calendar className="text-[#6e6e7e]" size={32} />
+          <div className="bg-white border border-ui-border rounded-lg p-12 text-center">
+            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-brand-cream flex items-center justify-center">
+              <Calendar className="text-ui-tertiary" size={32} />
             </div>
-            <h3 className="text-lg font-semibold text-[#1a1a2e] mb-2">
+            <h3 className="text-lg font-semibold text-brand-charcoal mb-2">
               {searchQuery || statusFilter !== 'ALL' ? 'No events found' : 'No events yet'}
             </h3>
-            <p className="text-sm text-[#6e6e7e] mb-6">
+            <p className="text-sm text-ui-tertiary mb-6">
               {searchQuery || statusFilter !== 'ALL'
                 ? 'Try adjusting your filters'
                 : 'Get started by creating your first event'}
@@ -325,7 +296,7 @@ export default function DashboardPage() {
             {!searchQuery && statusFilter === 'ALL' && (
               <button
                 onClick={() => setShowCreateModal(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-[#0f3460] hover:bg-[#c5a572] text-white text-sm font-semibold rounded-lg transition-colors shadow-sm mx-auto"
+                className="flex items-center gap-2 px-5 py-2.5 bg-brand-terracotta hover:bg-brand-terracotta/90 text-white text-sm font-semibold rounded-pill transition-colors shadow-cta mx-auto"
               >
                 <Plus size={16} />
                 Create Event
@@ -350,13 +321,13 @@ export default function DashboardPage() {
                 <Link
                   key={event.id}
                   href={`/dashboard/${event.id}`}
-                  className="bg-white border border-[#e1e4e8] rounded-lg overflow-hidden hover:border-[#c5a572] hover:shadow-sm transition-all"
+                  className="bg-white border border-ui-border rounded-card shadow-card overflow-hidden hover:border-brand-terracotta hover:shadow-sm transition-all"
                 >
                   <div className="p-6">
                     <div className="flex gap-6">
                       {/* Square Event Image */}
                       {event.image_url ? (
-                        <div className="w-40 h-40 shrink-0 bg-[#f0f2f5] rounded-lg overflow-hidden">
+                        <div className="w-40 h-40 shrink-0 bg-brand-cream rounded-lg overflow-hidden">
                           <Image
                             src={event.image_url}
                             alt={event.title ?? event.name ?? 'Event'}
@@ -367,7 +338,7 @@ export default function DashboardPage() {
                           />
                         </div>
                       ) : (
-                        <div className="w-40 h-40 shrink-0 bg-gradient-to-br from-[#0f3460] to-[#1a1a2e] rounded-lg flex items-center justify-center">
+                        <div className="w-40 h-40 shrink-0 bg-gradient-to-br from-brand-terracotta/80 to-brand-forest rounded-lg flex items-center justify-center">
                           <Calendar className="text-white/30" size={48} />
                         </div>
                       )}
@@ -392,33 +363,33 @@ export default function DashboardPage() {
                         </div>
 
                         {/* Event Title */}
-                        <h3 className="text-lg font-semibold text-[#1a1a2e] leading-tight">
+                        <h3 className="text-lg font-semibold text-brand-charcoal leading-tight">
                           {event.title ?? event.name}
                         </h3>
 
                         {/* Event Details */}
                         <div className="space-y-2">
-                          <div className="flex items-start gap-2 text-sm text-[#4a4a5e]">
+                          <div className="flex items-start gap-2 text-sm text-ui-secondary">
                             <Calendar className="shrink-0 mt-0.5" size={14} />
                             <span>{formatDateTime(event.start_date ?? event.starts_at ?? '')}</span>
                           </div>
-                          <div className="flex items-start gap-2 text-sm text-[#4a4a5e]">
+                          <div className="flex items-start gap-2 text-sm text-ui-secondary">
                             <MapPin className="shrink-0 mt-0.5" size={14} />
                             <span>{locationDisplay}</span>
                           </div>
                         </div>
 
                         {/* Operational Metrics */}
-                        <div className="grid grid-cols-2 gap-3 pt-4 border-t border-[#e1e4e8]">
+                        <div className="grid grid-cols-2 gap-3 pt-4 border-t border-ui-border">
                           <div className="flex items-start gap-2">
                             <div className="w-8 h-8 rounded bg-blue-50 flex items-center justify-center shrink-0">
-                              <Mail className="text-[#0f3460]" size={14} />
+                              <Mail className="text-brand-terracotta" size={14} />
                             </div>
                             <div>
-                              <div className="text-xs font-semibold text-[#6e6e7e] uppercase mb-0.5">
+                              <div className="text-xs font-semibold text-ui-tertiary uppercase mb-0.5">
                                 Invited
                               </div>
-                              <div className="text-lg font-bold text-[#0f3460]">—</div>
+                              <div className="text-lg font-bold text-brand-terracotta">—</div>
                             </div>
                           </div>
                           <div className="flex items-start gap-2">
@@ -426,7 +397,7 @@ export default function DashboardPage() {
                               <CheckCircle2 className="text-emerald-700" size={14} />
                             </div>
                             <div>
-                              <div className="text-xs font-semibold text-[#6e6e7e] uppercase mb-0.5">
+                              <div className="text-xs font-semibold text-ui-tertiary uppercase mb-0.5">
                                 Confirmed
                               </div>
                               <div className="text-lg font-bold text-emerald-700">—</div>
@@ -437,28 +408,28 @@ export default function DashboardPage() {
                               <Clock className="text-amber-700" size={14} />
                             </div>
                             <div>
-                              <div className="text-xs font-semibold text-[#6e6e7e] uppercase mb-0.5">
+                              <div className="text-xs font-semibold text-ui-tertiary uppercase mb-0.5">
                                 Pending
                               </div>
                               <div className="text-lg font-bold text-amber-700">—</div>
                             </div>
                           </div>
                           <div className="flex items-start gap-2">
-                            <div className="w-8 h-8 rounded bg-[#f0f2f5] flex items-center justify-center shrink-0">
-                              <Users className="text-[#4a4a5e]" size={14} />
+                            <div className="w-8 h-8 rounded bg-brand-cream flex items-center justify-center shrink-0">
+                              <Users className="text-ui-secondary" size={14} />
                             </div>
                             <div>
-                              <div className="text-xs font-semibold text-[#6e6e7e] uppercase mb-0.5">
+                              <div className="text-xs font-semibold text-ui-tertiary uppercase mb-0.5">
                                 Capacity
                               </div>
-                              <div className="text-lg font-bold text-[#4a4a5e]">—</div>
+                              <div className="text-lg font-bold text-ui-secondary">—</div>
                             </div>
                           </div>
                         </div>
 
                         {/* View Details Link */}
-                        <div className="pt-4 border-t border-[#e1e4e8]">
-                          <div className="text-sm font-semibold text-[#0f3460]">
+                        <div className="pt-4 border-t border-ui-border">
+                          <div className="text-sm font-semibold text-brand-terracotta">
                             Manage Event →
                           </div>
                         </div>

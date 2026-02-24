@@ -38,16 +38,16 @@ export function EventTabNavigation({ eventId }: EventTabNavigationProps) {
             href={tab.href}
             className={`
               relative py-4 text-sm font-semibold whitespace-nowrap transition-all duration-200
-              focus:outline-none focus-visible:ring-2 focus-visible:ring-[#0f3460] focus-visible:ring-offset-2 rounded-sm
+              focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-terracotta focus-visible:ring-offset-2 rounded-sm
               ${activeTab === tab.key
-                ? 'text-[#1a1a2e]'
-                : 'text-[#6e6e7e] hover:text-[#1a1a2e]'
+                ? 'text-brand-charcoal'
+                : 'text-ui-tertiary hover:text-brand-charcoal'
               }
             `}
           >
             {tab.label}
             {activeTab === tab.key && (
-              <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-[#0f3460] rounded-t-full" />
+              <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-brand-terracotta" />
             )}
           </Link>
         ))}

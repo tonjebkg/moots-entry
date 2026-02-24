@@ -33,7 +33,7 @@ export function BriefingViewer({ briefingId, eventId, onClose }: BriefingViewerP
       <div className="fixed inset-0 z-50 flex justify-end">
         <div className="absolute inset-0 bg-black/30" onClick={onClose} />
         <div className="relative w-full max-w-[700px] bg-white flex items-center justify-center">
-          <p className="text-sm text-[#6e6e7e]">Loading briefing...</p>
+          <p className="text-sm text-ui-tertiary">Loading briefing...</p>
         </div>
       </div>
     )
@@ -44,7 +44,7 @@ export function BriefingViewer({ briefingId, eventId, onClose }: BriefingViewerP
       <div className="fixed inset-0 z-50 flex justify-end">
         <div className="absolute inset-0 bg-black/30" onClick={onClose} />
         <div className="relative w-full max-w-[700px] bg-white flex items-center justify-center">
-          <p className="text-sm text-[#6e6e7e]">Briefing not available</p>
+          <p className="text-sm text-ui-tertiary">Briefing not available</p>
         </div>
       </div>
     )
@@ -64,38 +64,38 @@ export function BriefingViewer({ briefingId, eventId, onClose }: BriefingViewerP
       <div className="absolute inset-0 bg-black/30" onClick={onClose} />
       <div className="relative w-full max-w-[700px] bg-white shadow-2xl overflow-y-auto">
         {/* Header */}
-        <div className="sticky top-0 bg-white border-b border-[#e1e4e8] px-6 py-4 flex items-center justify-between z-10">
+        <div className="sticky top-0 bg-white border-b border-ui-border px-6 py-4 flex items-center justify-between z-10">
           <div>
-            <h3 className="text-lg font-semibold text-[#1a1a2e]">{briefing.title}</h3>
-            <p className="text-xs text-[#6e6e7e] mt-0.5">
+            <h3 className="text-lg font-semibold text-brand-charcoal">{briefing.title}</h3>
+            <p className="text-xs text-ui-tertiary mt-0.5">
               For {briefing.generated_for_name} · {briefing.guest_count} guests · {new Date(briefing.created_at).toLocaleDateString()}
             </p>
           </div>
-          <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded-lg">
-            <X className="w-5 h-5 text-[#6e6e7e]" />
+          <button onClick={onClose} className="p-1 hover:bg-brand-cream rounded-lg">
+            <X className="w-5 h-5 text-ui-tertiary" />
           </button>
         </div>
 
         <div className="p-6 space-y-6">
           {/* Event Summary */}
           {content.event_summary && (
-            <div className="bg-[#FAF9F7] border border-[#e1e4e8] rounded-lg p-4">
+            <div className="bg-brand-cream border border-ui-border rounded-lg p-4">
               <div className="flex items-center gap-2 mb-2">
-                <Sparkles className="w-4 h-4 text-[#B8755E]" />
-                <h4 className="text-sm font-semibold text-[#1a1a2e]">Event Summary</h4>
+                <Sparkles className="w-4 h-4 text-brand-terracotta" />
+                <h4 className="text-sm font-semibold text-brand-charcoal">Event Summary</h4>
               </div>
-              <p className="text-sm text-[#4a4a5e] leading-relaxed">{content.event_summary}</p>
+              <p className="text-sm text-ui-secondary leading-relaxed">{content.event_summary}</p>
             </div>
           )}
 
           {/* Agenda Highlights */}
           {content.agenda_highlights.length > 0 && (
             <div>
-              <h4 className="text-sm font-semibold text-[#1a1a2e] mb-2">Agenda Highlights</h4>
+              <h4 className="text-sm font-semibold text-brand-charcoal mb-2">Agenda Highlights</h4>
               <ul className="space-y-1.5">
                 {content.agenda_highlights.map((h, i) => (
-                  <li key={i} className="flex items-start gap-2 text-sm text-[#4a4a5e]">
-                    <span className="w-1.5 h-1.5 rounded-full bg-[#2F4F3F] mt-1.5 shrink-0" />
+                  <li key={i} className="flex items-start gap-2 text-sm text-ui-secondary">
+                    <span className="w-1.5 h-1.5 rounded-full bg-brand-forest mt-1.5 shrink-0" />
                     {h}
                   </li>
                 ))}
@@ -105,26 +105,26 @@ export function BriefingViewer({ briefingId, eventId, onClose }: BriefingViewerP
 
           {/* Strategic Notes */}
           {content.strategic_notes && (
-            <div className="bg-white border border-[#e1e4e8] rounded-lg p-4">
+            <div className="bg-white border border-ui-border rounded-lg p-4">
               <div className="flex items-center gap-2 mb-2">
-                <Target className="w-4 h-4 text-[#2F4F3F]" />
-                <h4 className="text-sm font-semibold text-[#1a1a2e]">Strategic Notes</h4>
+                <Target className="w-4 h-4 text-brand-forest" />
+                <h4 className="text-sm font-semibold text-brand-charcoal">Strategic Notes</h4>
               </div>
-              <p className="text-sm text-[#4a4a5e] leading-relaxed">{content.strategic_notes}</p>
+              <p className="text-sm text-ui-secondary leading-relaxed">{content.strategic_notes}</p>
             </div>
           )}
 
           {/* Key Guests */}
           <div>
-            <h4 className="text-sm font-semibold text-[#1a1a2e] mb-3">Key Guests</h4>
+            <h4 className="text-sm font-semibold text-brand-charcoal mb-3">Key Guests</h4>
             <div className="space-y-4">
               {content.key_guests.map((guest: BriefingGuest, i) => (
-                <div key={i} className="bg-white border border-[#e1e4e8] rounded-lg p-4">
+                <div key={i} className="bg-white border border-ui-border rounded-lg p-4">
                   <div className="flex items-start justify-between mb-3">
                     <div>
-                      <h5 className="font-semibold text-[#1a1a2e]">{guest.full_name}</h5>
+                      <h5 className="font-semibold text-brand-charcoal">{guest.full_name}</h5>
                       {(guest.title || guest.company) && (
-                        <p className="text-xs text-[#6e6e7e]">
+                        <p className="text-xs text-ui-tertiary">
                           {guest.title}{guest.title && guest.company ? ' at ' : ''}{guest.company}
                         </p>
                       )}
@@ -135,18 +135,18 @@ export function BriefingViewer({ briefingId, eventId, onClose }: BriefingViewerP
                   </div>
 
                   {guest.score_rationale && (
-                    <p className="text-xs text-[#4a4a5e] mb-3">{guest.score_rationale}</p>
+                    <p className="text-xs text-ui-secondary mb-3">{guest.score_rationale}</p>
                   )}
 
                   {guest.talking_points.length > 0 && (
                     <div className="mb-3">
                       <div className="flex items-center gap-1 mb-1">
-                        <MessageSquare className="w-3 h-3 text-[#B8755E]" />
-                        <span className="text-xs font-medium text-[#6e6e7e]">Talking Points</span>
+                        <MessageSquare className="w-3 h-3 text-brand-terracotta" />
+                        <span className="text-xs font-medium text-ui-tertiary">Talking Points</span>
                       </div>
                       <ul className="space-y-1">
                         {guest.talking_points.map((p, j) => (
-                          <li key={j} className="text-xs text-[#4a4a5e] pl-4">• {p}</li>
+                          <li key={j} className="text-xs text-ui-secondary pl-4">• {p}</li>
                         ))}
                       </ul>
                     </div>
@@ -155,12 +155,12 @@ export function BriefingViewer({ briefingId, eventId, onClose }: BriefingViewerP
                   {guest.conversation_starters.length > 0 && (
                     <div>
                       <div className="flex items-center gap-1 mb-1">
-                        <Lightbulb className="w-3 h-3 text-[#2F4F3F]" />
-                        <span className="text-xs font-medium text-[#6e6e7e]">Conversation Starters</span>
+                        <Lightbulb className="w-3 h-3 text-brand-forest" />
+                        <span className="text-xs font-medium text-ui-tertiary">Conversation Starters</span>
                       </div>
                       <ul className="space-y-1">
                         {guest.conversation_starters.map((s, j) => (
-                          <li key={j} className="text-xs text-[#4a4a5e] pl-4 italic">&ldquo;{s}&rdquo;</li>
+                          <li key={j} className="text-xs text-ui-secondary pl-4 italic">&ldquo;{s}&rdquo;</li>
                         ))}
                       </ul>
                     </div>

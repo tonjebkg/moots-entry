@@ -106,7 +106,7 @@ export default function PublicRsvpPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="text-[#6e6e7e] text-sm">Loading...</div>
+        <div className="text-ui-tertiary text-sm">Loading...</div>
       </div>
     )
   }
@@ -115,8 +115,8 @@ export default function PublicRsvpPage() {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
-          <h1 className="text-2xl font-bold text-[#1a1a2e] mb-2">Page Not Found</h1>
-          <p className="text-[#6e6e7e]">{error}</p>
+          <h1 className="text-2xl font-bold text-brand-charcoal mb-2">Page Not Found</h1>
+          <p className="text-ui-tertiary">{error}</p>
         </div>
       </div>
     )
@@ -127,14 +127,14 @@ export default function PublicRsvpPage() {
   if (submitted) {
     return (
       <div className="flex items-center justify-center min-h-screen px-4">
-        <div className="max-w-md w-full bg-white rounded-2xl shadow-lg border border-[#e1e4e8] p-10 text-center">
+        <div className="max-w-md w-full bg-white rounded-2xl shadow-lg border border-ui-border p-10 text-center">
           <div className="w-16 h-16 rounded-full mx-auto mb-6 flex items-center justify-center" style={{ backgroundColor: pageData.accent_color + '20' }}>
             <Check className="w-8 h-8" style={{ color: pageData.accent_color }} />
           </div>
-          <h1 className="text-2xl font-bold text-[#1a1a2e] mb-2" style={{ fontFamily: 'Playfair Display, serif' }}>
+          <h1 className="text-2xl font-bold text-brand-charcoal mb-2" style={{ fontFamily: 'Playfair Display, serif' }}>
             You&apos;re In!
           </h1>
-          <p className="text-[#4a4a5e]">
+          <p className="text-ui-secondary">
             Your RSVP for <strong>{pageData.event_title}</strong> has been received. Check your email for confirmation.
           </p>
         </div>
@@ -156,28 +156,28 @@ export default function PublicRsvpPage() {
           />
         )}
 
-        <div className="bg-white rounded-2xl shadow-lg border border-[#e1e4e8] p-8">
+        <div className="bg-white rounded-2xl shadow-lg border border-ui-border p-8">
           <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold text-[#1a1a2e] mb-2" style={{ fontFamily: 'Playfair Display, serif' }}>
+            <h1 className="text-3xl font-bold text-brand-charcoal mb-2" style={{ fontFamily: 'Playfair Display, serif' }}>
               {pageData.headline}
             </h1>
-            <p className="text-lg text-[#4a4a5e] font-medium">{pageData.event_title}</p>
+            <p className="text-lg text-ui-secondary font-medium">{pageData.event_title}</p>
             {pageData.description && (
-              <p className="text-sm text-[#6e6e7e] mt-2">{pageData.description}</p>
+              <p className="text-sm text-ui-tertiary mt-2">{pageData.description}</p>
             )}
           </div>
 
           {/* Event Details */}
           <div className="space-y-2 mb-8">
             {pageData.show_date && pageData.start_time && (
-              <div className="flex items-center gap-3 text-sm text-[#4a4a5e]">
-                <Calendar className="w-4 h-4 text-[#6e6e7e]" />
+              <div className="flex items-center gap-3 text-sm text-ui-secondary">
+                <Calendar className="w-4 h-4 text-ui-tertiary" />
                 <span>{new Date(pageData.start_time).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</span>
               </div>
             )}
             {pageData.show_location && pageData.location && (
-              <div className="flex items-center gap-3 text-sm text-[#4a4a5e]">
-                <MapPin className="w-4 h-4 text-[#6e6e7e]" />
+              <div className="flex items-center gap-3 text-sm text-ui-secondary">
+                <MapPin className="w-4 h-4 text-ui-tertiary" />
                 <span>{typeof pageData.location === 'object' ? pageData.location.venue_name || pageData.location.address : pageData.location}</span>
               </div>
             )}
@@ -185,8 +185,8 @@ export default function PublicRsvpPage() {
 
           {pageData.is_full ? (
             <div className="text-center py-8">
-              <p className="text-lg font-medium text-[#1a1a2e]">This event is at capacity</p>
-              <p className="text-sm text-[#6e6e7e] mt-1">RSVPs are no longer being accepted.</p>
+              <p className="text-lg font-medium text-brand-charcoal">This event is at capacity</p>
+              <p className="text-sm text-ui-tertiary mt-1">RSVPs are no longer being accepted.</p>
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-4">
@@ -198,13 +198,13 @@ export default function PublicRsvpPage() {
 
               {pageData.has_access_code && (
                 <div>
-                  <label className="block text-sm font-medium text-[#1a1a2e] mb-1">Access Code *</label>
+                  <label className="block text-sm font-medium text-brand-charcoal mb-1">Access Code *</label>
                   <input
                     type="text"
                     required
                     value={form.access_code}
                     onChange={(e) => setForm({ ...form, access_code: e.target.value })}
-                    className="w-full px-4 py-3 border border-[#e1e4e8] rounded-xl text-sm focus:outline-none focus:ring-2"
+                    className="w-full px-4 py-3 border border-ui-border rounded-xl text-sm focus:outline-none focus:ring-2"
                     style={{ '--tw-ring-color': pageData.accent_color } as any}
                     placeholder="Enter access code"
                   />
@@ -212,47 +212,47 @@ export default function PublicRsvpPage() {
               )}
 
               <div>
-                <label className="block text-sm font-medium text-[#1a1a2e] mb-1">Full Name *</label>
+                <label className="block text-sm font-medium text-brand-charcoal mb-1">Full Name *</label>
                 <input
                   type="text"
                   required
                   value={form.full_name}
                   onChange={(e) => setForm({ ...form, full_name: e.target.value })}
-                  className="w-full px-4 py-3 border border-[#e1e4e8] rounded-xl text-sm focus:outline-none focus:ring-2"
+                  className="w-full px-4 py-3 border border-ui-border rounded-xl text-sm focus:outline-none focus:ring-2"
                   style={{ '--tw-ring-color': pageData.accent_color } as any}
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-[#1a1a2e] mb-1">Email *</label>
+                <label className="block text-sm font-medium text-brand-charcoal mb-1">Email *</label>
                 <input
                   type="email"
                   required
                   value={form.email}
                   onChange={(e) => setForm({ ...form, email: e.target.value })}
-                  className="w-full px-4 py-3 border border-[#e1e4e8] rounded-xl text-sm focus:outline-none focus:ring-2"
+                  className="w-full px-4 py-3 border border-ui-border rounded-xl text-sm focus:outline-none focus:ring-2"
                   style={{ '--tw-ring-color': pageData.accent_color } as any}
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-[#1a1a2e] mb-1">Company</label>
+                  <label className="block text-sm font-medium text-brand-charcoal mb-1">Company</label>
                   <input
                     type="text"
                     value={form.company}
                     onChange={(e) => setForm({ ...form, company: e.target.value })}
-                    className="w-full px-4 py-3 border border-[#e1e4e8] rounded-xl text-sm focus:outline-none focus:ring-2"
+                    className="w-full px-4 py-3 border border-ui-border rounded-xl text-sm focus:outline-none focus:ring-2"
                     style={{ '--tw-ring-color': pageData.accent_color } as any}
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-[#1a1a2e] mb-1">Title</label>
+                  <label className="block text-sm font-medium text-brand-charcoal mb-1">Title</label>
                   <input
                     type="text"
                     value={form.title}
                     onChange={(e) => setForm({ ...form, title: e.target.value })}
-                    className="w-full px-4 py-3 border border-[#e1e4e8] rounded-xl text-sm focus:outline-none focus:ring-2"
+                    className="w-full px-4 py-3 border border-ui-border rounded-xl text-sm focus:outline-none focus:ring-2"
                     style={{ '--tw-ring-color': pageData.accent_color } as any}
                   />
                 </div>
@@ -261,7 +261,7 @@ export default function PublicRsvpPage() {
               {/* Custom Fields */}
               {pageData.custom_fields.map((field) => (
                 <div key={field.id}>
-                  <label className="block text-sm font-medium text-[#1a1a2e] mb-1">
+                  <label className="block text-sm font-medium text-brand-charcoal mb-1">
                     {field.label} {field.required && '*'}
                   </label>
                   {field.type === 'text' && (
@@ -270,7 +270,7 @@ export default function PublicRsvpPage() {
                       required={field.required}
                       value={(form.custom_responses[field.id] as string) || ''}
                       onChange={(e) => setForm({ ...form, custom_responses: { ...form.custom_responses, [field.id]: e.target.value } })}
-                      className="w-full px-4 py-3 border border-[#e1e4e8] rounded-xl text-sm focus:outline-none focus:ring-2"
+                      className="w-full px-4 py-3 border border-ui-border rounded-xl text-sm focus:outline-none focus:ring-2"
                       style={{ '--tw-ring-color': pageData.accent_color } as any}
                       placeholder={field.placeholder}
                     />
@@ -281,7 +281,7 @@ export default function PublicRsvpPage() {
                       value={(form.custom_responses[field.id] as string) || ''}
                       onChange={(e) => setForm({ ...form, custom_responses: { ...form.custom_responses, [field.id]: e.target.value } })}
                       rows={3}
-                      className="w-full px-4 py-3 border border-[#e1e4e8] rounded-xl text-sm focus:outline-none focus:ring-2 resize-none"
+                      className="w-full px-4 py-3 border border-ui-border rounded-xl text-sm focus:outline-none focus:ring-2 resize-none"
                       style={{ '--tw-ring-color': pageData.accent_color } as any}
                       placeholder={field.placeholder}
                     />
@@ -291,7 +291,7 @@ export default function PublicRsvpPage() {
                       required={field.required}
                       value={(form.custom_responses[field.id] as string) || ''}
                       onChange={(e) => setForm({ ...form, custom_responses: { ...form.custom_responses, [field.id]: e.target.value } })}
-                      className="w-full px-4 py-3 border border-[#e1e4e8] rounded-xl text-sm focus:outline-none focus:ring-2"
+                      className="w-full px-4 py-3 border border-ui-border rounded-xl text-sm focus:outline-none focus:ring-2"
                       style={{ '--tw-ring-color': pageData.accent_color } as any}
                     >
                       <option value="">Select...</option>
@@ -308,7 +308,7 @@ export default function PublicRsvpPage() {
                         onChange={(e) => setForm({ ...form, custom_responses: { ...form.custom_responses, [field.id]: e.target.checked } })}
                         className="rounded"
                       />
-                      <span className="text-sm text-[#4a4a5e]">{field.placeholder || field.label}</span>
+                      <span className="text-sm text-ui-secondary">{field.placeholder || field.label}</span>
                     </label>
                   )}
                 </div>
@@ -326,7 +326,7 @@ export default function PublicRsvpPage() {
           )}
 
           <div className="mt-8 text-center">
-            <p className="text-xs text-[#6e6e7e]">Powered by <strong>Moots</strong></p>
+            <p className="text-xs text-ui-tertiary">Powered by <strong>Moots</strong></p>
           </div>
         </div>
       </div>

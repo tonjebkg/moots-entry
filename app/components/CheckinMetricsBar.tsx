@@ -57,16 +57,16 @@ export function CheckinMetricsBar({ metrics }: CheckinMetricsBarProps) {
       </div>
 
       {/* Capacity gauge */}
-      <div className="bg-white border border-[#e1e4e8] rounded-lg p-4">
+      <div className="bg-white border border-ui-border rounded-lg p-4">
         <div className="flex items-center justify-between mb-2">
-          <span className="text-sm font-medium text-[#4a4a5e]">Capacity</span>
-          <span className="text-sm font-semibold text-[#1a1a2e]">
+          <span className="text-sm font-medium text-ui-secondary">Capacity</span>
+          <span className="text-sm font-semibold text-brand-charcoal">
             {metrics.total_checked_in} / {metrics.total_expected || '—'}
           </span>
         </div>
-        <div className="h-3 bg-gray-100 rounded-full overflow-hidden">
+        <div className="h-3 bg-brand-cream rounded-full overflow-hidden">
           <div
-            className="h-full bg-[#2F4F3F] rounded-full transition-all duration-500"
+            className="h-full bg-brand-forest rounded-full transition-all duration-500"
             style={{ width: `${gaugePercent}%` }}
           />
         </div>

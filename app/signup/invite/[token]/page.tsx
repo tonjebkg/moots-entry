@@ -79,22 +79,22 @@ export default function InviteAcceptPage() {
 
   if (loadingInvite) {
     return (
-      <main className="min-h-screen bg-[#FAF9F7] flex items-center justify-center">
-        <Loader2 className="animate-spin text-[#6e6e7e]" size={32} />
+      <main className="min-h-screen bg-brand-cream flex items-center justify-center">
+        <Loader2 className="animate-spin text-ui-tertiary" size={32} />
       </main>
     );
   }
 
   if (inviteError || !invite) {
     return (
-      <main className="min-h-screen bg-[#FAF9F7] flex items-center justify-center px-4">
+      <main className="min-h-screen bg-brand-cream flex items-center justify-center px-4">
         <div className="w-full max-w-md text-center">
-          <div className="bg-white border border-[#e1e4e8] rounded-2xl p-8 shadow-sm">
-            <h2 className="text-lg font-semibold text-[#1C1C1E] mb-2">Invalid Invitation</h2>
-            <p className="text-sm text-[#6e6e7e] mb-6">{inviteError}</p>
+          <div className="bg-white border border-ui-border rounded-2xl p-8 shadow-sm">
+            <h2 className="text-lg font-semibold text-brand-charcoal mb-2">Invalid Invitation</h2>
+            <p className="text-sm text-ui-tertiary mb-6">{inviteError}</p>
             <Link
               href="/login"
-              className="inline-flex items-center gap-2 px-4 py-2.5 bg-[#2F4F3F] hover:bg-[#3a6349] text-white text-sm font-semibold rounded-lg transition-colors"
+              className="inline-flex items-center gap-2 px-4 py-2.5 bg-brand-forest hover:bg-brand-forest/90 text-white text-sm font-semibold rounded-lg transition-colors"
             >
               Go to Login
             </Link>
@@ -105,14 +105,14 @@ export default function InviteAcceptPage() {
   }
 
   return (
-    <main className="min-h-screen bg-[#FAF9F7] flex items-center justify-center px-4">
+    <main className="min-h-screen bg-brand-cream flex items-center justify-center px-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-[#1C1C1E] tracking-tight">Moots</h1>
-          <p className="text-sm text-[#6e6e7e] mt-2">Join {invite.workspace_name}</p>
+          <h1 className="text-3xl font-bold text-brand-charcoal tracking-tight">Moots</h1>
+          <p className="text-sm text-ui-tertiary mt-2">Join {invite.workspace_name}</p>
         </div>
 
-        <div className="bg-white border border-[#e1e4e8] rounded-2xl p-8 shadow-sm">
+        <div className="bg-white border border-ui-border rounded-2xl p-8 shadow-sm">
           {/* Invite info */}
           <div className="flex items-center gap-3 p-3 bg-emerald-50 border border-emerald-200 rounded-lg mb-6">
             <CheckCircle2 className="text-emerald-600 shrink-0" size={20} />
@@ -132,24 +132,24 @@ export default function InviteAcceptPage() {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-[#1C1C1E] mb-1.5">Full Name</label>
+              <label className="block text-sm font-medium text-brand-charcoal mb-1.5">Full Name</label>
               <div className="relative">
-                <User className="absolute left-3 top-1/2 -translate-y-1/2 text-[#6e6e7e]" size={16} />
+                <User className="absolute left-3 top-1/2 -translate-y-1/2 text-ui-tertiary" size={16} />
                 <input
                   type="text"
                   value={fullName}
                   onChange={e => setFullName(e.target.value)}
                   placeholder="Your name"
                   required
-                  className="w-full pl-10 pr-3 py-2.5 border border-[#e1e4e8] rounded-lg text-sm text-[#1C1C1E] placeholder-[#6e6e7e] focus:outline-none focus:border-[#2F4F3F] focus:ring-1 focus:ring-[#2F4F3F]"
+                  className="w-full pl-10 pr-3 py-2.5 border border-ui-border rounded-lg text-sm text-brand-charcoal placeholder-ui-tertiary focus:outline-none focus:border-brand-forest focus:ring-1 focus:ring-brand-forest"
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-[#1C1C1E] mb-1.5">Password</label>
+              <label className="block text-sm font-medium text-brand-charcoal mb-1.5">Password</label>
               <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-[#6e6e7e]" size={16} />
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-ui-tertiary" size={16} />
                 <input
                   type="password"
                   value={password}
@@ -157,10 +157,10 @@ export default function InviteAcceptPage() {
                   placeholder="Min. 12 characters"
                   required
                   minLength={12}
-                  className="w-full pl-10 pr-3 py-2.5 border border-[#e1e4e8] rounded-lg text-sm text-[#1C1C1E] placeholder-[#6e6e7e] focus:outline-none focus:border-[#2F4F3F] focus:ring-1 focus:ring-[#2F4F3F]"
+                  className="w-full pl-10 pr-3 py-2.5 border border-ui-border rounded-lg text-sm text-brand-charcoal placeholder-ui-tertiary focus:outline-none focus:border-brand-forest focus:ring-1 focus:ring-brand-forest"
                 />
               </div>
-              <p className="mt-1 text-xs text-[#6e6e7e]">
+              <p className="mt-1 text-xs text-ui-tertiary">
                 Must include uppercase, lowercase, number, and special character
               </p>
             </div>
@@ -168,7 +168,7 @@ export default function InviteAcceptPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full flex items-center justify-center gap-2 py-2.5 bg-[#2F4F3F] hover:bg-[#3a6349] text-white text-sm font-semibold rounded-lg transition-colors disabled:opacity-50"
+              className="w-full flex items-center justify-center gap-2 py-2.5 bg-brand-forest hover:bg-brand-forest/90 text-white text-sm font-semibold rounded-lg transition-colors disabled:opacity-50"
             >
               {loading ? <Loader2 size={16} className="animate-spin" /> : <ArrowRight size={16} />}
               Accept & Join
@@ -176,9 +176,9 @@ export default function InviteAcceptPage() {
           </form>
         </div>
 
-        <p className="text-center text-sm text-[#6e6e7e] mt-6">
+        <p className="text-center text-sm text-ui-tertiary mt-6">
           Already have an account?{' '}
-          <Link href="/login" className="text-[#2F4F3F] font-medium hover:underline">
+          <Link href="/login" className="text-brand-forest font-medium hover:underline">
             Sign in
           </Link>
         </p>

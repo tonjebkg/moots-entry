@@ -3,10 +3,11 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Search, Plus, Upload, Tag, Trash2, X, Users, Settings, LogOut } from 'lucide-react'
+import { Search, Plus, Upload, Tag, Trash2, X, Users } from 'lucide-react'
 import { ContactsTable } from '@/app/components/ContactsTable'
 import { ContactImportModal } from '@/app/components/ContactImportModal'
 import { ContactDetailPanel } from '@/app/components/ContactDetailPanel'
+import { DashboardHeader } from '@/app/components/DashboardHeader'
 
 interface ContactRow {
   id: string
@@ -119,46 +120,31 @@ export default function PeoplePage() {
   }
 
   return (
-    <main className="min-h-screen bg-[#f8f9fa]">
+    <main className="min-h-screen bg-brand-cream">
       {/* Header */}
-      <header className="fixed top-0 left-0 right-0 bg-white/98 backdrop-blur-sm border-b border-[#e1e4e8] z-50">
-        <div className="max-w-7xl mx-auto px-8 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-8">
-            <Link href="/dashboard" className="text-2xl font-bold text-[#1a1a2e]">Moots</Link>
-            <nav className="flex items-center gap-6">
-              <Link href="/dashboard" className="text-sm font-medium text-[#6e6e7e] hover:text-[#1a1a2e]">Events</Link>
-              <Link href="/dashboard/people" className="text-sm font-semibold text-[#0f3460]">People</Link>
-            </nav>
-          </div>
-          <div className="flex items-center gap-3">
-            <Link href="/dashboard/settings" className="p-2 text-[#6e6e7e] hover:text-[#0f3460] transition-colors rounded-lg hover:bg-[#f0f2f5]" title="Settings">
-              <Settings size={18} />
-            </Link>
-          </div>
-        </div>
-      </header>
+      <DashboardHeader activeNav="people" />
 
       <div className="pt-[73px]">
         <div className="max-w-7xl mx-auto p-8 space-y-6">
           {/* Page Title */}
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold text-[#1a1a2e]">People Database</h1>
-              <p className="text-sm text-[#6e6e7e] mt-1">
+              <h1 className="font-display text-2xl font-bold text-brand-charcoal">People Database</h1>
+              <p className="text-sm text-ui-tertiary mt-1">
                 {pagination.total} contact{pagination.total !== 1 ? 's' : ''} in your workspace
               </p>
             </div>
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setShowImport(true)}
-                className="flex items-center gap-2 px-4 py-2 border border-[#e1e4e8] rounded-lg text-sm font-medium text-[#4a4a5e] hover:bg-[#f8f9fa]"
+                className="flex items-center gap-2 px-4 py-2 border border-ui-border rounded-lg text-sm font-medium text-ui-secondary hover:bg-brand-cream"
               >
                 <Upload size={16} />
                 Import
               </button>
               <button
                 onClick={() => router.push('/dashboard/people/new')}
-                className="flex items-center gap-2 px-4 py-2 bg-[#0f3460] hover:bg-[#c5a572] text-white text-sm font-semibold rounded-lg transition-colors"
+                className="flex items-center gap-2 px-5 py-2.5 bg-brand-terracotta hover:bg-brand-terracotta/90 text-white text-sm font-semibold rounded-pill transition-colors shadow-cta"
               >
                 <Plus size={16} />
                 Add Contact
@@ -169,18 +155,18 @@ export default function PeoplePage() {
           {/* Filters */}
           <div className="flex gap-3">
             <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[#6e6e7e]" size={16} />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-ui-tertiary" size={16} />
               <input
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search by name, company, title..."
-                className="w-full pl-10 pr-3 py-2 bg-white border border-[#e1e4e8] rounded-lg text-sm text-[#1a1a2e] placeholder-[#6e6e7e] focus:outline-none focus:border-[#0f3460] focus:ring-1 focus:ring-[#0f3460]"
+                className="w-full pl-10 pr-3 py-2 bg-white border border-ui-border rounded-lg text-sm text-brand-charcoal placeholder-ui-tertiary focus:outline-none focus:border-brand-terracotta focus:ring-1 focus:ring-brand-terracotta"
               />
             </div>
             <select
               value={enrichmentFilter}
               onChange={(e) => setEnrichmentFilter(e.target.value)}
-              className="px-3 py-2 bg-white border border-[#e1e4e8] rounded-lg text-sm text-[#1a1a2e] focus:outline-none focus:border-[#0f3460]"
+              className="px-3 py-2 bg-white border border-ui-border rounded-lg text-sm text-brand-charcoal focus:outline-none focus:border-brand-terracotta"
             >
               <option value="">All Statuses</option>
               <option value="PENDING">Not Enriched</option>
@@ -191,7 +177,7 @@ export default function PeoplePage() {
             {(searchQuery || enrichmentFilter) && (
               <button
                 onClick={() => { setSearchQuery(''); setEnrichmentFilter('') }}
-                className="flex items-center gap-1 px-3 py-2 text-sm font-medium text-[#0f3460] hover:text-[#c5a572]"
+                className="flex items-center gap-1 px-3 py-2 text-sm font-medium text-brand-terracotta hover:text-brand-terracotta/70"
               >
                 <X size={14} />
                 Clear
@@ -201,14 +187,14 @@ export default function PeoplePage() {
 
           {/* Bulk Actions Bar */}
           {selectedIds.size > 0 && (
-            <div className="flex items-center gap-3 p-3 bg-[#0f3460]/5 border border-[#0f3460]/20 rounded-lg">
-              <span className="text-sm font-medium text-[#0f3460]">
+            <div className="flex items-center gap-3 p-3 bg-brand-terracotta/5 border border-brand-terracotta/20 rounded-lg">
+              <span className="text-sm font-medium text-brand-terracotta">
                 {selectedIds.size} selected
               </span>
               <div className="flex-1" />
               <button
                 onClick={handleBulkEnrich}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-[#0f3460] hover:bg-[#0f3460]/10 rounded-lg"
+                className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-brand-terracotta hover:bg-brand-terracotta/10 rounded-lg"
               >
                 <Tag size={14} />
                 Enrich
@@ -224,9 +210,9 @@ export default function PeoplePage() {
           )}
 
           {/* Table */}
-          <div className="bg-white border border-[#e1e4e8] rounded-lg overflow-hidden">
+          <div className="bg-white border border-ui-border rounded-card shadow-card overflow-hidden">
             {loading ? (
-              <div className="p-12 text-center text-[#6e6e7e]">Loading contacts...</div>
+              <div className="p-12 text-center text-ui-tertiary">Loading contacts...</div>
             ) : (
               <ContactsTable
                 contacts={contacts}
@@ -243,21 +229,21 @@ export default function PeoplePage() {
           {/* Pagination */}
           {pagination.total_pages > 1 && (
             <div className="flex items-center justify-between">
-              <div className="text-sm text-[#6e6e7e]">
+              <div className="text-sm text-ui-tertiary">
                 Page {pagination.page} of {pagination.total_pages}
               </div>
               <div className="flex gap-2">
                 <button
                   onClick={() => fetchContacts(pagination.page - 1)}
                   disabled={pagination.page <= 1}
-                  className="px-3 py-1.5 text-sm border border-[#e1e4e8] rounded-lg disabled:opacity-50 hover:bg-[#f8f9fa]"
+                  className="px-3 py-1.5 text-sm border border-ui-border rounded-lg disabled:opacity-50 hover:bg-brand-cream"
                 >
                   Previous
                 </button>
                 <button
                   onClick={() => fetchContacts(pagination.page + 1)}
                   disabled={pagination.page >= pagination.total_pages}
-                  className="px-3 py-1.5 text-sm border border-[#e1e4e8] rounded-lg disabled:opacity-50 hover:bg-[#f8f9fa]"
+                  className="px-3 py-1.5 text-sm border border-ui-border rounded-lg disabled:opacity-50 hover:bg-brand-cream"
                 >
                   Next
                 </button>

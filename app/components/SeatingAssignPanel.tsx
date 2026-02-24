@@ -28,25 +28,25 @@ export function SeatingAssignPanel({ unassigned, tableNumbers, onAssign, loading
   });
 
   return (
-    <div className="bg-white border border-[#e1e4e8] rounded-lg shadow-sm">
-      <div className="p-4 border-b border-[#e1e4e8]">
-        <h3 className="font-semibold text-[#1a1a2e] mb-3">Unassigned Guests ({unassigned.length})</h3>
+    <div className="bg-white border border-ui-border rounded-lg shadow-sm">
+      <div className="p-4 border-b border-ui-border">
+        <h3 className="font-semibold text-brand-charcoal mb-3">Unassigned Guests ({unassigned.length})</h3>
 
         <div className="flex gap-3">
           <div className="relative flex-1">
-            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#6e6e7e]" />
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-ui-tertiary" />
             <input
               type="text"
               placeholder="Search guests..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-8 pr-3 py-2 text-sm border border-[#e1e4e8] rounded-md focus:outline-none focus:ring-2 focus:ring-[#0f3460] focus:border-transparent"
+              className="w-full pl-8 pr-3 py-2 text-sm border border-ui-border rounded-md focus:outline-none focus:ring-2 focus:ring-brand-terracotta focus:border-transparent"
             />
           </div>
           <select
             value={selectedTable}
             onChange={(e) => setSelectedTable(Number(e.target.value))}
-            className="px-3 py-2 text-sm border border-[#e1e4e8] rounded-md focus:outline-none focus:ring-2 focus:ring-[#0f3460]"
+            className="px-3 py-2 text-sm border border-ui-border rounded-md focus:outline-none focus:ring-2 focus:ring-brand-terracotta"
           >
             {tableNumbers.map(n => (
               <option key={n} value={n}>Table {n}</option>
@@ -55,20 +55,20 @@ export function SeatingAssignPanel({ unassigned, tableNumbers, onAssign, loading
         </div>
       </div>
 
-      <div className="max-h-[400px] overflow-y-auto divide-y divide-[#e1e4e8]">
+      <div className="max-h-[400px] overflow-y-auto divide-y divide-ui-border">
         {filtered.length === 0 ? (
-          <div className="p-6 text-center text-sm text-[#6e6e7e]">
+          <div className="p-6 text-center text-sm text-ui-tertiary">
             {unassigned.length === 0 ? 'All guests are assigned!' : 'No matching guests'}
           </div>
         ) : (
           filtered.map(guest => (
             <div
               key={guest.contact_id}
-              className="flex items-center justify-between px-4 py-3 hover:bg-[#f8f9fa] transition-colors"
+              className="flex items-center justify-between px-4 py-3 hover:bg-brand-cream transition-colors"
             >
               <div className="min-w-0 flex-1">
-                <div className="text-sm font-medium text-[#1a1a2e] truncate">{guest.full_name}</div>
-                <div className="text-xs text-[#6e6e7e] truncate">
+                <div className="text-sm font-medium text-brand-charcoal truncate">{guest.full_name}</div>
+                <div className="text-xs text-ui-tertiary truncate">
                   {guest.company || 'No company'}
                   {guest.relevance_score != null && ` · Score: ${guest.relevance_score}`}
                 </div>
@@ -76,7 +76,7 @@ export function SeatingAssignPanel({ unassigned, tableNumbers, onAssign, loading
               <button
                 onClick={() => onAssign(guest.contact_id, selectedTable)}
                 disabled={loading}
-                className="shrink-0 ml-3 flex items-center gap-1 px-3 py-1.5 text-xs font-semibold text-[#0f3460] bg-[#0f3460]/10 rounded-md hover:bg-[#0f3460]/20 transition-colors disabled:opacity-50"
+                className="shrink-0 ml-3 flex items-center gap-1 px-3 py-1.5 text-xs font-semibold text-brand-terracotta bg-brand-terracotta/10 rounded-md hover:bg-brand-terracotta/20 transition-colors disabled:opacity-50"
               >
                 <ArrowRight size={12} />
                 Table {selectedTable}

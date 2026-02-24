@@ -162,13 +162,13 @@ export function GuestAddEditModal({ campaignId, guestId, onSuccess, onCancel }: 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-6">
       <div className="bg-white rounded-lg shadow-lg w-full max-w-md">
-        <div className="flex items-center justify-between p-6 border-b border-[#e1e4e8]">
-          <h2 className="text-xl font-semibold text-[#1a1a2e] tracking-tight">
+        <div className="flex items-center justify-between p-6 border-b border-ui-border">
+          <h2 className="text-xl font-semibold text-brand-charcoal tracking-tight">
             {guestId ? 'Edit Guest' : 'Add Guest'}
           </h2>
           <button
             onClick={onCancel}
-            className="text-[#6e6e7e] hover:text-[#1a1a2e] transition-colors"
+            className="text-ui-tertiary hover:text-brand-charcoal transition-colors"
           >
             <X size={20} />
           </button>
@@ -184,14 +184,14 @@ export function GuestAddEditModal({ campaignId, guestId, onSuccess, onCancel }: 
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* First Name */}
             <div>
-              <label className="block text-sm font-semibold text-[#1a1a2e] mb-2">
+              <label className="block text-sm font-semibold text-brand-charcoal mb-2">
                 First Name <span className="text-red-600">*</span>
               </label>
               <input
                 type="text"
                 value={formData.first_name}
                 onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
-                className="w-full px-3 py-2 bg-white border border-[#e1e4e8] rounded-lg text-[#1a1a2e] placeholder-[#6e6e7e] focus:outline-none focus:border-[#0f3460] focus:ring-1 focus:ring-[#0f3460] transition-colors"
+                className="w-full px-3 py-2 bg-white border border-ui-border rounded-lg text-brand-charcoal placeholder-ui-tertiary focus:outline-none focus:border-brand-terracotta focus:ring-1 focus:ring-brand-terracotta transition-colors"
                 placeholder="John"
                 required
               />
@@ -199,14 +199,14 @@ export function GuestAddEditModal({ campaignId, guestId, onSuccess, onCancel }: 
 
             {/* Last Name */}
             <div>
-              <label className="block text-sm font-semibold text-[#1a1a2e] mb-2">
+              <label className="block text-sm font-semibold text-brand-charcoal mb-2">
                 Last Name <span className="text-red-600">*</span>
               </label>
               <input
                 type="text"
                 value={formData.last_name}
                 onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
-                className="w-full px-3 py-2 bg-white border border-[#e1e4e8] rounded-lg text-[#1a1a2e] placeholder-[#6e6e7e] focus:outline-none focus:border-[#0f3460] focus:ring-1 focus:ring-[#0f3460] transition-colors"
+                className="w-full px-3 py-2 bg-white border border-ui-border rounded-lg text-brand-charcoal placeholder-ui-tertiary focus:outline-none focus:border-brand-terracotta focus:ring-1 focus:ring-brand-terracotta transition-colors"
                 placeholder="Doe"
                 required
               />
@@ -214,14 +214,14 @@ export function GuestAddEditModal({ campaignId, guestId, onSuccess, onCancel }: 
 
             {/* Company */}
             <div>
-              <label className="block text-sm font-semibold text-[#1a1a2e] mb-2">
+              <label className="block text-sm font-semibold text-brand-charcoal mb-2">
                 Company <span className="text-red-600">*</span>
               </label>
               <input
                 type="text"
                 value={formData.company}
                 onChange={(e) => setFormData({ ...formData, company: e.target.value })}
-                className="w-full px-3 py-2 bg-white border border-[#e1e4e8] rounded-lg text-[#1a1a2e] placeholder-[#6e6e7e] focus:outline-none focus:border-[#0f3460] focus:ring-1 focus:ring-[#0f3460] transition-colors"
+                className="w-full px-3 py-2 bg-white border border-ui-border rounded-lg text-brand-charcoal placeholder-ui-tertiary focus:outline-none focus:border-brand-terracotta focus:ring-1 focus:ring-brand-terracotta transition-colors"
                 placeholder="Acme Corporation"
                 required
               />
@@ -229,42 +229,42 @@ export function GuestAddEditModal({ campaignId, guestId, onSuccess, onCancel }: 
 
             {/* Title */}
             <div>
-              <label className="block text-sm font-semibold text-[#1a1a2e] mb-2">
+              <label className="block text-sm font-semibold text-brand-charcoal mb-2">
                 Title
               </label>
               <input
                 type="text"
                 value={formData.title}
                 onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                className="w-full px-3 py-2 bg-white border border-[#e1e4e8] rounded-lg text-[#1a1a2e] placeholder-[#6e6e7e] focus:outline-none focus:border-[#0f3460] focus:ring-1 focus:ring-[#0f3460] transition-colors"
+                className="w-full px-3 py-2 bg-white border border-ui-border rounded-lg text-brand-charcoal placeholder-ui-tertiary focus:outline-none focus:border-brand-terracotta focus:ring-1 focus:ring-brand-terracotta transition-colors"
                 placeholder="CEO"
               />
             </div>
 
             {/* LinkedIn URL */}
             <div>
-              <label className="block text-sm font-semibold text-[#1a1a2e] mb-2">
+              <label className="block text-sm font-semibold text-brand-charcoal mb-2">
                 LinkedIn Profile
               </label>
               <input
                 type="url"
                 value={formData.linkedin_url}
                 onChange={(e) => setFormData({ ...formData, linkedin_url: e.target.value })}
-                className="w-full px-3 py-2 bg-white border border-[#e1e4e8] rounded-lg text-[#1a1a2e] placeholder-[#6e6e7e] focus:outline-none focus:border-[#0f3460] focus:ring-1 focus:ring-[#0f3460] transition-colors"
+                className="w-full px-3 py-2 bg-white border border-ui-border rounded-lg text-brand-charcoal placeholder-ui-tertiary focus:outline-none focus:border-brand-terracotta focus:ring-1 focus:ring-brand-terracotta transition-colors"
                 placeholder="https://linkedin.com/in/johndoe"
               />
             </div>
 
             {/* Email */}
             <div>
-              <label className="block text-sm font-semibold text-[#1a1a2e] mb-2">
+              <label className="block text-sm font-semibold text-brand-charcoal mb-2">
                 Email <span className="text-red-600">*</span>
               </label>
               <input
                 type="email"
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                className="w-full px-3 py-2 bg-white border border-[#e1e4e8] rounded-lg text-[#1a1a2e] placeholder-[#6e6e7e] focus:outline-none focus:border-[#0f3460] focus:ring-1 focus:ring-[#0f3460] transition-colors"
+                className="w-full px-3 py-2 bg-white border border-ui-border rounded-lg text-brand-charcoal placeholder-ui-tertiary focus:outline-none focus:border-brand-terracotta focus:ring-1 focus:ring-brand-terracotta transition-colors"
                 placeholder="john@example.com"
                 required
               />
@@ -272,32 +272,32 @@ export function GuestAddEditModal({ campaignId, guestId, onSuccess, onCancel }: 
 
             {/* Phone */}
             <div>
-              <label className="block text-sm font-semibold text-[#1a1a2e] mb-2">
+              <label className="block text-sm font-semibold text-brand-charcoal mb-2">
                 Phone
               </label>
               <input
                 type="tel"
                 value={formData.phone}
                 onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                className="w-full px-3 py-2 bg-white border border-[#e1e4e8] rounded-lg text-[#1a1a2e] placeholder-[#6e6e7e] focus:outline-none focus:border-[#0f3460] focus:ring-1 focus:ring-[#0f3460] transition-colors"
+                className="w-full px-3 py-2 bg-white border border-ui-border rounded-lg text-brand-charcoal placeholder-ui-tertiary focus:outline-none focus:border-brand-terracotta focus:ring-1 focus:ring-brand-terracotta transition-colors"
                 placeholder="+1 (555) 123-4567"
               />
             </div>
 
             {/* Divider */}
-            <div className="border-t border-[#e1e4e8] pt-4">
-              <h3 className="text-sm font-semibold text-[#1a1a2e] mb-3">Event Context</h3>
+            <div className="border-t border-ui-border pt-4">
+              <h3 className="text-sm font-semibold text-brand-charcoal mb-3">Event Context</h3>
             </div>
 
             {/* Tier */}
             <div>
-              <label className="block text-sm font-semibold text-[#1a1a2e] mb-2">
+              <label className="block text-sm font-semibold text-brand-charcoal mb-2">
                 Tier
               </label>
               <select
                 value={formData.tier}
                 onChange={(e) => setFormData({ ...formData, tier: e.target.value as GuestFormData['tier'] })}
-                className="w-full px-3 py-2 bg-white border border-[#e1e4e8] rounded-lg text-[#1a1a2e] focus:outline-none focus:border-[#0f3460] focus:ring-1 focus:ring-[#0f3460] transition-colors"
+                className="w-full px-3 py-2 bg-white border border-ui-border rounded-lg text-brand-charcoal focus:outline-none focus:border-brand-terracotta focus:ring-1 focus:ring-brand-terracotta transition-colors"
               >
                 <option value="TIER_1">Tier 1 (First Wave)</option>
                 <option value="TIER_2">Tier 2 (Second Wave)</option>
@@ -308,13 +308,13 @@ export function GuestAddEditModal({ campaignId, guestId, onSuccess, onCancel }: 
 
             {/* Priority */}
             <div>
-              <label className="block text-sm font-semibold text-[#1a1a2e] mb-2">
+              <label className="block text-sm font-semibold text-brand-charcoal mb-2">
                 Priority
               </label>
               <select
                 value={formData.priority}
                 onChange={(e) => setFormData({ ...formData, priority: e.target.value as GuestFormData['priority'] })}
-                className="w-full px-3 py-2 bg-white border border-[#e1e4e8] rounded-lg text-[#1a1a2e] focus:outline-none focus:border-[#0f3460] focus:ring-1 focus:ring-[#0f3460] transition-colors"
+                className="w-full px-3 py-2 bg-white border border-ui-border rounded-lg text-brand-charcoal focus:outline-none focus:border-brand-terracotta focus:ring-1 focus:ring-brand-terracotta transition-colors"
               >
                 <option value="VIP">VIP</option>
                 <option value="HIGH">High</option>
@@ -325,24 +325,24 @@ export function GuestAddEditModal({ campaignId, guestId, onSuccess, onCancel }: 
 
             {/* Expected Plus Ones */}
             <div>
-              <label className="block text-sm font-semibold text-[#1a1a2e] mb-2">
+              <label className="block text-sm font-semibold text-brand-charcoal mb-2">
                 Expected +1s
               </label>
               <div className="flex items-center gap-3">
                 <button
                   type="button"
                   onClick={() => setFormData({ ...formData, expected_plus_ones: Math.max(0, formData.expected_plus_ones - 1) })}
-                  className="w-10 h-10 flex items-center justify-center bg-white border border-[#e1e4e8] rounded-lg text-[#1a1a2e] hover:border-[#0f3460] transition-colors"
+                  className="w-10 h-10 flex items-center justify-center bg-white border border-ui-border rounded-lg text-brand-charcoal hover:border-brand-terracotta transition-colors"
                 >
                   <Minus size={16} />
                 </button>
-                <span className="text-lg font-semibold text-[#1a1a2e] min-w-[3rem] text-center">
+                <span className="text-lg font-semibold text-brand-charcoal min-w-[3rem] text-center">
                   {formData.expected_plus_ones}
                 </span>
                 <button
                   type="button"
                   onClick={() => setFormData({ ...formData, expected_plus_ones: formData.expected_plus_ones + 1 })}
-                  className="w-10 h-10 flex items-center justify-center bg-white border border-[#e1e4e8] rounded-lg text-[#1a1a2e] hover:border-[#0f3460] transition-colors"
+                  className="w-10 h-10 flex items-center justify-center bg-white border border-ui-border rounded-lg text-brand-charcoal hover:border-brand-terracotta transition-colors"
                 >
                   <Plus size={16} />
                 </button>
@@ -350,64 +350,64 @@ export function GuestAddEditModal({ campaignId, guestId, onSuccess, onCancel }: 
             </div>
 
             {/* Divider */}
-            <div className="border-t border-[#e1e4e8] pt-4">
-              <h3 className="text-sm font-semibold text-[#1a1a2e] mb-3">Curation Intelligence</h3>
-              <p className="text-xs text-[#6e6e7e] mb-4">Help your team understand why this guest matters</p>
+            <div className="border-t border-ui-border pt-4">
+              <h3 className="text-sm font-semibold text-brand-charcoal mb-3">Curation Intelligence</h3>
+              <p className="text-xs text-ui-tertiary mb-4">Help your team understand why this guest matters</p>
             </div>
 
             {/* Introduction Source */}
             <div>
-              <label className="block text-sm font-semibold text-[#1a1a2e] mb-2">
+              <label className="block text-sm font-semibold text-brand-charcoal mb-2">
                 Introduced By
               </label>
               <input
                 type="text"
                 value={formData.introduction_source}
                 onChange={(e) => setFormData({ ...formData, introduction_source: e.target.value })}
-                className="w-full px-3 py-2 bg-white border border-[#e1e4e8] rounded-lg text-[#1a1a2e] placeholder-[#6e6e7e] focus:outline-none focus:border-[#0f3460] focus:ring-1 focus:ring-[#0f3460] transition-colors"
+                className="w-full px-3 py-2 bg-white border border-ui-border rounded-lg text-brand-charcoal placeholder-ui-tertiary focus:outline-none focus:border-brand-terracotta focus:ring-1 focus:ring-brand-terracotta transition-colors"
                 placeholder="e.g., Sarah Chen (Partner)"
               />
             </div>
 
             {/* Host Notes */}
             <div>
-              <label className="block text-sm font-semibold text-[#1a1a2e] mb-2">
+              <label className="block text-sm font-semibold text-brand-charcoal mb-2">
                 Host Notes
               </label>
               <textarea
                 value={formData.host_notes}
                 onChange={(e) => setFormData({ ...formData, host_notes: e.target.value })}
-                className="w-full px-3 py-2 bg-white border border-[#e1e4e8] rounded-lg text-[#1a1a2e] placeholder-[#6e6e7e] focus:outline-none focus:border-[#0f3460] focus:ring-1 focus:ring-[#0f3460] transition-colors"
+                className="w-full px-3 py-2 bg-white border border-ui-border rounded-lg text-brand-charcoal placeholder-ui-tertiary focus:outline-none focus:border-brand-terracotta focus:ring-1 focus:ring-brand-terracotta transition-colors"
                 placeholder="Why they matter for this event..."
                 rows={3}
               />
-              <p className="text-xs text-[#6e6e7e] mt-1">e.g., &quot;Key LP relationship. CEO of portfolio company ($50M ARR).&quot;</p>
+              <p className="text-xs text-ui-tertiary mt-1">e.g., &quot;Key LP relationship. CEO of portfolio company ($50M ARR).&quot;</p>
             </div>
 
             {/* Tags */}
             <div>
-              <label className="block text-sm font-semibold text-[#1a1a2e] mb-2">
+              <label className="block text-sm font-semibold text-brand-charcoal mb-2">
                 Tags
               </label>
               <input
                 type="text"
                 value={formData.tags}
                 onChange={(e) => setFormData({ ...formData, tags: e.target.value })}
-                className="w-full px-3 py-2 bg-white border border-[#e1e4e8] rounded-lg text-[#1a1a2e] placeholder-[#6e6e7e] focus:outline-none focus:border-[#0f3460] focus:ring-1 focus:ring-[#0f3460] transition-colors"
+                className="w-full px-3 py-2 bg-white border border-ui-border rounded-lg text-brand-charcoal placeholder-ui-tertiary focus:outline-none focus:border-brand-terracotta focus:ring-1 focus:ring-brand-terracotta transition-colors"
                 placeholder="Portfolio CEO, Key LP, Board Member"
               />
-              <p className="text-xs text-[#6e6e7e] mt-1">Separate multiple tags with commas</p>
+              <p className="text-xs text-ui-tertiary mt-1">Separate multiple tags with commas</p>
             </div>
 
             {/* Internal Notes */}
             <div>
-              <label className="block text-sm font-semibold text-[#1a1a2e] mb-2">
+              <label className="block text-sm font-semibold text-brand-charcoal mb-2">
                 Internal Notes
               </label>
               <textarea
                 value={formData.internal_notes}
                 onChange={(e) => setFormData({ ...formData, internal_notes: e.target.value })}
-                className="w-full px-3 py-2 bg-white border border-[#e1e4e8] rounded-lg text-[#1a1a2e] placeholder-[#6e6e7e] focus:outline-none focus:border-[#0f3460] focus:ring-1 focus:ring-[#0f3460] transition-colors"
+                className="w-full px-3 py-2 bg-white border border-ui-border rounded-lg text-brand-charcoal placeholder-ui-tertiary focus:outline-none focus:border-brand-terracotta focus:ring-1 focus:ring-brand-terracotta transition-colors"
                 placeholder="Operational notes (not shown to host)"
                 rows={2}
               />
@@ -418,14 +418,14 @@ export function GuestAddEditModal({ campaignId, guestId, onSuccess, onCancel }: 
             <button
               type="button"
               onClick={onCancel}
-              className="flex-1 px-4 py-2 bg-white border border-[#e1e4e8] rounded-lg text-[#4a4a5e] hover:bg-[#f8f9fa] transition-colors font-medium"
+              className="flex-1 px-4 py-2 bg-white border border-ui-border rounded-lg text-ui-secondary hover:bg-brand-cream transition-colors font-medium"
               disabled={loading}
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-[#0f3460] hover:bg-[#c5a572] text-white rounded-lg transition-colors shadow-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-brand-terracotta hover:bg-brand-terracotta/90 text-white rounded-lg transition-colors shadow-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
               disabled={loading}
             >
               {loading ? (
