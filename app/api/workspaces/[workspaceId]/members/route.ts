@@ -8,6 +8,7 @@ import { getDb } from '@/lib/db';
 import { ForbiddenError, ConflictError } from '@/lib/errors';
 import { getClientIdentifier } from '@/lib/rate-limit';
 import { logger } from '@/lib/logger';
+import { sendWorkspaceInviteEmail } from '@/lib/email-service';
 
 export const runtime = 'nodejs';
 
@@ -119,8 +120,19 @@ export const POST = withErrorHandling(async (request: NextRequest, context: Rout
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
   const inviteUrl = `${appUrl}/signup/invite/${token}`;
 
-  // TODO: Send invite email via Resend
-  logger.info('Workspace invite generated', { email, workspaceId, url: inviteUrl });
+  // Send invite email via Resend
+  const emailResult = await sendWorkspaceInviteEmail({
+    to: email,
+    inviterName: auth.user.full_name || auth.user.email,
+    workspaceName: auth.workspace.name,
+    role,
+    inviteUrl,
+  });
+  if (!emailResult.success) {
+    logger.error('Failed to send workspace invite email', undefined, { email, error: emailResult.error });
+  } else {
+    logger.info('Workspace invite email sent', { email, workspaceId });
+  }
 
   logAction({
     workspaceId,

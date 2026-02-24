@@ -34,3 +34,11 @@ export const passwordResetVerifySchema = z.object({
 });
 
 export type PasswordResetVerifyInput = z.infer<typeof passwordResetVerifySchema>;
+
+export const inviteAcceptSchema = z.object({
+  token: z.string().min(1, 'Token is required'),
+  full_name: z.string().min(1, 'Full name is required').max(200).trim(),
+  password: z.string().min(12, 'Password must be at least 12 characters'),
+});
+
+export type InviteAcceptInput = z.infer<typeof inviteAcceptSchema>;

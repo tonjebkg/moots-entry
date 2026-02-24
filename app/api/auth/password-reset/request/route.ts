@@ -7,6 +7,7 @@ import { getDb } from '@/lib/db';
 import { getClientIdentifier, checkAuthRateLimit } from '@/lib/rate-limit';
 import { RateLimitError } from '@/lib/errors';
 import { logger } from '@/lib/logger';
+import { sendPasswordResetEmail } from '@/lib/email-service';
 
 export const runtime = 'nodejs';
 
@@ -53,8 +54,13 @@ export const POST = withErrorHandling(async (request: NextRequest) => {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
   const resetUrl = `${appUrl}/reset-password?token=${token}`;
 
-  // TODO: Send email via Resend when email templates are ready
-  logger.info('Password reset link generated', { email, url: resetUrl });
+  // Send password reset email via Resend
+  const emailResult = await sendPasswordResetEmail({ to: email, resetUrl });
+  if (!emailResult.success) {
+    logger.error('Failed to send password reset email', undefined, { email, error: emailResult.error });
+  } else {
+    logger.info('Password reset email sent', { email });
+  }
 
   return NextResponse.json({ message: 'If an account exists, a password reset link has been sent.' });
 });

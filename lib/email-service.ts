@@ -437,6 +437,168 @@ export async function sendCrmSyncNotificationEmail(
   }
 }
 
+// ─── Magic Link Email ─────────────────────────────────────────────────
+
+export interface SendMagicLinkEmailParams {
+  to: string;
+  magicLinkUrl: string;
+}
+
+export async function sendMagicLinkEmail(
+  params: SendMagicLinkEmailParams
+): Promise<EmailResult> {
+  try {
+    if (!resend) {
+      return { success: false, error: 'Email service not available' };
+    }
+
+    const html = `
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8"></head>
+<body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;background:#f9fafb;">
+<table role="presentation" style="width:100%;border-collapse:collapse;"><tr><td align="center" style="padding:40px 0;">
+<table role="presentation" style="width:600px;max-width:100%;background:#fff;border-radius:8px;box-shadow:0 2px 4px rgba(0,0,0,.1);">
+<tr><td style="padding:40px;text-align:center;border-bottom:1px solid #e5e7eb;">
+  <h1 style="margin:0;font-size:24px;color:#111827;">Sign in to Moots</h1>
+</td></tr>
+<tr><td style="padding:32px 40px;text-align:center;">
+  <p style="font-size:16px;color:#374151;line-height:1.6;">Click the button below to sign in. This link expires in 15 minutes.</p>
+  <table role="presentation" style="width:100%;border-collapse:collapse;"><tr><td align="center" style="padding:24px 0;">
+    <a href="${params.magicLinkUrl}" style="display:inline-block;padding:14px 32px;background-color:#0f3460;color:#ffffff;text-decoration:none;border-radius:6px;font-size:16px;font-weight:600;">Sign In</a>
+  </td></tr></table>
+  <p style="font-size:14px;color:#6b7280;line-height:1.6;">If you didn't request this, you can safely ignore this email.</p>
+</td></tr>
+<tr><td style="padding:24px 40px;text-align:center;border-top:1px solid #e5e7eb;background:#f9fafb;border-radius:0 0 8px 8px;">
+  <p style="margin:0;font-size:14px;color:#6b7280;">Powered by <strong>Moots</strong></p>
+</td></tr>
+</table></td></tr></table></body></html>`.trim();
+
+    const result = await resend.emails.send({
+      from: (env as any).RESEND_FROM_EMAIL,
+      to: params.to,
+      subject: 'Sign in to Moots',
+      html,
+      tags: [{ name: 'category', value: 'magic_link' }],
+    });
+
+    if (result.error) {
+      return { success: false, error: result.error.message };
+    }
+    return { success: true, emailServiceId: result.data?.id };
+  } catch (error) {
+    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+  }
+}
+
+// ─── Password Reset Email ─────────────────────────────────────────────
+
+export interface SendPasswordResetEmailParams {
+  to: string;
+  resetUrl: string;
+}
+
+export async function sendPasswordResetEmail(
+  params: SendPasswordResetEmailParams
+): Promise<EmailResult> {
+  try {
+    if (!resend) {
+      return { success: false, error: 'Email service not available' };
+    }
+
+    const html = `
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8"></head>
+<body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;background:#f9fafb;">
+<table role="presentation" style="width:100%;border-collapse:collapse;"><tr><td align="center" style="padding:40px 0;">
+<table role="presentation" style="width:600px;max-width:100%;background:#fff;border-radius:8px;box-shadow:0 2px 4px rgba(0,0,0,.1);">
+<tr><td style="padding:40px;text-align:center;border-bottom:1px solid #e5e7eb;">
+  <h1 style="margin:0;font-size:24px;color:#111827;">Reset Your Password</h1>
+</td></tr>
+<tr><td style="padding:32px 40px;text-align:center;">
+  <p style="font-size:16px;color:#374151;line-height:1.6;">Click the button below to reset your password. This link expires in 1 hour.</p>
+  <table role="presentation" style="width:100%;border-collapse:collapse;"><tr><td align="center" style="padding:24px 0;">
+    <a href="${params.resetUrl}" style="display:inline-block;padding:14px 32px;background-color:#0f3460;color:#ffffff;text-decoration:none;border-radius:6px;font-size:16px;font-weight:600;">Reset Password</a>
+  </td></tr></table>
+  <p style="font-size:14px;color:#6b7280;line-height:1.6;">If you didn't request this, you can safely ignore this email.</p>
+</td></tr>
+<tr><td style="padding:24px 40px;text-align:center;border-top:1px solid #e5e7eb;background:#f9fafb;border-radius:0 0 8px 8px;">
+  <p style="margin:0;font-size:14px;color:#6b7280;">Powered by <strong>Moots</strong></p>
+</td></tr>
+</table></td></tr></table></body></html>`.trim();
+
+    const result = await resend.emails.send({
+      from: (env as any).RESEND_FROM_EMAIL,
+      to: params.to,
+      subject: 'Reset your Moots password',
+      html,
+      tags: [{ name: 'category', value: 'password_reset' }],
+    });
+
+    if (result.error) {
+      return { success: false, error: result.error.message };
+    }
+    return { success: true, emailServiceId: result.data?.id };
+  } catch (error) {
+    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+  }
+}
+
+// ─── Workspace Invite Email ───────────────────────────────────────────
+
+export interface SendWorkspaceInviteEmailParams {
+  to: string;
+  inviterName: string;
+  workspaceName: string;
+  role: string;
+  inviteUrl: string;
+}
+
+export async function sendWorkspaceInviteEmail(
+  params: SendWorkspaceInviteEmailParams
+): Promise<EmailResult> {
+  try {
+    if (!resend) {
+      return { success: false, error: 'Email service not available' };
+    }
+
+    const html = `
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8"></head>
+<body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;background:#f9fafb;">
+<table role="presentation" style="width:100%;border-collapse:collapse;"><tr><td align="center" style="padding:40px 0;">
+<table role="presentation" style="width:600px;max-width:100%;background:#fff;border-radius:8px;box-shadow:0 2px 4px rgba(0,0,0,.1);">
+<tr><td style="padding:40px;text-align:center;border-bottom:1px solid #e5e7eb;">
+  <h1 style="margin:0;font-size:24px;color:#111827;">You're Invited to ${params.workspaceName}</h1>
+</td></tr>
+<tr><td style="padding:32px 40px;text-align:center;">
+  <p style="font-size:16px;color:#374151;line-height:1.6;"><strong>${params.inviterName}</strong> has invited you to join <strong>${params.workspaceName}</strong> on Moots as a <strong>${params.role.replace('_', ' ').toLowerCase()}</strong>.</p>
+  <table role="presentation" style="width:100%;border-collapse:collapse;"><tr><td align="center" style="padding:24px 0;">
+    <a href="${params.inviteUrl}" style="display:inline-block;padding:14px 32px;background-color:#0f3460;color:#ffffff;text-decoration:none;border-radius:6px;font-size:16px;font-weight:600;">Accept Invitation</a>
+  </td></tr></table>
+  <p style="font-size:14px;color:#6b7280;line-height:1.6;">This invitation expires in 7 days.</p>
+</td></tr>
+<tr><td style="padding:24px 40px;text-align:center;border-top:1px solid #e5e7eb;background:#f9fafb;border-radius:0 0 8px 8px;">
+  <p style="margin:0;font-size:14px;color:#6b7280;">Powered by <strong>Moots</strong></p>
+</td></tr>
+</table></td></tr></table></body></html>`.trim();
+
+    const result = await resend.emails.send({
+      from: (env as any).RESEND_FROM_EMAIL,
+      to: params.to,
+      subject: `${params.inviterName} invited you to ${params.workspaceName} on Moots`,
+      html,
+      tags: [{ name: 'category', value: 'workspace_invite' }],
+    });
+
+    if (result.error) {
+      return { success: false, error: result.error.message };
+    }
+    return { success: true, emailServiceId: result.data?.id };
+  } catch (error) {
+    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+  }
+}
+
 /**
  * Generate HTML body for RSVP invitation email
  */

@@ -7,6 +7,7 @@ import { getDb } from '@/lib/db';
 import { getClientIdentifier, checkAuthRateLimit } from '@/lib/rate-limit';
 import { RateLimitError } from '@/lib/errors';
 import { logger } from '@/lib/logger';
+import { sendMagicLinkEmail } from '@/lib/email-service';
 
 export const runtime = 'nodejs';
 
@@ -54,8 +55,13 @@ export const POST = withErrorHandling(async (request: NextRequest) => {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
   const magicLinkUrl = `${appUrl}/api/auth/magic-link/verify?token=${token}`;
 
-  // TODO: Send email via Resend when email templates are ready
-  logger.info('Magic link generated', { email, url: magicLinkUrl });
+  // Send magic link email via Resend
+  const emailResult = await sendMagicLinkEmail({ to: email, magicLinkUrl });
+  if (!emailResult.success) {
+    logger.error('Failed to send magic link email', undefined, { email, error: emailResult.error });
+  } else {
+    logger.info('Magic link email sent', { email });
+  }
 
   return NextResponse.json({ message: 'If an account exists, a magic link has been sent.' });
 });
