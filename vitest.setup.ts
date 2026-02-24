@@ -38,11 +38,11 @@ vi.mock('next/headers', () => ({
   headers: vi.fn().mockResolvedValue(new Map()),
 }));
 
-// Mock resend
+// Mock resend — must use regular function (not arrow) so it works as a constructor with `new`
 vi.mock('resend', () => ({
-  Resend: vi.fn().mockImplementation(() => ({
-    emails: {
+  Resend: vi.fn().mockImplementation(function (this: any) {
+    this.emails = {
       send: vi.fn().mockResolvedValue({ data: { id: 'test-email-id' }, error: null }),
-    },
-  })),
+    };
+  }),
 }));
