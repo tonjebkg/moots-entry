@@ -112,6 +112,12 @@ const rateLimiters = {
 
   // Auth rate limiter - 5 attempts per 15 minutes per IP
   auth: new RateLimiter(),
+
+  // RSVP submission rate limiter - 5 submissions per 15 minutes per IP
+  rsvpSubmission: new RateLimiter(),
+
+  // Broadcast send rate limiter - 3 sends per minute per user
+  broadcastSend: new RateLimiter(),
 };
 
 /**
@@ -133,6 +139,14 @@ export const RATE_LIMITS = {
   auth: {
     maxRequests: 5,
     windowMs: 15 * 60 * 1000, // 15 minutes
+  },
+  rsvpSubmission: {
+    maxRequests: 5,
+    windowMs: 15 * 60 * 1000, // 15 minutes
+  },
+  broadcastSend: {
+    maxRequests: 3,
+    windowMs: 60 * 1000, // 1 minute
   },
 } as const;
 
@@ -181,6 +195,28 @@ export function checkAuthRateLimit(identifier: string) {
 }
 
 /**
+ * Check rate limit for RSVP submissions
+ */
+export function checkRsvpSubmissionRateLimit(identifier: string) {
+  return rateLimiters.rsvpSubmission.check(
+    identifier,
+    RATE_LIMITS.rsvpSubmission.maxRequests,
+    RATE_LIMITS.rsvpSubmission.windowMs
+  );
+}
+
+/**
+ * Check rate limit for broadcast sends
+ */
+export function checkBroadcastSendRateLimit(identifier: string) {
+  return rateLimiters.broadcastSend.check(
+    identifier,
+    RATE_LIMITS.broadcastSend.maxRequests,
+    RATE_LIMITS.broadcastSend.windowMs
+  );
+}
+
+/**
  * Get client identifier from request (IP address)
  */
 export function getClientIdentifier(request: Request): string {
@@ -207,4 +243,6 @@ export function clearRateLimits() {
   rateLimiters.joinRequest.clear();
   rateLimiters.upload.clear();
   rateLimiters.auth.clear();
+  rateLimiters.rsvpSubmission.clear();
+  rateLimiters.broadcastSend.clear();
 }

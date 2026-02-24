@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
 import { GuestDetailPanel } from '@/app/components/GuestDetailPanel'
+import { DossierPanel } from '@/app/components/DossierPanel'
 import { GuestProfile } from '@/types/guest'
 
 type NeonStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'CANCELLED' | 'DRAFT'
@@ -36,6 +37,29 @@ export default function GuestsTabPage() {
   const [filterStatus, setFilterStatus] = useState<string>('')
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedGuest, setSelectedGuest] = useState<GuestProfile | null>(null)
+  const [dossierContactId, setDossierContactId] = useState<string | null>(null)
+  const [dossierScores, setDossierScores] = useState<Record<string, { score: number; contact_id: string }>>({})
+
+  // Fetch dossier scores for overlay
+  useEffect(() => {
+    async function fetchDossierScores() {
+      try {
+        const res = await fetch(`/api/events/${eventId}/dossiers`)
+        if (res.ok) {
+          const data = await res.json()
+          const scoreMap: Record<string, { score: number; contact_id: string }> = {}
+          for (const d of data.dossiers || []) {
+            if (d.relevance_score != null) {
+              // Map by email or name for matching to join-request guests
+              scoreMap[d.full_name?.toLowerCase()] = { score: d.relevance_score, contact_id: d.contact_id }
+            }
+          }
+          setDossierScores(scoreMap)
+        }
+      } catch {}
+    }
+    fetchDossierScores()
+  }, [eventId])
 
   useEffect(() => {
     fetchGuests()
@@ -239,6 +263,7 @@ export default function GuestsTabPage() {
         <table className="w-full text-sm">
           <thead className="bg-[#f8f9fa] border-b border-[#e1e4e8]">
             <tr>
+              <th className="px-4 py-3 text-center font-semibold text-[#1a1a2e] w-16">Score</th>
               <th className="px-4 py-3 text-left font-semibold text-[#1a1a2e]">Name</th>
               <th className="px-4 py-3 text-left font-semibold text-[#1a1a2e]">Email</th>
               <th className="px-4 py-3 text-center font-semibold text-[#1a1a2e]">Plus Ones</th>
@@ -261,6 +286,23 @@ export default function GuestsTabPage() {
                   onClick={() => handleGuestClick(guest.id)}
                   className="hover:bg-[#f8f9fa] transition-colors cursor-pointer"
                 >
+                  <td className="px-4 py-3 text-center">
+                    {(() => {
+                      const match = dossierScores[guest.full_name?.toLowerCase()]
+                      if (!match) return <span className="text-xs text-[#6e6e7e]">—</span>
+                      const s = match.score
+                      const color = s >= 80 ? 'bg-green-50 text-green-700' : s >= 60 ? 'bg-blue-50 text-blue-700' : s >= 40 ? 'bg-amber-50 text-amber-700' : 'bg-red-50 text-red-700'
+                      return (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); setDossierContactId(match.contact_id) }}
+                          className={`inline-flex px-1.5 py-0.5 text-xs font-bold rounded ${color} hover:opacity-80`}
+                          title="View dossier"
+                        >
+                          {s}
+                        </button>
+                      )
+                    })()}
+                  </td>
                   <td className="px-4 py-3 font-medium text-[#1a1a2e]">{guest.full_name}</td>
                   <td className="px-4 py-3 text-[#4a4a5e]">{guest.email}</td>
                   <td className="px-4 py-3 text-center text-[#4a4a5e]">{guest.plus_ones || 0}</td>
@@ -327,6 +369,15 @@ export default function GuestsTabPage() {
           guest={selectedGuest}
           onClose={() => setSelectedGuest(null)}
           onUpdate={handleGuestUpdate}
+        />
+      )}
+
+      {/* Dossier Panel */}
+      {dossierContactId && (
+        <DossierPanel
+          eventId={eventId}
+          contactId={dossierContactId}
+          onClose={() => setDossierContactId(null)}
         />
       )}
     </div>

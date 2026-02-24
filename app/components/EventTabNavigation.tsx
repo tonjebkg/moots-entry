@@ -7,7 +7,7 @@ interface EventTabNavigationProps {
   eventId: string
 }
 
-type TabKey = 'overview' | 'guests' | 'campaigns' | 'objectives' | 'scoring' | 'seating' | 'checkin'
+type TabKey = 'overview' | 'guests' | 'campaigns' | 'objectives' | 'scoring' | 'seating' | 'checkin' | 'briefings' | 'broadcast' | 'follow-up' | 'rsvp-page'
 
 export function EventTabNavigation({ eventId }: EventTabNavigationProps) {
   const pathname = usePathname()
@@ -20,6 +20,10 @@ export function EventTabNavigation({ eventId }: EventTabNavigationProps) {
     { key: 'scoring', label: 'AI Scoring', href: `/dashboard/${eventId}/scoring` },
     { key: 'seating', label: 'Seating', href: `/dashboard/${eventId}/seating` },
     { key: 'checkin', label: 'Check-in', href: `/dashboard/${eventId}/checkin` },
+    { key: 'briefings', label: 'Briefings', href: `/dashboard/${eventId}/briefings` },
+    { key: 'broadcast', label: 'Broadcast', href: `/dashboard/${eventId}/broadcast` },
+    { key: 'follow-up', label: 'Follow-Up', href: `/dashboard/${eventId}/follow-up` },
+    { key: 'rsvp-page', label: 'RSVP Page', href: `/dashboard/${eventId}/rsvp-page` },
   ]
 
   const activeTab = tabs.find(tab => pathname?.startsWith(tab.href))?.key || 'overview'

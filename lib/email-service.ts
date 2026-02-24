@@ -163,6 +163,218 @@ export async function sendJoinLinkEmail(
   }
 }
 
+// ─── Walk-in Welcome Email ─────────────────────────────────────────────
+
+export interface SendWalkInWelcomeEmailParams {
+  to: string;
+  recipientName: string;
+  eventTitle: string;
+}
+
+export async function sendWalkInWelcomeEmail(
+  params: SendWalkInWelcomeEmailParams
+): Promise<EmailResult> {
+  try {
+    if (!resend) {
+      return { success: false, error: 'Email service not available' };
+    }
+
+    const html = `
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8"></head>
+<body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;background:#f9fafb;">
+<table role="presentation" style="width:100%;border-collapse:collapse;"><tr><td align="center" style="padding:40px 0;">
+<table role="presentation" style="width:600px;max-width:100%;background:#fff;border-radius:8px;box-shadow:0 2px 4px rgba(0,0,0,.1);">
+<tr><td style="padding:40px;text-align:center;border-bottom:1px solid #e5e7eb;">
+  <h1 style="margin:0;font-size:24px;color:#111827;">Welcome to ${params.eventTitle}!</h1>
+</td></tr>
+<tr><td style="padding:32px 40px;">
+  <p style="font-size:16px;color:#374151;line-height:1.6;">Hi ${params.recipientName},</p>
+  <p style="font-size:16px;color:#374151;line-height:1.6;">Thank you for joining us! We're glad you could make it.</p>
+</td></tr>
+<tr><td style="padding:24px 40px;text-align:center;border-top:1px solid #e5e7eb;background:#f9fafb;border-radius:0 0 8px 8px;">
+  <p style="margin:0;font-size:14px;color:#6b7280;">Powered by <strong>Moots</strong></p>
+</td></tr>
+</table></td></tr></table></body></html>`.trim();
+
+    const result = await resend.emails.send({
+      from: (env as any).RESEND_FROM_EMAIL,
+      to: params.to,
+      subject: `Welcome to ${params.eventTitle}!`,
+      html,
+      tags: [{ name: 'category', value: 'walk_in_welcome' }],
+    });
+
+    if (result.error) {
+      return { success: false, error: result.error.message };
+    }
+    return { success: true, emailServiceId: result.data?.id };
+  } catch (error) {
+    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+  }
+}
+
+// ─── RSVP Confirmation Email ──────────────────────────────────────────
+
+export interface SendRsvpConfirmationEmailParams {
+  to: string;
+  recipientName: string;
+  eventTitle: string;
+  eventDate?: string;
+  eventLocation?: string;
+}
+
+export async function sendRsvpConfirmationEmail(
+  params: SendRsvpConfirmationEmailParams
+): Promise<EmailResult> {
+  try {
+    if (!resend) {
+      return { success: false, error: 'Email service not available' };
+    }
+
+    const html = `
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8"></head>
+<body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;background:#f9fafb;">
+<table role="presentation" style="width:100%;border-collapse:collapse;"><tr><td align="center" style="padding:40px 0;">
+<table role="presentation" style="width:600px;max-width:100%;background:#fff;border-radius:8px;box-shadow:0 2px 4px rgba(0,0,0,.1);">
+<tr><td style="padding:40px;text-align:center;border-bottom:1px solid #e5e7eb;">
+  <h1 style="margin:0;font-size:24px;color:#111827;">RSVP Confirmed!</h1>
+</td></tr>
+<tr><td style="padding:32px 40px;">
+  <p style="font-size:16px;color:#374151;line-height:1.6;">Hi ${params.recipientName},</p>
+  <p style="font-size:16px;color:#374151;line-height:1.6;">Your RSVP for <strong>${params.eventTitle}</strong> has been received. We'll be in touch with more details soon.</p>
+  ${params.eventDate ? `<p style="font-size:14px;color:#6b7280;">Date: ${params.eventDate}</p>` : ''}
+  ${params.eventLocation ? `<p style="font-size:14px;color:#6b7280;">Location: ${params.eventLocation}</p>` : ''}
+</td></tr>
+<tr><td style="padding:24px 40px;text-align:center;border-top:1px solid #e5e7eb;background:#f9fafb;border-radius:0 0 8px 8px;">
+  <p style="margin:0;font-size:14px;color:#6b7280;">Powered by <strong>Moots</strong></p>
+</td></tr>
+</table></td></tr></table></body></html>`.trim();
+
+    const result = await resend.emails.send({
+      from: (env as any).RESEND_FROM_EMAIL,
+      to: params.to,
+      subject: `RSVP Confirmed — ${params.eventTitle}`,
+      html,
+      tags: [{ name: 'category', value: 'rsvp_confirmation' }],
+    });
+
+    if (result.error) {
+      return { success: false, error: result.error.message };
+    }
+    return { success: true, emailServiceId: result.data?.id };
+  } catch (error) {
+    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+  }
+}
+
+// ─── Broadcast Email ──────────────────────────────────────────────────
+
+export interface SendBroadcastEmailParams {
+  to: string;
+  recipientName: string;
+  subject: string;
+  content: string;
+  eventTitle: string;
+}
+
+export async function sendBroadcastEmail(
+  params: SendBroadcastEmailParams
+): Promise<EmailResult> {
+  try {
+    if (!resend) {
+      return { success: false, error: 'Email service not available' };
+    }
+
+    const html = `
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8"></head>
+<body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;background:#f9fafb;">
+<table role="presentation" style="width:100%;border-collapse:collapse;"><tr><td align="center" style="padding:40px 0;">
+<table role="presentation" style="width:600px;max-width:100%;background:#fff;border-radius:8px;box-shadow:0 2px 4px rgba(0,0,0,.1);">
+<tr><td style="padding:40px;text-align:center;border-bottom:1px solid #e5e7eb;">
+  <h1 style="margin:0;font-size:24px;color:#111827;">${params.eventTitle}</h1>
+</td></tr>
+<tr><td style="padding:32px 40px;">
+  <p style="font-size:16px;color:#374151;line-height:1.6;">Hi ${params.recipientName},</p>
+  <div style="font-size:16px;color:#374151;line-height:1.6;">${params.content}</div>
+</td></tr>
+<tr><td style="padding:24px 40px;text-align:center;border-top:1px solid #e5e7eb;background:#f9fafb;border-radius:0 0 8px 8px;">
+  <p style="margin:0;font-size:14px;color:#6b7280;">Powered by <strong>Moots</strong></p>
+</td></tr>
+</table></td></tr></table></body></html>`.trim();
+
+    const result = await resend.emails.send({
+      from: (env as any).RESEND_FROM_EMAIL,
+      to: params.to,
+      subject: params.subject,
+      html,
+      tags: [{ name: 'category', value: 'broadcast' }],
+    });
+
+    if (result.error) {
+      return { success: false, error: result.error.message };
+    }
+    return { success: true, emailServiceId: result.data?.id };
+  } catch (error) {
+    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+  }
+}
+
+// ─── Follow-Up Email ──────────────────────────────────────────────────
+
+export interface SendFollowUpEmailParams {
+  to: string;
+  recipientName: string;
+  subject: string;
+  content: string;
+  eventTitle: string;
+}
+
+export async function sendFollowUpEmail(
+  params: SendFollowUpEmailParams
+): Promise<EmailResult> {
+  try {
+    if (!resend) {
+      return { success: false, error: 'Email service not available' };
+    }
+
+    const html = `
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8"></head>
+<body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;background:#f9fafb;">
+<table role="presentation" style="width:100%;border-collapse:collapse;"><tr><td align="center" style="padding:40px 0;">
+<table role="presentation" style="width:600px;max-width:100%;background:#fff;border-radius:8px;box-shadow:0 2px 4px rgba(0,0,0,.1);">
+<tr><td style="padding:40px;text-align:center;border-bottom:1px solid #e5e7eb;">
+  <h1 style="margin:0;font-size:24px;color:#111827;">Following up — ${params.eventTitle}</h1>
+</td></tr>
+<tr><td style="padding:32px 40px;">
+  <p style="font-size:16px;color:#374151;line-height:1.6;">Hi ${params.recipientName},</p>
+  <div style="font-size:16px;color:#374151;line-height:1.6;">${params.content}</div>
+</td></tr>
+<tr><td style="padding:24px 40px;text-align:center;border-top:1px solid #e5e7eb;background:#f9fafb;border-radius:0 0 8px 8px;">
+  <p style="margin:0;font-size:14px;color:#6b7280;">Powered by <strong>Moots</strong></p>
+</td></tr>
+</table></td></tr></table></body></html>`.trim();
+
+    const result = await resend.emails.send({
+      from: (env as any).RESEND_FROM_EMAIL,
+      to: params.to,
+      subject: params.subject,
+      html,
+      tags: [{ name: 'category', value: 'follow_up' }],
+    });
+
+    if (result.error) {
+      return { success: false, error: result.error.message };
+    }
+    return { success: true, emailServiceId: result.data?.id };
+  } catch (error) {
+    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+  }
+}
+
 /**
  * Generate HTML body for RSVP invitation email
  */

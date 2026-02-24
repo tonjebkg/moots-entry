@@ -44,6 +44,12 @@ export function middleware(request: NextRequest) {
     return addSecurityHeaders(response);
   }
 
+  // Public RSVP pages (/e/[slug])
+  if (pathname.startsWith('/e/')) {
+    const response = NextResponse.next();
+    return addSecurityHeaders(response);
+  }
+
   // ─── Public API endpoints ─────────────────────────────────────────
   const isPublicApiPath =
     /^\/api\/events\/\d+\/join-requests$/.test(pathname) ||
@@ -51,7 +57,8 @@ export function middleware(request: NextRequest) {
     /^\/api\/events\/\d+$/.test(pathname) ||
     /^\/api\/rsvp\//.test(pathname) ||
     /^\/api\/join\//.test(pathname) ||
-    /^\/api\/auth\//.test(pathname); // Auth endpoints are public
+    /^\/api\/auth\//.test(pathname) || // Auth endpoints are public
+    /^\/api\/public\//.test(pathname); // Public API endpoints (RSVP, etc.)
 
   // Handle CORS preflight for public endpoints
   if (isPublicApiPath && method === 'OPTIONS') {
@@ -101,6 +108,13 @@ export function middleware(request: NextRequest) {
       const response = NextResponse.next();
       return addSecurityHeaders(response);
     }
+
+    // Public API endpoints (RSVP submissions, etc.)
+    if (/^\/api\/public\//.test(pathname)) {
+      const response = NextResponse.next();
+      addCorsHeaders(response, origin);
+      return addSecurityHeaders(response);
+    }
   }
 
   // ─── Protected routes: check session cookie ───────────────────────
@@ -145,6 +159,7 @@ export const config = {
     // Public guest pages
     '/rsvp/:path*',
     '/join/:path*',
+    '/e/:path*',
     // API routes
     '/api/:path*',
   ],
