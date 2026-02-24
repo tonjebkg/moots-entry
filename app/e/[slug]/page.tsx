@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import Image from 'next/image'
 import { useParams } from 'next/navigation'
 import { Calendar, MapPin, Check } from 'lucide-react'
 
@@ -145,10 +146,13 @@ export default function PublicRsvpPage() {
     <div className="flex items-center justify-center min-h-screen px-4 py-12">
       <div className="max-w-lg w-full">
         {pageData.hero_image_url && (
-          <img
+          <Image
             src={pageData.hero_image_url}
             alt=""
+            width={512}
+            height={192}
             className="w-full h-48 object-cover rounded-t-2xl"
+            unoptimized
           />
         )}
 

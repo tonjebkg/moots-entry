@@ -37,6 +37,7 @@ export default function EventSetupPage() {
   // Load event data
   useEffect(() => {
     fetchEvent();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [eventId]);
 
   async function fetchEvent() {

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import Image from 'next/image'
 import { X, Mail, Phone, Building2, Briefcase, Linkedin, Globe, Sparkles, Edit3, Save } from 'lucide-react'
 import { EnrichmentStatusBadge } from './EnrichmentStatusBadge'
 import { TagEditor } from './TagEditor'
@@ -54,6 +55,7 @@ export function ContactDetailPanel({ contactId, onClose, onUpdate, onEnrich }: C
 
   useEffect(() => {
     fetchContact()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [contactId])
 
   async function fetchContact() {
@@ -116,7 +118,7 @@ export function ContactDetailPanel({ contactId, onClose, onUpdate, onEnrich }: C
             {/* Profile Header */}
             <div className="text-center">
               {contact.photo_url ? (
-                <img src={contact.photo_url} alt={contact.full_name} className="w-20 h-20 rounded-full mx-auto mb-3 border-2 border-[#e1e4e8] object-cover" />
+                <Image src={contact.photo_url} alt={contact.full_name} width={80} height={80} className="w-20 h-20 rounded-full mx-auto mb-3 border-2 border-[#e1e4e8] object-cover" unoptimized />
               ) : (
                 <div className="w-20 h-20 rounded-full mx-auto mb-3 bg-gradient-to-br from-[#0f3460] to-[#1a1a2e] flex items-center justify-center">
                   <span className="text-2xl font-bold text-white">{contact.full_name.charAt(0)}</span>

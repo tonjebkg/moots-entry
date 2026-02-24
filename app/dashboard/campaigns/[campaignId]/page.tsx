@@ -75,6 +75,7 @@ export default function CampaignDetailPage() {
 
   useEffect(() => {
     fetchData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [campaignId]);
 
   async function fetchData() {

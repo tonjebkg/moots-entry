@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import Image from 'next/image'
 import { ChevronLeft } from 'lucide-react'
 import { EventTabNavigation } from '@/app/components/EventTabNavigation'
 import { EventHeaderActions } from '@/app/components/EventHeaderActions'
@@ -205,10 +206,13 @@ export default async function EventLayout({ children, params }: LayoutProps) {
                 {/* Event Image */}
                 {event.image_url && (
                   <div className="shrink-0">
-                    <img
+                    <Image
                       src={event.image_url}
                       alt={event.title}
+                      width={80}
+                      height={80}
                       className="w-20 h-20 rounded-lg object-cover border border-[#e1e4e8]"
+                      unoptimized
                     />
                   </div>
                 )}

@@ -28,6 +28,7 @@ export default function BroadcastPage() {
 
   useEffect(() => {
     fetchBroadcasts()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [eventId])
 
   async function handleSend(broadcastId: string) {

@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import Image from 'next/image'
 import { X, Linkedin, Mail, Building2, Target, MessageSquare, Users, Star } from 'lucide-react'
 import type { DossierData } from '@/types/phase3'
 
@@ -63,7 +64,7 @@ export function DossierPanel({ eventId, contactId, onClose }: DossierPanelProps)
             <div className="flex items-start gap-4">
               <div className="w-16 h-16 rounded-full bg-[#2F4F3F] flex items-center justify-center text-white text-xl font-semibold shrink-0">
                 {dossier.photo_url ? (
-                  <img src={dossier.photo_url} alt="" className="w-16 h-16 rounded-full object-cover" />
+                  <Image src={dossier.photo_url} alt="" width={64} height={64} className="w-16 h-16 rounded-full object-cover" unoptimized />
                 ) : (
                   dossier.full_name?.charAt(0)?.toUpperCase() || '?'
                 )}

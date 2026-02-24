@@ -29,6 +29,7 @@ export default function RsvpPageAdmin() {
 
   useEffect(() => {
     fetchPage()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [eventId])
 
   if (loading) {

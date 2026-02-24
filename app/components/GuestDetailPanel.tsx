@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Image from 'next/image'
 import { X, Linkedin, Mail, Phone, Building, Briefcase, FileText, Tag, Users, Calendar, Check, AlertCircle, Edit2, Save } from 'lucide-react'
 import { GuestProfile, getFullName, getDisplayTitle, isEnriched, getEnrichmentSources, hasEnrichmentFrom, getLatestEnrichment, TIER_META, PRIORITY_META, STATUS_META } from '@/types/guest'
 
@@ -68,10 +69,13 @@ export function GuestDetailPanel({ guest, onClose, onUpdate }: GuestDetailPanelP
           {/* Profile Picture & Basic Info */}
           <div className="text-center">
             {displayGuest.profile_picture_url ? (
-              <img
+              <Image
                 src={displayGuest.profile_picture_url}
                 alt={fullName}
+                width={96}
+                height={96}
                 className="w-24 h-24 rounded-full mx-auto mb-4 object-cover border-2 border-[#e1e4e8]"
+                unoptimized
               />
             ) : (
               <div className="w-24 h-24 rounded-full mx-auto mb-4 bg-gradient-to-br from-[#0f3460] to-[#1a1a2e] flex items-center justify-center">

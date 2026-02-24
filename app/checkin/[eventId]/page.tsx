@@ -177,6 +177,7 @@ export default function CheckinPage() {
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [commentGuest, commentDraft])
 
   // Guard: Skip Supabase usage when in dashboard mode

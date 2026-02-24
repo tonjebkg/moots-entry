@@ -1,6 +1,7 @@
 'use client'
 
 import { ChevronDown, ChevronUp, MessageSquare } from 'lucide-react'
+import Image from 'next/image'
 import { useState } from 'react'
 
 interface MatchedObjective {
@@ -48,7 +49,7 @@ export function ScoreCard({
         {/* Contact Info */}
         <div className="flex items-center gap-3 flex-1 min-w-0">
           {photoUrl ? (
-            <img src={photoUrl} alt={contactName} className="w-8 h-8 rounded-full object-cover" />
+            <Image src={photoUrl} alt={contactName} width={32} height={32} className="w-8 h-8 rounded-full object-cover" unoptimized />
           ) : (
             <div className="w-8 h-8 rounded-full bg-[#0f3460] flex items-center justify-center text-white text-xs font-bold shrink-0">
               {contactName.charAt(0)}

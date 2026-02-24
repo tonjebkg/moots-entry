@@ -50,6 +50,7 @@ export default function OverviewPage() {
 
   useEffect(() => {
     fetchData()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [eventId])
 
   async function fetchData() {

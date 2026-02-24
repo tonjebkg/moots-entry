@@ -31,6 +31,7 @@ export default function BriefingsPage() {
 
   useEffect(() => {
     fetchBriefings()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [eventId])
 
   async function handleGenerate(type: BriefingType = 'PRE_EVENT') {

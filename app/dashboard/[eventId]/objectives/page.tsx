@@ -25,6 +25,7 @@ export default function ObjectivesPage() {
   useEffect(() => {
     fetchObjectives()
     fetchEvent()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [eventId])
 
   async function fetchObjectives() {

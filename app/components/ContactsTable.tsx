@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Image from 'next/image'
 import { ChevronUp, ChevronDown, User } from 'lucide-react'
 import { EnrichmentStatusBadge } from './EnrichmentStatusBadge'
 
@@ -123,10 +124,13 @@ export function ContactsTable({
               <td className="px-4 py-3">
                 <div className="flex items-center gap-3">
                   {contact.photo_url ? (
-                    <img
+                    <Image
                       src={contact.photo_url}
                       alt={contact.full_name}
+                      width={32}
+                      height={32}
                       className="w-8 h-8 rounded-full object-cover"
+                      unoptimized
                     />
                   ) : (
                     <div className="w-8 h-8 rounded-full bg-[#0f3460] flex items-center justify-center text-white text-xs font-bold">

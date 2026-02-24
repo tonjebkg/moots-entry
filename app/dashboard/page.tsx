@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { CreateEventModal } from '@/app/components/CreateEventModal'
 import { Calendar, MapPin, Users, Lock, Plus, Search, X, Mail, CheckCircle2, Clock, UserCheck, Settings, LogOut } from 'lucide-react'
 
@@ -356,10 +357,13 @@ export default function DashboardPage() {
                       {/* Square Event Image */}
                       {event.image_url ? (
                         <div className="w-40 h-40 shrink-0 bg-[#f0f2f5] rounded-lg overflow-hidden">
-                          <img
+                          <Image
                             src={event.image_url}
                             alt={event.title ?? event.name ?? 'Event'}
+                            width={160}
+                            height={160}
                             className="w-full h-full object-cover"
+                            unoptimized
                           />
                         </div>
                       ) : (

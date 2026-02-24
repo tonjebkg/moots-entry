@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
+import Image from 'next/image'
 import {
   ArrowLeft, Mail, Phone, Building2, Briefcase, Linkedin, Globe,
   Sparkles, Edit3, Save, Trash2, Settings
@@ -60,6 +61,7 @@ export default function ContactDetailPage() {
 
   useEffect(() => {
     fetchContact()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [contactId])
 
   async function fetchContact() {
@@ -163,7 +165,7 @@ export default function ContactDetailPage() {
               <div className="flex items-start gap-6">
                 {/* Avatar */}
                 {contact.photo_url ? (
-                  <img src={contact.photo_url} alt={contact.full_name} className="w-24 h-24 rounded-full object-cover border-2 border-[#e1e4e8]" />
+                  <Image src={contact.photo_url} alt={contact.full_name} width={96} height={96} className="w-24 h-24 rounded-full object-cover border-2 border-[#e1e4e8]" unoptimized />
                 ) : (
                   <div className="w-24 h-24 rounded-full bg-gradient-to-br from-[#0f3460] to-[#1a1a2e] flex items-center justify-center shrink-0">
                     <span className="text-3xl font-bold text-white">{contact.full_name.charAt(0)}</span>

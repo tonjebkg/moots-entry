@@ -24,6 +24,7 @@ export default function JoinPage() {
 
   useEffect(() => {
     fetchInvitation();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
   async function fetchInvitation() {

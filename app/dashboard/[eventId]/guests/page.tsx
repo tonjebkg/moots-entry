@@ -63,6 +63,7 @@ export default function GuestsTabPage() {
 
   useEffect(() => {
     fetchGuests()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [eventId])
 
   async function fetchGuests() {

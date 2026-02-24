@@ -31,6 +31,7 @@ export default function FollowUpPage() {
 
   useEffect(() => {
     fetchFollowUps()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [eventId])
 
   async function handleSend(followUpId: string) {

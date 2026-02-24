@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import type { RsvpPage } from '@/types/phase3'
 
 interface RsvpPagePreviewProps {
@@ -25,7 +26,7 @@ export function RsvpPagePreview({ page }: RsvpPagePreviewProps) {
       <div className="p-6" style={{ backgroundColor: '#FAF9F7' }}>
         <div className="max-w-md mx-auto bg-white rounded-xl shadow-sm border border-[#e1e4e8] p-8 text-center">
           {page.hero_image_url && (
-            <img src={page.hero_image_url} alt="" className="w-full h-40 object-cover rounded-lg mb-6" />
+            <Image src={page.hero_image_url} alt="" width={400} height={160} className="w-full h-40 object-cover rounded-lg mb-6" unoptimized />
           )}
           <h1 className="text-2xl font-bold text-[#1a1a2e] mb-2" style={{ fontFamily: 'Playfair Display, serif' }}>
             {page.headline}

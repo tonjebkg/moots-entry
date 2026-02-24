@@ -83,6 +83,7 @@ export function CampaignDetailPanel({ campaignId, eventId, onRefresh }: Campaign
 
   useEffect(() => {
     fetchData()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [campaignId])
 
   async function fetchData() {

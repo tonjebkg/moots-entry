@@ -32,6 +32,7 @@ export default function CampaignsTabPage() {
 
   useEffect(() => {
     fetchCampaigns()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [eventId])
 
   useEffect(() => {
