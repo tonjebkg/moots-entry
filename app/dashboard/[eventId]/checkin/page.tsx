@@ -1,11 +1,10 @@
-'use client'
+import { redirect } from 'next/navigation'
 
-import { useParams } from 'next/navigation'
-import { CheckinDashboard } from '@/app/components/CheckinDashboard'
+type PageProps = {
+  params: Promise<{ eventId: string }>
+}
 
-export default function CheckinTabPage() {
-  const params = useParams()
-  const eventId = params.eventId as string
-
-  return <CheckinDashboard eventId={eventId} />
+export default async function CheckinRedirectPage({ params }: PageProps) {
+  const { eventId } = await params
+  redirect(`/dashboard/${eventId}/day-of`)
 }

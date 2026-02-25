@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
-import { CreateEventModal } from '@/app/components/CreateEventModal'
+import { CreateEventWizard } from '@/app/components/CreateEventWizard'
 import { DashboardHeader } from '@/app/components/DashboardHeader'
 import { Calendar, MapPin, Users, Lock, Plus, Search, X, Mail, CheckCircle2, Clock, UserCheck } from 'lucide-react'
 
@@ -444,9 +444,9 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Create Event Modal */}
+      {/* Create Event Wizard */}
       {showCreateModal && (
-        <CreateEventModal
+        <CreateEventWizard
           onClose={() => setShowCreateModal(false)}
           onSuccess={() => {
             setShowCreateModal(false)
