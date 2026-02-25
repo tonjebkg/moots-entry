@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { withErrorHandling } from '@/lib/with-error-handling';
-import { requireAuth, requireRole } from '@/lib/auth';
+import { requireAuth, requireRole, tryAuthOrEventFallback } from '@/lib/auth';
 import { validateRequest } from '@/lib/validate-request';
 import { getDb } from '@/lib/db';
 import { logAction } from '@/lib/audit-log';
@@ -13,14 +13,15 @@ type RouteParams = { params: Promise<{ eventId: string }> };
  * GET /api/events/[eventId]/objectives — List objectives for an event
  */
 export const GET = withErrorHandling(async (request: NextRequest, { params }: RouteParams) => {
-  const auth = await requireAuth();
   const { eventId } = await params;
+  const eventIdNum = parseInt(eventId);
+  const { workspaceId } = await tryAuthOrEventFallback(eventIdNum);
   const db = getDb();
 
   const objectives = await db`
     SELECT * FROM event_objectives
-    WHERE event_id = ${parseInt(eventId)}
-      AND workspace_id = ${auth.workspace.id}
+    WHERE event_id = ${eventIdNum}
+      AND workspace_id = ${workspaceId}
     ORDER BY sort_order ASC, created_at ASC
   `;
 

@@ -21,11 +21,11 @@ export async function getEventAnalytics(
     scoreDistRows,
     campaignRows,
   ] = await Promise.all([
-    // Guest pool: contacts linked to this event via campaign_invitations
+    // Guest pool: total contacts in workspace
     db`
-      SELECT COUNT(DISTINCT ci.contact_id)::int AS count
-      FROM campaign_invitations ci
-      WHERE ci.event_id = ${eventId}
+      SELECT COUNT(*)::int AS count
+      FROM people_contacts
+      WHERE workspace_id = ${workspaceId}
     `,
     // Scored contacts
     db`
@@ -124,16 +124,19 @@ export async function getEventAnalytics(
   }));
 
   // Campaign summary with acceptance rate
-  const campaignSummary = campaignRows.map((c: any) => ({
-    campaign_id: c.campaign_id,
-    campaign_name: c.campaign_name,
-    total_invited: c.total_invited,
-    total_accepted: c.total_accepted,
-    total_declined: c.total_declined,
-    acceptance_rate: c.total_invited > 0
-      ? Math.round((c.total_accepted / c.total_invited) * 100)
-      : 0,
-  }));
+  const campaignSummary = campaignRows.map((c: any) => {
+    const totalSent = c.total_invited + c.total_accepted + c.total_declined;
+    return {
+      campaign_id: c.campaign_id,
+      campaign_name: c.campaign_name,
+      total_invited: totalSent,
+      total_accepted: c.total_accepted,
+      total_declined: c.total_declined,
+      acceptance_rate: totalSent > 0
+        ? Math.round((c.total_accepted / totalSent) * 100)
+        : 0,
+    };
+  });
 
   return {
     funnel,

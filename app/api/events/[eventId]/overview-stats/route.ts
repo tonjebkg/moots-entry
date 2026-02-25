@@ -34,11 +34,10 @@ export const GET = withErrorHandling(async (_request: NextRequest, { params }: R
         COUNT(DISTINCT CASE WHEN gs.relevance_score >= 60 THEN gs.id END) as qualified_count
       FROM people_contacts c
       LEFT JOIN guest_scores gs ON gs.contact_id = c.id AND gs.event_id = ${eventIdNum}
-      LEFT JOIN workspaces w ON w.id = c.workspace_id
-      WHERE c.workspace_id = (SELECT workspace_id FROM events e2 LEFT JOIN workspaces w2 ON 1=1 LIMIT 1)
+      WHERE c.workspace_id = (SELECT workspace_id FROM events WHERE id = ${eventIdNum} LIMIT 1)
     `.catch(() => [{ total_contacts: 0, scored_count: 0, qualified_count: 0 }]),
 
-    // Guest status counts
+    // Guest status counts (from both join requests and campaign invitations)
     db`
       SELECT
         COUNT(*) as total,
@@ -63,10 +62,15 @@ export const GET = withErrorHandling(async (_request: NextRequest, { params }: R
 
     // Recent join requests for activity feed
     db`
-      SELECT full_name, status, created_at, updated_at
-      FROM event_join_requests
-      WHERE event_id = ${eventIdNum}
-      ORDER BY COALESCE(updated_at, created_at) DESC
+      SELECT
+        COALESCE(TRIM(CONCAT(up.first_name, ' ', up.last_name)), 'Unknown') AS full_name,
+        ejr.status,
+        ejr.created_at,
+        ejr.updated_at
+      FROM event_join_requests ejr
+      LEFT JOIN user_profiles up ON up.owner_id = ejr.owner_id
+      WHERE ejr.event_id = ${eventIdNum}
+      ORDER BY COALESCE(ejr.updated_at, ejr.created_at) DESC
       LIMIT 15
     `.catch(() => []),
   ])
@@ -76,11 +80,15 @@ export const GET = withErrorHandling(async (_request: NextRequest, { params }: R
   const capacity = capacityResult[0] || { total_capacity: 0, confirmed: 0 }
   const objectives = objectiveCount[0] || { count: 0 }
 
-  // Build funnel
+  // Build funnel — Evaluated = total contacts, Qualified = scored >= 60, Invited = all campaign invites, Confirmed = accepted invites
+  const invitedResult = await db`
+    SELECT COUNT(*) as total_invited FROM campaign_invitations WHERE event_id = ${eventIdNum}
+  `.catch(() => [{ total_invited: 0 }])
+
   const funnel = {
     evaluated: Number(scoring.total_contacts) || 0,
     qualified: Number(scoring.qualified_count) || 0,
-    invited: Number(guests.approved) || 0,
+    invited: Number(invitedResult[0]?.total_invited) || 0,
     confirmed: Number(capacity.confirmed) || 0,
   }
 

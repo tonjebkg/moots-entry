@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { withErrorHandling } from '@/lib/with-error-handling';
-import { requireAuth, requireRole } from '@/lib/auth';
+import { requireAuth, requireRole, tryAuthOrEventFallback } from '@/lib/auth';
 import { validateRequest } from '@/lib/validate-request';
 import { logAction } from '@/lib/audit-log';
 import { getDb } from '@/lib/db';
@@ -13,16 +13,16 @@ export const runtime = 'nodejs';
  * GET /api/events/[eventId]/briefings — List briefing packets
  */
 export const GET = withErrorHandling(async (request: NextRequest, context: any) => {
-  const auth = await requireAuth();
   const { eventId } = await context.params;
   const eventIdNum = parseInt(eventId, 10);
+  const { workspaceId } = await tryAuthOrEventFallback(eventIdNum);
   const db = getDb();
 
   const briefings = await db`
     SELECT bp.*, u.full_name AS generated_for_name, u.email AS generated_for_email
     FROM briefing_packets bp
     JOIN users u ON u.id = bp.generated_for
-    WHERE bp.event_id = ${eventIdNum} AND bp.workspace_id = ${auth.workspace.id}
+    WHERE bp.event_id = ${eventIdNum} AND bp.workspace_id = ${workspaceId}
     ORDER BY bp.created_at DESC
   `;
 

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { withErrorHandling } from '@/lib/with-error-handling';
-import { requireAuth, requireRole } from '@/lib/auth';
+import { requireAuth, requireRole, tryAuthOrEventFallback } from '@/lib/auth';
 import { validateRequest } from '@/lib/validate-request';
 import { logAction } from '@/lib/audit-log';
 import { checkInGuest, getCheckinMetrics } from '@/lib/checkin/manager';
@@ -13,11 +13,11 @@ export const runtime = 'nodejs';
  * GET /api/events/[eventId]/checkin — Get check-in metrics and list
  */
 export const GET = withErrorHandling(async (request: NextRequest, context: any) => {
-  const auth = await requireAuth();
   const { eventId } = await context.params;
   const eventIdNum = parseInt(eventId, 10);
+  const { workspaceId } = await tryAuthOrEventFallback(eventIdNum);
 
-  const metrics = await getCheckinMetrics(eventIdNum, auth.workspace.id);
+  const metrics = await getCheckinMetrics(eventIdNum, workspaceId);
 
   return NextResponse.json(metrics);
 });

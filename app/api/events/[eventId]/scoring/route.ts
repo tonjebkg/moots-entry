@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { withErrorHandling } from '@/lib/with-error-handling';
-import { requireAuth, requireRole } from '@/lib/auth';
+import { requireAuth, requireRole, tryAuthOrEventFallback } from '@/lib/auth';
 import { validateRequest } from '@/lib/validate-request';
 import { getDb } from '@/lib/db';
 import { logAction } from '@/lib/audit-log';
@@ -14,9 +14,9 @@ type RouteParams = { params: Promise<{ eventId: string }> };
  * GET /api/events/[eventId]/scoring — Get scored contacts list
  */
 export const GET = withErrorHandling(async (request: NextRequest, { params }: RouteParams) => {
-  const auth = await requireAuth();
   const { eventId } = await params;
   const eventIdNum = parseInt(eventId);
+  const { workspaceId } = await tryAuthOrEventFallback(eventIdNum);
   const db = getDb();
 
   const searchParams = request.nextUrl.searchParams;
@@ -32,7 +32,7 @@ export const GET = withErrorHandling(async (request: NextRequest, { params }: Ro
       gs.score_rationale, gs.talking_points, gs.scored_at, gs.model_version
     FROM people_contacts c
     LEFT JOIN guest_scores gs ON gs.contact_id = c.id AND gs.event_id = ${eventIdNum}
-    WHERE c.workspace_id = ${auth.workspace.id}
+    WHERE c.workspace_id = ${workspaceId}
       ${minScore > 0 ? db`AND gs.relevance_score >= ${minScore}` : db``}
     ORDER BY gs.relevance_score DESC NULLS LAST, c.full_name ASC
     LIMIT ${limit}
@@ -49,14 +49,14 @@ export const GET = withErrorHandling(async (request: NextRequest, { params }: Ro
       MIN(gs.relevance_score) as min_score
     FROM people_contacts c
     LEFT JOIN guest_scores gs ON gs.contact_id = c.id AND gs.event_id = ${eventIdNum}
-    WHERE c.workspace_id = ${auth.workspace.id}
+    WHERE c.workspace_id = ${workspaceId}
   `;
 
   // Get active scoring job if any
   const activeJob = await db`
     SELECT id, status, total_contacts, completed_count, failed_count, created_at
     FROM scoring_jobs
-    WHERE event_id = ${eventIdNum} AND workspace_id = ${auth.workspace.id}
+    WHERE event_id = ${eventIdNum} AND workspace_id = ${workspaceId}
       AND status IN ('PENDING', 'IN_PROGRESS')
     ORDER BY created_at DESC
     LIMIT 1

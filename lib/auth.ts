@@ -159,6 +159,43 @@ export async function requireAuth(): Promise<AuthContext> {
 }
 
 /**
+ * Try auth first; if no session, derive workspace from event.
+ * Used for GET endpoints that should work in demo mode without a session cookie.
+ */
+export async function tryAuthOrEventFallback(eventId: number): Promise<{ workspaceId: string; userId?: string; role?: WorkspaceRole }> {
+  const session = await getSession();
+  if (session) {
+    return { workspaceId: session.workspace.id, userId: session.user.id, role: session.role };
+  }
+
+  // Fallback: derive workspace from event
+  const db = getDb();
+  const result = await db`SELECT workspace_id FROM events WHERE id = ${eventId} LIMIT 1`;
+  if (!result.length) {
+    throw new UnauthorizedError('Event not found and no session available');
+  }
+  return { workspaceId: result[0].workspace_id };
+}
+
+/**
+ * Try auth first; if no session, use the first workspace.
+ * Used for non-event endpoints (e.g. contacts) in demo mode.
+ */
+export async function tryAuthOrWorkspaceFallback(): Promise<{ workspaceId: string; userId?: string; role?: WorkspaceRole }> {
+  const session = await getSession();
+  if (session) {
+    return { workspaceId: session.workspace.id, userId: session.user.id, role: session.role };
+  }
+
+  const db = getDb();
+  const result = await db`SELECT id FROM workspaces LIMIT 1`;
+  if (!result.length) {
+    throw new UnauthorizedError('No workspace found and no session available');
+  }
+  return { workspaceId: result[0].id };
+}
+
+/**
  * Check that the user's role is one of the allowed roles.
  * Throws ForbiddenError if not.
  */

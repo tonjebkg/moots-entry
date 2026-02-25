@@ -55,6 +55,15 @@ export function middleware(request: NextRequest) {
     /^\/api\/events\/\d+\/join-requests$/.test(pathname) ||
     /^\/api\/events\/\d+\/join-requests\/me$/.test(pathname) ||
     /^\/api\/events\/\d+$/.test(pathname) ||
+    /^\/api\/events\/\d+\/overview-stats$/.test(pathname) ||
+    /^\/api\/events\/\d+\/scoring$/.test(pathname) ||
+    /^\/api\/events\/\d+\/objectives$/.test(pathname) ||
+    /^\/api\/events\/\d+\/briefings$/.test(pathname) ||
+    /^\/api\/events\/\d+\/follow-up$/.test(pathname) ||
+    /^\/api\/events\/\d+\/analytics$/.test(pathname) ||
+    /^\/api\/events\/\d+\/checkin/.test(pathname) ||
+    /^\/api\/events\/\d+\/seating/.test(pathname) ||
+    /^\/api\/contacts$/.test(pathname) ||
     /^\/api\/rsvp\//.test(pathname) ||
     /^\/api\/join\//.test(pathname) ||
     /^\/api\/auth\//.test(pathname) || // Auth endpoints are public
@@ -115,13 +124,25 @@ export function middleware(request: NextRequest) {
       addCorsHeaders(response, origin);
       return addSecurityHeaders(response);
     }
+
+    // Event-scoped API endpoints (scoring, objectives, briefings, etc.) — read-only
+    if (method === 'GET' && /^\/api\/events\/\d+\//.test(pathname)) {
+      const response = NextResponse.next();
+      return addSecurityHeaders(response);
+    }
+
+    // Contacts API — read-only
+    if (method === 'GET' && /^\/api\/contacts$/.test(pathname)) {
+      const response = NextResponse.next();
+      return addSecurityHeaders(response);
+    }
   }
 
   // ─── Protected routes: check session cookie ───────────────────────
   const sessionCookie = request.cookies.get(SESSION_COOKIE_NAME);
 
   if (!sessionCookie?.value) {
-    // API routes → 401 JSON
+    // API routes → 401 JSON (only for write operations on non-public paths)
     if (pathname.startsWith('/api/')) {
       const response = NextResponse.json(
         { error: 'Authentication required', code: 'UNAUTHORIZED' },
@@ -130,7 +151,13 @@ export function middleware(request: NextRequest) {
       return addSecurityHeaders(response);
     }
 
-    // Page routes → redirect to login
+    // Dashboard pages with event context → allow through (auth fallback in API routes)
+    if (/^\/dashboard\/\d+\//.test(pathname) || pathname === '/dashboard' || pathname.startsWith('/dashboard/people')) {
+      const response = NextResponse.next();
+      return addSecurityHeaders(response);
+    }
+
+    // Other page routes → redirect to login
     const loginUrl = new URL('/login', request.url);
     loginUrl.searchParams.set('redirect', pathname);
     const response = NextResponse.redirect(loginUrl);

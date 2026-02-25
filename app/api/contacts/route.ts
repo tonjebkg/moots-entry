@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { withErrorHandling } from '@/lib/with-error-handling';
-import { requireAuth, requireRole } from '@/lib/auth';
+import { requireAuth, requireRole, tryAuthOrWorkspaceFallback } from '@/lib/auth';
 import { validateRequest } from '@/lib/validate-request';
 import { validateQueryParams } from '@/lib/validate-request';
 import { getDb } from '@/lib/db';
@@ -13,8 +13,7 @@ import { computeDedupKey } from '@/lib/contacts/dedup';
  * GET /api/contacts — List contacts with search, filter, pagination
  */
 export const GET = withErrorHandling(async (request: NextRequest) => {
-  const auth = await requireAuth();
-  requireRole(auth, 'OWNER', 'ADMIN', 'TEAM_MEMBER');
+  const { workspaceId } = await tryAuthOrWorkspaceFallback();
 
   const searchParams = request.nextUrl.searchParams;
   const params = validateQueryParams(searchParams, contactSearchSchema);
@@ -25,7 +24,7 @@ export const GET = withErrorHandling(async (request: NextRequest) => {
   const db = getDb();
 
   // Build dynamic query with conditions
-  const conditions: string[] = [`c.workspace_id = '${auth.workspace.id}'`];
+  const conditions: string[] = [`c.workspace_id = '${workspaceId}'`];
   const queryParts: string[] = [];
 
   if (q) {
@@ -58,7 +57,7 @@ export const GET = withErrorHandling(async (request: NextRequest) => {
   const countResult = await db`
     SELECT COUNT(*) as total
     FROM people_contacts c
-    WHERE workspace_id = ${auth.workspace.id}
+    WHERE workspace_id = ${workspaceId}
       ${q ? db`AND to_tsvector('english', COALESCE(full_name, '') || ' ' || COALESCE(company, '') || ' ' || COALESCE(title, '')) @@ plainto_tsquery('english', ${q})` : db``}
       ${enrichment_status ? db`AND enrichment_status = ${enrichment_status}::enrichment_status` : db``}
       ${source ? db`AND source = ${source}::contact_source` : db``}
@@ -71,7 +70,7 @@ export const GET = withErrorHandling(async (request: NextRequest) => {
       c.company, c.title, c.emails, c.tags,
       c.enrichment_status, c.source, c.created_at, c.updated_at
     FROM people_contacts c
-    WHERE c.workspace_id = ${auth.workspace.id}
+    WHERE c.workspace_id = ${workspaceId}
       ${q ? db`AND to_tsvector('english', COALESCE(c.full_name, '') || ' ' || COALESCE(c.company, '') || ' ' || COALESCE(c.title, '')) @@ plainto_tsquery('english', ${q})` : db``}
       ${enrichment_status ? db`AND c.enrichment_status = ${enrichment_status}::enrichment_status` : db``}
       ${source ? db`AND c.source = ${source}::contact_source` : db``}
