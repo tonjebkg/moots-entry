@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { withErrorHandling } from '@/lib/with-error-handling';
-import { requireAuth, requireRole, tryAuthOrEventFallback } from '@/lib/auth';
+import { requireAuth, requireRole } from '@/lib/auth';
 import { validateRequest } from '@/lib/validate-request';
 import { getDb } from '@/lib/db';
 import { logAction } from '@/lib/audit-log';
@@ -16,39 +16,91 @@ type RouteParams = { params: Promise<{ eventId: string }> };
 export const GET = withErrorHandling(async (request: NextRequest, { params }: RouteParams) => {
   const { eventId } = await params;
   const eventIdNum = parseInt(eventId);
-  const { workspaceId } = await tryAuthOrEventFallback(eventIdNum);
   const db = getDb();
+
+  // Derive workspace_id from event directly (same pattern as overview-stats)
+  const eventRows = await db`SELECT workspace_id FROM events WHERE id = ${eventIdNum} LIMIT 1`;
+  if (eventRows.length === 0) {
+    return NextResponse.json({ error: 'Event not found' }, { status: 404 });
+  }
+  const workspaceId = eventRows[0].workspace_id;
 
   const searchParams = request.nextUrl.searchParams;
   const minScore = parseInt(searchParams.get('min_score') || '0');
-  const limit = Math.min(parseInt(searchParams.get('limit') || '100'), 500);
+  const limit = Math.min(parseInt(searchParams.get('limit') || '500'), 1000);
   const offset = parseInt(searchParams.get('offset') || '0');
+  const filter = searchParams.get('filter') || '';
+
+  // Build filter clause
+  const filterClause =
+    filter === 'scored' ? db`AND gs.id IS NOT NULL` :
+    filter === 'qualified' ? db`AND gs.relevance_score >= 60` :
+    filter === 'selected' ? db`AND ci.id IS NOT NULL` :
+    filter === 'confirmed' ? db`AND ci.status = 'ACCEPTED'` :
+    filter === 'pending' ? db`AND c.source IN ('RSVP_SUBMISSION','JOIN_REQUEST') AND ci.id IS NULL` :
+    db``;
 
   const scoredContacts = await db`
     SELECT
       c.id AS contact_id, c.full_name, c.first_name, c.last_name, c.photo_url,
       c.company, c.title, c.emails, c.tags, c.enrichment_status, c.ai_summary,
+      c.source, c.linkedin_url,
       gs.id AS score_id, gs.relevance_score, gs.matched_objectives,
-      gs.score_rationale, gs.talking_points, gs.scored_at, gs.model_version
+      gs.score_rationale, gs.talking_points, gs.scored_at, gs.model_version,
+      ci.id AS invitation_id, ci.status AS invitation_status,
+      ci.tier AS invitation_tier, ci.campaign_id,
+      rs.id AS rsvp_submission_id
     FROM people_contacts c
     LEFT JOIN guest_scores gs ON gs.contact_id = c.id AND gs.event_id = ${eventIdNum}
+    LEFT JOIN campaign_invitations ci ON ci.contact_id = c.id AND ci.event_id = ${eventIdNum}
+    LEFT JOIN rsvp_submissions rs ON rs.contact_id = c.id AND rs.event_id = ${eventIdNum}
     WHERE c.workspace_id = ${workspaceId}
       ${minScore > 0 ? db`AND gs.relevance_score >= ${minScore}` : db``}
-    ORDER BY gs.relevance_score DESC NULLS LAST, c.full_name ASC
+      ${filterClause}
+    ORDER BY
+      CASE WHEN gs.relevance_score IS NOT NULL THEN 0 ELSE 1 END,
+      gs.relevance_score DESC NULLS LAST,
+      CASE WHEN c.enrichment_status = 'COMPLETED' THEN 0 WHEN c.enrichment_status = 'PENDING' THEN 1 ELSE 2 END,
+      c.full_name ASC
     LIMIT ${limit}
     OFFSET ${offset}
   `;
 
-  // Get summary stats
+  // Fetch event objectives to enrich matched_objectives with objective_text
+  const objectives = await db`
+    SELECT id, objective_text FROM event_objectives WHERE event_id = ${eventIdNum}
+  `;
+  const objectiveMap: Record<string, string> = {};
+  for (const obj of objectives) {
+    objectiveMap[obj.id] = obj.objective_text;
+  }
+
+  // Enrich matched_objectives with objective_text
+  const enrichedContacts = scoredContacts.map((c: any) => {
+    if (c.matched_objectives && Array.isArray(c.matched_objectives)) {
+      c.matched_objectives = c.matched_objectives.map((mo: any) => ({
+        ...mo,
+        objective_text: mo.objective_text || objectiveMap[mo.objective_id] || 'Unknown objective',
+      }));
+    }
+    return c;
+  });
+
+  // Get summary stats with vetting funnel
   const stats = await db`
     SELECT
       COUNT(DISTINCT c.id) as total_contacts,
       COUNT(DISTINCT gs.id) as scored_count,
       ROUND(AVG(gs.relevance_score)) as avg_score,
       MAX(gs.relevance_score) as max_score,
-      MIN(gs.relevance_score) as min_score
+      MIN(gs.relevance_score) as min_score,
+      COUNT(DISTINCT CASE WHEN gs.relevance_score >= 60 THEN gs.id END) as qualified_count,
+      COUNT(DISTINCT CASE WHEN c.source IN ('RSVP_SUBMISSION','JOIN_REQUEST') AND ci.id IS NULL THEN c.id END) as pending_review_count,
+      COUNT(DISTINCT ci.id) as selected_count,
+      COUNT(DISTINCT CASE WHEN ci.status = 'ACCEPTED' THEN ci.id END) as confirmed_count
     FROM people_contacts c
     LEFT JOIN guest_scores gs ON gs.contact_id = c.id AND gs.event_id = ${eventIdNum}
+    LEFT JOIN campaign_invitations ci ON ci.contact_id = c.id AND ci.event_id = ${eventIdNum}
     WHERE c.workspace_id = ${workspaceId}
   `;
 
@@ -63,7 +115,7 @@ export const GET = withErrorHandling(async (request: NextRequest, { params }: Ro
   `;
 
   return NextResponse.json({
-    contacts: scoredContacts,
+    contacts: enrichedContacts,
     stats: stats[0],
     active_job: activeJob[0] || null,
   });

@@ -2,13 +2,32 @@
 
 import { useEffect, useState } from 'react'
 import Image from 'next/image'
-import { X, Linkedin, Mail, Building2, Target, MessageSquare, Users, Star } from 'lucide-react'
+import { X, Linkedin, Mail, Building2, Target, MessageSquare, Users, Star, ArrowRight } from 'lucide-react'
 import type { DossierData } from '@/types/phase3'
 
 interface DossierPanelProps {
   eventId: string
   contactId: string
   onClose: () => void
+}
+
+const SOURCE_LABELS: Record<string, string> = {
+  RSVP_SUBMISSION: 'RSVP',
+  JOIN_REQUEST: 'Join Request',
+  CSV_IMPORT: 'CSV Import',
+  EVENT_IMPORT: 'Event Import',
+  MANUAL: 'Manual Entry',
+  ENRICHMENT: 'Enrichment',
+  API: 'API',
+}
+
+const INVITATION_STATUS_LABELS: Record<string, { label: string; color: string }> = {
+  CONSIDERING: { label: 'Selected', color: 'text-blue-700 bg-blue-50 border-blue-200' },
+  INVITED: { label: 'Invited', color: 'text-amber-700 bg-amber-50 border-amber-200' },
+  ACCEPTED: { label: 'Confirmed', color: 'text-emerald-700 bg-emerald-50 border-emerald-200' },
+  DECLINED: { label: 'Declined', color: 'text-red-700 bg-red-50 border-red-200' },
+  WAITLIST: { label: 'Waitlist', color: 'text-gray-600 bg-gray-100 border-gray-200' },
+  BOUNCED: { label: 'Bounced', color: 'text-red-700 bg-red-50 border-red-200' },
 }
 
 export function DossierPanel({ eventId, contactId, onClose }: DossierPanelProps) {
@@ -95,6 +114,80 @@ export function DossierPanel({ eventId, contactId, onClose }: DossierPanelProps)
                   <div className="text-xs font-medium">Score</div>
                 </div>
               )}
+            </div>
+
+            {/* Event Journey */}
+            <div className="bg-white rounded-card shadow-card p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <ArrowRight className="w-4 h-4 text-brand-forest" />
+                <h4 className="text-sm font-semibold text-brand-charcoal">Event Journey</h4>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                {/* Source */}
+                <div>
+                  <span className="text-[11px] font-semibold text-ui-tertiary uppercase tracking-wider">Source</span>
+                  <div className="mt-1">
+                    <span className="inline-flex px-2 py-0.5 text-xs font-medium rounded border bg-gray-100 text-gray-700 border-gray-200">
+                      {dossier.source ? (SOURCE_LABELS[dossier.source] || dossier.source) : 'Unknown'}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Enrichment */}
+                <div>
+                  <span className="text-[11px] font-semibold text-ui-tertiary uppercase tracking-wider">Enrichment</span>
+                  <div className="mt-1">
+                    {dossier.enrichment_status === 'COMPLETED' ? (
+                      <span className="inline-flex px-2 py-0.5 text-xs font-medium rounded border bg-emerald-50 text-emerald-700 border-emerald-200">
+                        Completed ✓
+                      </span>
+                    ) : dossier.enrichment_status === 'PENDING' ? (
+                      <span className="inline-flex px-2 py-0.5 text-xs font-medium rounded border bg-amber-50 text-amber-700 border-amber-200">
+                        Pending ⋯
+                      </span>
+                    ) : dossier.enrichment_status === 'FAILED' ? (
+                      <span className="inline-flex px-2 py-0.5 text-xs font-medium rounded border bg-red-50 text-red-700 border-red-200">
+                        Failed
+                      </span>
+                    ) : (
+                      <span className="text-xs text-ui-tertiary">Not started</span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Score */}
+                <div>
+                  <span className="text-[11px] font-semibold text-ui-tertiary uppercase tracking-wider">Score</span>
+                  <div className="mt-1">
+                    {dossier.relevance_score !== null ? (
+                      <span className={`inline-flex px-2 py-0.5 text-xs font-bold rounded border ${getScoreColor(dossier.relevance_score)}`}>
+                        {dossier.relevance_score}
+                      </span>
+                    ) : (
+                      <span className="text-xs text-ui-tertiary">Not yet scored</span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Invitation */}
+                <div>
+                  <span className="text-[11px] font-semibold text-ui-tertiary uppercase tracking-wider">Invitation</span>
+                  <div className="mt-1">
+                    {dossier.invitation_status ? (
+                      <div className="flex items-center gap-1.5">
+                        <span className={`inline-flex px-2 py-0.5 text-xs font-medium rounded border ${INVITATION_STATUS_LABELS[dossier.invitation_status]?.color || 'bg-gray-100 text-gray-700 border-gray-200'}`}>
+                          {INVITATION_STATUS_LABELS[dossier.invitation_status]?.label || dossier.invitation_status}
+                        </span>
+                        {dossier.campaign_name && (
+                          <span className="text-[11px] text-ui-tertiary">{dossier.campaign_name}</span>
+                        )}
+                      </div>
+                    ) : (
+                      <span className="text-xs text-ui-tertiary">Not invited</span>
+                    )}
+                  </div>
+                </div>
+              </div>
             </div>
 
             {/* Tags */}

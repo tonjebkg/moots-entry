@@ -66,6 +66,9 @@ export interface DossierData {
   email: string | null;
   ai_summary: string | null;
   tags: string[];
+  // Source & enrichment
+  source: string | null;
+  enrichment_status: string | null;
   // Scoring data
   relevance_score: number | null;
   score_rationale: string | null;
@@ -76,6 +79,9 @@ export interface DossierData {
     match_score: number;
     explanation: string;
   }[];
+  // Invitation data
+  invitation_status: string | null;
+  campaign_name: string | null;
   // Team assignments
   team_assignments: GuestTeamAssignment[];
   // Enrichment
