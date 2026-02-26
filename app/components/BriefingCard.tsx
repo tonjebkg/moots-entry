@@ -3,6 +3,7 @@
 import { FileText, Trash2, Users, Clock } from 'lucide-react'
 import type { BriefingPacket } from '@/types/phase3'
 import { BRIEFING_STATUS_META } from '@/types/phase3'
+import { formatUSDate } from '@/lib/datetime'
 
 interface BriefingCardProps {
   briefing: BriefingPacket
@@ -32,7 +33,7 @@ export function BriefingCard({ briefing, onView, onDelete }: BriefingCardProps) 
               </span>
               <span className="flex items-center gap-1">
                 <Clock className="w-3 h-3" />
-                {new Date(briefing.created_at).toLocaleDateString()}
+                {formatUSDate(new Date(briefing.created_at))}
               </span>
               {briefing.generated_for_name && (
                 <span>For: {briefing.generated_for_name}</span>

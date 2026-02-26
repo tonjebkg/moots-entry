@@ -26,14 +26,29 @@ export interface EventCheckin {
   notes: string | null;
   created_at: string;
   updated_at: string;
+  // Enriched fields from JOINs
+  tags?: string[] | null;
+  relevance_score?: number | null;
+  table_assignment?: number | null;
+}
+
+export interface NotArrivedGuest {
+  contact_id: string;
+  full_name: string;
+  company: string | null;
+  title: string | null;
+  relevance_score: number | null;
+  table_assignment: number | null;
 }
 
 export interface CheckinMetrics {
   total_expected: number;
   total_checked_in: number;
   walk_ins: number;
+  not_arrived: number;
   check_in_rate: number;
   recent_checkins: EventCheckin[];
+  not_arrived_guests: NotArrivedGuest[];
 }
 
 // ─── Guest Team Assignments ──────────────────────────────────────────────
@@ -80,6 +95,7 @@ export interface DossierData {
     explanation: string;
   }[];
   // Invitation data
+  invitation_id: string | null;
   invitation_status: string | null;
   campaign_name: string | null;
   // Team assignments

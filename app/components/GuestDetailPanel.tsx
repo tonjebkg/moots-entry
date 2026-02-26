@@ -4,6 +4,7 @@ import { useState } from 'react'
 import Image from 'next/image'
 import { X, Linkedin, Mail, Phone, Building, Briefcase, FileText, Tag, Users, Calendar, Check, AlertCircle, Edit2, Save } from 'lucide-react'
 import { GuestProfile, getFullName, getDisplayTitle, isEnriched, getEnrichmentSources, hasEnrichmentFrom, getLatestEnrichment, TIER_META, PRIORITY_META, STATUS_META } from '@/types/guest'
+import { formatUSDateShort } from '@/lib/datetime'
 
 interface GuestDetailPanelProps {
   guest: GuestProfile
@@ -314,7 +315,7 @@ export function GuestDetailPanel({ guest, onClose, onUpdate }: GuestDetailPanelP
                         <Check className="text-emerald-600" size={16} />
                       </div>
                       <p className="text-xs text-ui-tertiary mt-0.5">
-                        {new Date(enrichment.enriched_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                        {formatUSDateShort(new Date(enrichment.enriched_at))}
                       </p>
                     </div>
                   </div>
@@ -329,7 +330,7 @@ export function GuestDetailPanel({ guest, onClose, onUpdate }: GuestDetailPanelP
 
             {displayGuest.last_enriched_at && (
               <p className="text-xs text-ui-tertiary pt-2 border-t border-blue-200">
-                Last enriched: {new Date(displayGuest.last_enriched_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                Last enriched: {formatUSDateShort(new Date(displayGuest.last_enriched_at))}
               </p>
             )}
 

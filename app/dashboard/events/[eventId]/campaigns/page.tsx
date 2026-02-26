@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { CampaignForm } from '@/app/components/CampaignForm';
 import { CompactCapacityGauge } from '@/app/components/CapacityGauge';
+import { formatUSDate } from '@/lib/datetime';
 
 interface Campaign {
   id: string;
@@ -224,7 +225,7 @@ export default function CampaignsPage() {
                       </div>
 
                       <div className="text-xs text-gray-500 mt-3">
-                        Created {new Date(campaign.created_at).toLocaleDateString()}
+                        Created {formatUSDate(new Date(campaign.created_at))}
                       </div>
                     </div>
 

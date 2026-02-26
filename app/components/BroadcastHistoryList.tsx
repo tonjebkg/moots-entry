@@ -3,6 +3,7 @@
 import { Send, Clock, AlertCircle, CheckCircle2, XCircle, Trash2 } from 'lucide-react'
 import type { BroadcastMessage } from '@/types/phase3'
 import { BROADCAST_STATUS_META } from '@/types/phase3'
+import { formatUSDate } from '@/lib/datetime'
 
 interface BroadcastHistoryListProps {
   broadcasts: BroadcastMessage[]
@@ -54,7 +55,7 @@ export function BroadcastHistoryList({ broadcasts, eventId, onSend, onDelete }: 
                   <p className="text-xs text-ui-tertiary line-clamp-1">{b.content}</p>
                   <div className="flex items-center gap-4 mt-2 text-xs text-ui-tertiary">
                     {b.created_by_name && <span>By {b.created_by_name}</span>}
-                    <span>{new Date(b.created_at).toLocaleDateString()}</span>
+                    <span>{formatUSDate(new Date(b.created_at))}</span>
                     {b.status === 'SENT' && (
                       <span>
                         {b.delivered_count} delivered, {b.failed_count} failed

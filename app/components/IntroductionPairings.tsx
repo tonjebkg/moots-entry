@@ -1,6 +1,7 @@
 'use client';
 
-import { Sparkles, ArrowLeftRight } from 'lucide-react';
+import { useState } from 'react';
+import { Sparkles, ArrowLeftRight, Copy, Check } from 'lucide-react';
 
 interface Pairing {
   id: string;
@@ -26,6 +27,34 @@ const priorityLabels: Record<number, { label: string; color: string }> = {
 };
 
 export function IntroductionPairings({ pairings, onGenerate, generating }: IntroductionPairingsProps) {
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  async function handleFacilitate(pairing: Pairing) {
+    const nameA = pairing.contact_a_name || 'Guest A';
+    const nameB = pairing.contact_b_name || 'Guest B';
+    const companyA = pairing.contact_a_company ? ` (${pairing.contact_a_company})` : '';
+    const companyB = pairing.contact_b_company ? ` (${pairing.contact_b_company})` : '';
+    const interest = pairing.mutual_interest || pairing.reason;
+
+    const text = `Introduce ${nameA}${companyA} to ${nameB}${companyB} — ${interest}`;
+
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedId(pairing.id);
+      setTimeout(() => setCopiedId(null), 2000);
+    } catch {
+      // Fallback for clipboard API not available
+      const textarea = document.createElement('textarea');
+      textarea.value = text;
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textarea);
+      setCopiedId(pairing.id);
+      setTimeout(() => setCopiedId(null), 2000);
+    }
+  }
+
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
@@ -54,6 +83,7 @@ export function IntroductionPairings({ pairings, onGenerate, generating }: Intro
         <div className="space-y-3">
           {pairings.map(pairing => {
             const pMeta = priorityLabels[pairing.priority] || priorityLabels[3];
+            const isCopied = copiedId === pairing.id;
             return (
               <div
                 key={pairing.id}
@@ -96,9 +126,22 @@ export function IntroductionPairings({ pairings, onGenerate, generating }: Intro
                         </p>
                       )}
                     </div>
-                    <span className={`shrink-0 inline-flex px-2 py-0.5 text-xs font-medium rounded border ${pMeta.color}`}>
-                      {pMeta.label}
-                    </span>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <button
+                        onClick={() => handleFacilitate(pairing)}
+                        className={`flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-md transition-colors ${
+                          isCopied
+                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                            : 'bg-brand-cream text-brand-charcoal hover:bg-brand-terracotta/10 hover:text-brand-terracotta border border-ui-border'
+                        }`}
+                      >
+                        {isCopied ? <Check size={12} /> : <Copy size={12} />}
+                        {isCopied ? 'Copied' : 'Facilitate'}
+                      </button>
+                      <span className={`inline-flex px-2 py-0.5 text-xs font-medium rounded border ${pMeta.color}`}>
+                        {pMeta.label}
+                      </span>
+                    </div>
                   </div>
                 </div>
               </div>

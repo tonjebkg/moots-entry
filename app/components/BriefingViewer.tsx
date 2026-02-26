@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { X, Target, MessageSquare, Lightbulb, Sparkles } from 'lucide-react'
 import type { BriefingPacket, BriefingContent, BriefingGuest } from '@/types/phase3'
+import { formatUSDate } from '@/lib/datetime'
 
 interface BriefingViewerProps {
   briefingId: string
@@ -68,7 +69,7 @@ export function BriefingViewer({ briefingId, eventId, onClose }: BriefingViewerP
           <div>
             <h3 className="text-lg font-semibold text-brand-charcoal">{briefing.title}</h3>
             <p className="text-xs text-ui-tertiary mt-0.5">
-              For {briefing.generated_for_name} · {briefing.guest_count} guests · {new Date(briefing.created_at).toLocaleDateString()}
+              For {briefing.generated_for_name} · {briefing.guest_count} guests · {formatUSDate(new Date(briefing.created_at))}
             </p>
           </div>
           <button onClick={onClose} className="p-1 hover:bg-brand-cream rounded-lg">

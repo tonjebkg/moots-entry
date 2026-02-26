@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
+import { formatUSDateTime, formatUSTime } from '@/lib/datetime'
 
 type Status = 'invite_sent' | 'confirmed' | 'waitlist' | 'cancelled' | 'checked_in'
 type Priority = 'normal' | 'vip' | 'vvip'
@@ -222,7 +223,7 @@ export default function CheckinPage() {
         <div>
           <h1 className="text-2xl font-semibold leading-tight">{event.name}</h1>
           <p className="text-sm text-slate-400">
-            {event.city ?? '—'} • {new Date(event.starts_at).toLocaleString()} • {event.timezone ?? '—'}
+            {event.city ?? '—'} • {formatUSDateTime(new Date(event.starts_at))} • {event.timezone ?? '—'}
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -368,7 +369,7 @@ export default function CheckinPage() {
 
                 {/* Time */}
                 <td className="p-2">
-                  {g.checked_in_at ? new Date(g.checked_in_at).toLocaleTimeString() : '—'}
+                  {g.checked_in_at ? formatUSTime(new Date(g.checked_in_at)) : '—'}
                 </td>
               </tr>
             ))}

@@ -2,15 +2,18 @@
 
 import { AvatarInitials } from '@/app/components/ui/AvatarInitials'
 import { Clock } from 'lucide-react'
+import { formatUSDateShort } from '@/lib/datetime'
 
 interface ActivityItem {
   actor: string
   action: string
   timestamp: string
+  contact_id?: string | null
 }
 
 interface ActivityFeedProps {
   activities: ActivityItem[]
+  onContactClick?: (contactId: string) => void
 }
 
 function timeAgo(timestamp: string): string {
@@ -25,10 +28,10 @@ function timeAgo(timestamp: string): string {
   if (diffHours < 24) return `${diffHours}h ago`
   const diffDays = Math.floor(diffHours / 24)
   if (diffDays < 7) return `${diffDays}d ago`
-  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+  return formatUSDateShort(date)
 }
 
-export function ActivityFeed({ activities }: ActivityFeedProps) {
+export function ActivityFeed({ activities, onContactClick }: ActivityFeedProps) {
   if (activities.length === 0) {
     return (
       <div className="bg-white rounded-card shadow-card p-8 text-center">
@@ -52,7 +55,16 @@ export function ActivityFeed({ activities }: ActivityFeedProps) {
             />
             <div className="flex-1 min-w-0">
               <p className="text-sm text-brand-charcoal">
-                <span className="font-medium">{activity.actor}</span>{' '}
+                {activity.contact_id && onContactClick ? (
+                  <button
+                    onClick={() => onContactClick(activity.contact_id!)}
+                    className="font-medium hover:text-brand-terracotta hover:underline transition-colors text-left"
+                  >
+                    {activity.actor}
+                  </button>
+                ) : (
+                  <span className="font-medium">{activity.actor}</span>
+                )}{' '}
                 <span className="text-ui-secondary">{activity.action}</span>
               </p>
             </div>

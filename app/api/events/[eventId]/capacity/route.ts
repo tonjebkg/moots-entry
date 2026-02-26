@@ -143,6 +143,43 @@ export const PATCH = withErrorHandling(
       );
     }
 
+    // Post-update cleanup: unassign guests from removed tables or over-limit
+    if (body.tables_config) {
+      const newTableNumbers = body.tables_config.tables.map((t: any) => t.number);
+      const newTableSeats: Record<number, number> = {};
+      body.tables_config.tables.forEach((t: any) => { newTableSeats[t.number] = t.seats; });
+
+      // Unassign guests from removed tables
+      if (newTableNumbers.length > 0) {
+        await db`
+          UPDATE campaign_invitations
+          SET table_assignment = NULL, seat_assignment = NULL
+          WHERE event_id = ${eventIdNum}
+            AND table_assignment IS NOT NULL
+            AND table_assignment != ALL(${newTableNumbers}::int[])
+        `;
+      }
+
+      // Unassign excess guests from tables that shrunk
+      for (const [tableNum, maxSeats] of Object.entries(newTableSeats)) {
+        const currentAssignments = await db`
+          SELECT id FROM campaign_invitations
+          WHERE event_id = ${eventIdNum} AND table_assignment = ${Number(tableNum)}
+          ORDER BY id
+        `;
+        if (currentAssignments.length > maxSeats) {
+          const idsToRemove = currentAssignments.slice(maxSeats).map((r: any) => r.id);
+          if (idsToRemove.length > 0) {
+            await db`
+              UPDATE campaign_invitations
+              SET table_assignment = NULL, seat_assignment = NULL
+              WHERE id = ANY(${idsToRemove}::uuid[])
+            `;
+          }
+        }
+      }
+    }
+
     return NextResponse.json({
       event: result[0],
       message: 'Event capacity updated successfully',

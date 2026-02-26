@@ -1,11 +1,15 @@
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
-import { Search, UserPlus, UserCheck, RefreshCw, X, AlertCircle, CheckCircle } from 'lucide-react'
+import { Search, UserPlus, UserCheck, RefreshCw, X, AlertCircle, CheckCircle, ChevronDown, ChevronRight } from 'lucide-react'
 import { CheckinMetricsBar } from './CheckinMetricsBar'
 import { WalkInForm } from './WalkInForm'
 import { DossierPanel } from './DossierPanel'
-import type { CheckinMetrics, EventCheckin } from '@/types/phase3'
+import { AvatarInitials } from './ui/AvatarInitials'
+import { TagBadge } from './ui/TagBadge'
+import { ScoreBar } from './ui/ScoreBar'
+import { formatUSTime } from '@/lib/datetime'
+import type { CheckinMetrics, EventCheckin, NotArrivedGuest } from '@/types/phase3'
 
 interface CheckinDashboardProps {
   eventId: string
@@ -25,6 +29,14 @@ interface SearchResult {
   checkin_id: string | null
 }
 
+function getTagVariant(tag: string): 'terracotta' | 'gold' | 'forest' | 'default' {
+  const t = tag.toLowerCase()
+  if (t.includes('vip') || t.includes('sponsor')) return 'terracotta'
+  if (t.includes('speaker') || t.includes('host')) return 'gold'
+  if (t.includes('portfolio') || t.includes('partner')) return 'forest'
+  return 'default'
+}
+
 export function CheckinDashboard({ eventId }: CheckinDashboardProps) {
   const [metrics, setMetrics] = useState<CheckinMetrics | null>(null)
   const [loading, setLoading] = useState(true)
@@ -37,6 +49,8 @@ export function CheckinDashboard({ eventId }: CheckinDashboardProps) {
   const [checkinFilter, setCheckinFilter] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [lastCheckedIn, setLastCheckedIn] = useState<string | null>(null)
+  const [expandedRow, setExpandedRow] = useState<string | null>(null)
+  const [showNotArrived, setShowNotArrived] = useState(false)
 
   const fetchMetrics = useCallback(async () => {
     try {
@@ -95,7 +109,6 @@ export function CheckinDashboard({ eventId }: CheckinDashboardProps) {
       })
 
       if (res.ok) {
-        // Refresh results and metrics
         setSearchResults(prev =>
           prev.map(r =>
             r.invitation_id === result.invitation_id
@@ -109,7 +122,6 @@ export function CheckinDashboard({ eventId }: CheckinDashboardProps) {
       } else {
         const data = await res.json()
         if (res.status === 409) {
-          // Already checked in — update UI
           setSearchResults(prev =>
             prev.map(r =>
               r.invitation_id === result.invitation_id
@@ -135,6 +147,13 @@ export function CheckinDashboard({ eventId }: CheckinDashboardProps) {
       </div>
     )
   }
+
+  const filteredCheckins = metrics?.recent_checkins.filter((checkin: EventCheckin) => {
+    if (!checkinFilter) return true
+    if (checkinFilter === 'walk_ins') return checkin.source === 'WALK_IN'
+    if (checkinFilter === 'checked_in') return true
+    return true
+  }) || []
 
   return (
     <div className="space-y-6">
@@ -181,7 +200,7 @@ export function CheckinDashboard({ eventId }: CheckinDashboardProps) {
             <div className="flex items-center gap-2">
               <span className="text-xs text-ui-tertiary font-medium">Filtered:</span>
               <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-brand-terracotta/10 text-brand-terracotta text-xs font-semibold rounded-full">
-                {checkinFilter === 'expected' ? 'Expected' : checkinFilter === 'checked_in' ? 'Checked In' : 'Walk-ins'}
+                {checkinFilter === 'expected' ? 'Expected' : checkinFilter === 'checked_in' ? 'Checked In' : checkinFilter === 'not_arrived' ? 'Not Arrived' : 'Walk-ins'}
                 <button
                   onClick={() => setCheckinFilter('')}
                   className="hover:text-brand-charcoal transition-colors"
@@ -267,50 +286,190 @@ export function CheckinDashboard({ eventId }: CheckinDashboardProps) {
         )}
       </div>
 
-      {/* Recent Check-ins */}
-      {metrics && metrics.recent_checkins.length > 0 && (
+      {/* Recent Check-ins Table */}
+      {metrics && filteredCheckins.length > 0 && (
         <div className="bg-white border border-ui-border rounded-lg overflow-hidden">
           <div className="px-4 py-3 border-b border-ui-border">
-            <h3 className="text-sm font-semibold text-brand-charcoal">Recent Check-ins</h3>
+            <h3 className="text-sm font-semibold text-brand-charcoal">
+              Recent Check-ins ({filteredCheckins.length})
+            </h3>
           </div>
-          <div className="divide-y divide-ui-border">
-            {metrics.recent_checkins
-              .filter((checkin: EventCheckin) => {
-                if (!checkinFilter) return true
-                if (checkinFilter === 'walk_ins') return checkin.source === 'WALK_IN'
-                if (checkinFilter === 'checked_in') return true
-                return true
-              })
-              .map((checkin: EventCheckin) => (
-              <div key={checkin.id} className="flex items-center justify-between px-4 py-3">
-                <div>
-                  <button
-                    onClick={() => checkin.contact_id && setDossierContactId(checkin.contact_id)}
-                    className={`font-medium text-sm text-brand-charcoal ${checkin.contact_id ? 'hover:text-brand-terracotta hover:underline transition-colors' : ''}`}
-                    disabled={!checkin.contact_id}
-                  >
-                    {checkin.full_name}
-                  </button>
-                  <div className="text-xs text-ui-tertiary">
-                    {checkin.email}
-                    {checkin.company && ` · ${checkin.company}`}
-                  </div>
-                </div>
-                <div className="flex items-center gap-3">
-                  <span className={`text-xs font-medium px-2 py-0.5 rounded ${
-                    checkin.source === 'WALK_IN'
-                      ? 'bg-amber-50 text-amber-700'
-                      : 'bg-emerald-50 text-emerald-700'
-                  }`}>
-                    {checkin.source === 'WALK_IN' ? 'Walk-in' : 'Checked In'}
-                  </span>
-                  <span className="text-xs text-ui-tertiary">
-                    {new Date(checkin.created_at).toLocaleTimeString()}
-                  </span>
-                </div>
-              </div>
-            ))}
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-ui-border bg-brand-cream">
+                  <th className="text-left px-4 py-2.5 font-medium text-ui-tertiary w-8"></th>
+                  <th className="text-left px-4 py-2.5 font-medium text-ui-tertiary">Time</th>
+                  <th className="text-left px-4 py-2.5 font-medium text-ui-tertiary">Name</th>
+                  <th className="text-left px-4 py-2.5 font-medium text-ui-tertiary">Company</th>
+                  <th className="text-left px-4 py-2.5 font-medium text-ui-tertiary">Title</th>
+                  <th className="text-left px-4 py-2.5 font-medium text-ui-tertiary">Tags</th>
+                  <th className="text-left px-4 py-2.5 font-medium text-ui-tertiary">Table</th>
+                  <th className="text-left px-4 py-2.5 font-medium text-ui-tertiary">Status</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-ui-border">
+                {filteredCheckins.map((checkin: EventCheckin) => {
+                  const isExpanded = expandedRow === checkin.id
+                  const tags = checkin.tags || []
+                  return (
+                    <React.Fragment key={checkin.id}>
+                      <tr
+                        className="hover:bg-brand-cream cursor-pointer transition-colors"
+                        onClick={() => setExpandedRow(isExpanded ? null : checkin.id)}
+                      >
+                        <td className="px-4 py-2.5">
+                          {isExpanded
+                            ? <ChevronDown size={14} className="text-ui-tertiary" />
+                            : <ChevronRight size={14} className="text-ui-tertiary" />
+                          }
+                        </td>
+                        <td className="px-4 py-2.5 text-ui-tertiary whitespace-nowrap">
+                          {formatUSTime(new Date(checkin.created_at))}
+                        </td>
+                        <td className="px-4 py-2.5">
+                          <div className="flex items-center gap-2">
+                            <AvatarInitials name={checkin.full_name} size={24} />
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                checkin.contact_id && setDossierContactId(checkin.contact_id)
+                              }}
+                              className={`font-medium text-brand-charcoal ${checkin.contact_id ? 'hover:text-brand-terracotta hover:underline transition-colors' : ''}`}
+                              disabled={!checkin.contact_id}
+                            >
+                              {checkin.full_name}
+                            </button>
+                          </div>
+                        </td>
+                        <td className="px-4 py-2.5 text-ui-secondary">{checkin.company || '—'}</td>
+                        <td className="px-4 py-2.5 text-ui-secondary">{checkin.title || '—'}</td>
+                        <td className="px-4 py-2.5">
+                          <div className="flex items-center gap-1">
+                            {tags.length > 0 && (
+                              <TagBadge label={tags[0]} variant={getTagVariant(tags[0])} />
+                            )}
+                            {tags.length > 1 && (
+                              <span className="text-xs text-ui-tertiary">+{tags.length - 1}</span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-4 py-2.5 text-ui-secondary">
+                          {checkin.table_assignment ? `Table ${checkin.table_assignment}` : '—'}
+                        </td>
+                        <td className="px-4 py-2.5">
+                          <span className={`text-xs font-medium px-2 py-0.5 rounded ${
+                            checkin.source === 'WALK_IN'
+                              ? 'bg-amber-50 text-amber-700'
+                              : 'bg-emerald-50 text-emerald-700'
+                          }`}>
+                            {checkin.source === 'WALK_IN' ? 'Walk-in' : 'Checked In'}
+                          </span>
+                        </td>
+                      </tr>
+                      {isExpanded && (
+                        <tr>
+                          <td colSpan={8} className="bg-brand-cream px-4 py-3">
+                            <div className="flex items-center gap-6">
+                              {checkin.relevance_score != null && (
+                                <div className="flex items-center gap-2">
+                                  <span className="text-xs font-medium text-ui-tertiary">Score:</span>
+                                  <ScoreBar score={checkin.relevance_score} />
+                                </div>
+                              )}
+                              {tags.length > 0 && (
+                                <div className="flex items-center gap-1.5">
+                                  <span className="text-xs font-medium text-ui-tertiary">Tags:</span>
+                                  {tags.map(tag => (
+                                    <TagBadge key={tag} label={tag} variant={getTagVariant(tag)} />
+                                  ))}
+                                </div>
+                              )}
+                              {checkin.notes && (
+                                <div className="flex items-center gap-1.5">
+                                  <span className="text-xs font-medium text-ui-tertiary">Notes:</span>
+                                  <span className="text-xs text-ui-secondary">{checkin.notes}</span>
+                                </div>
+                              )}
+                              {checkin.contact_id && (
+                                <button
+                                  onClick={() => setDossierContactId(checkin.contact_id!)}
+                                  className="text-xs font-semibold text-brand-terracotta hover:text-brand-terracotta/70 transition-colors ml-auto"
+                                >
+                                  View Full Profile
+                                </button>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
+                  )
+                })}
+              </tbody>
+            </table>
           </div>
+        </div>
+      )}
+
+      {/* Not Yet Arrived */}
+      {metrics && metrics.not_arrived_guests && metrics.not_arrived_guests.length > 0 && (
+        <div className="bg-white border border-ui-border rounded-lg overflow-hidden">
+          <button
+            onClick={() => setShowNotArrived(!showNotArrived)}
+            className="w-full px-4 py-3 border-b border-ui-border flex items-center justify-between hover:bg-brand-cream transition-colors"
+          >
+            <h3 className="text-sm font-semibold text-brand-charcoal">
+              Not Yet Arrived ({metrics.not_arrived_guests.length})
+            </h3>
+            {showNotArrived
+              ? <ChevronDown size={16} className="text-ui-tertiary" />
+              : <ChevronRight size={16} className="text-ui-tertiary" />
+            }
+          </button>
+          {showNotArrived && (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-ui-border bg-brand-cream">
+                    <th className="text-left px-4 py-2.5 font-medium text-ui-tertiary">Name</th>
+                    <th className="text-left px-4 py-2.5 font-medium text-ui-tertiary">Company</th>
+                    <th className="text-left px-4 py-2.5 font-medium text-ui-tertiary">Title</th>
+                    <th className="text-left px-4 py-2.5 font-medium text-ui-tertiary">Score</th>
+                    <th className="text-left px-4 py-2.5 font-medium text-ui-tertiary">Table</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-ui-border">
+                  {metrics.not_arrived_guests.map((guest: NotArrivedGuest) => (
+                    <tr key={guest.contact_id} className="hover:bg-brand-cream transition-colors">
+                      <td className="px-4 py-2.5">
+                        <div className="flex items-center gap-2">
+                          <AvatarInitials name={guest.full_name} size={24} />
+                          <button
+                            onClick={() => setDossierContactId(guest.contact_id)}
+                            className="font-medium text-brand-charcoal hover:text-brand-terracotta hover:underline transition-colors"
+                          >
+                            {guest.full_name}
+                          </button>
+                        </div>
+                      </td>
+                      <td className="px-4 py-2.5 text-ui-secondary">{guest.company || '—'}</td>
+                      <td className="px-4 py-2.5 text-ui-secondary">{guest.title || '—'}</td>
+                      <td className="px-4 py-2.5">
+                        {guest.relevance_score != null
+                          ? <ScoreBar score={guest.relevance_score} />
+                          : <span className="text-ui-tertiary">—</span>
+                        }
+                      </td>
+                      <td className="px-4 py-2.5 text-ui-secondary">
+                        {guest.table_assignment ? `Table ${guest.table_assignment}` : '—'}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       )}
 
@@ -335,3 +494,6 @@ export function CheckinDashboard({ eventId }: CheckinDashboardProps) {
     </div>
   )
 }
+
+// Need React import for Fragment usage
+import React from 'react'

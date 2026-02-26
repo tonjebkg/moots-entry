@@ -13,6 +13,7 @@ import { ScoringJobProgress } from '@/app/components/ScoringJobProgress'
 import { DossierPanel } from '@/app/components/DossierPanel'
 import { AddToWaveModal } from '@/app/components/AddToWaveModal'
 import { AddGuestModal } from '@/app/components/AddGuestModal'
+import { formatUSDate } from '@/lib/datetime'
 import { ScoreBar } from '@/app/components/ui/ScoreBar'
 import { TagBadge } from '@/app/components/ui/TagBadge'
 import { AvatarInitials } from '@/app/components/ui/AvatarInitials'
@@ -338,7 +339,7 @@ function ContactRow({
             )}
             {contact.scored_at && (
               <span className="text-[11px] text-ui-tertiary ml-auto">
-                Scored {new Date(contact.scored_at).toLocaleDateString()}
+                Scored {formatUSDate(new Date(contact.scored_at))}
               </span>
             )}
           </div>
@@ -1110,7 +1111,7 @@ export default function GuestIntelligencePage() {
                                     )}
                                     {c.scored_at && (
                                       <span className="text-[11px] text-ui-tertiary ml-auto">
-                                        Scored {new Date(c.scored_at).toLocaleDateString()}
+                                        Scored {formatUSDate(new Date(c.scored_at))}
                                       </span>
                                     )}
                                   </div>

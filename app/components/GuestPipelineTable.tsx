@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { Search, Mail, Send, Edit2, Trash2, CheckCircle } from 'lucide-react';
+import { formatUSDate, formatUSTime } from '@/lib/datetime';
 
 interface Invitation {
   id: string;
@@ -134,12 +135,8 @@ export function GuestPipelineTable({
 
   function formatDate(dateStr: string | null) {
     if (!dateStr) return '—';
-    return new Date(dateStr).toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
+    const d = new Date(dateStr);
+    return `${formatUSDate(d)} ${formatUSTime(d)}`;
   }
 
   async function handleTierChange(invitationId: string, newTier: string) {

@@ -5,6 +5,7 @@ import Image from 'next/image'
 import { X, Mail, Phone, Building2, Briefcase, Linkedin, Globe, Sparkles, Edit3, Save } from 'lucide-react'
 import { EnrichmentStatusBadge } from './EnrichmentStatusBadge'
 import { TagEditor } from './TagEditor'
+import { formatUSDate, formatUSDateTime } from '@/lib/datetime'
 
 interface ContactDetail {
   id: string
@@ -258,7 +259,7 @@ export function ContactDetailPanel({ contactId, onClose, onUpdate, onEnrich }: C
                     <div>
                       <div className="text-sm font-medium text-brand-charcoal">{score.event_title}</div>
                       <div className="text-xs text-ui-tertiary">
-                        {new Date(score.scored_at).toLocaleDateString()}
+                        {formatUSDate(new Date(score.scored_at))}
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
@@ -300,8 +301,8 @@ export function ContactDetailPanel({ contactId, onClose, onUpdate, onEnrich }: C
             {/* Metadata */}
             <div className="pt-4 border-t border-ui-border text-xs text-ui-tertiary space-y-1">
               <div>Source: {contact.source}</div>
-              <div>Created: {new Date(contact.created_at).toLocaleString()}</div>
-              <div>Updated: {new Date(contact.updated_at).toLocaleString()}</div>
+              <div>Created: {formatUSDateTime(new Date(contact.created_at))}</div>
+              <div>Updated: {formatUSDateTime(new Date(contact.updated_at))}</div>
             </div>
           </div>
         ) : (

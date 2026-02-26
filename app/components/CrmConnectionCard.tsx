@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { RefreshCw, Settings, Trash2, CheckCircle, XCircle, Clock } from 'lucide-react';
+import { formatUSDateShort, formatUSTime } from '@/lib/datetime';
 
 interface CrmConnection {
   id: string;
@@ -74,12 +75,7 @@ export function CrmConnectionCard({
         {statusIcon}
         <span>
           {connection.last_sync_at
-            ? `Last sync: ${new Date(connection.last_sync_at).toLocaleDateString('en-US', {
-                month: 'short',
-                day: 'numeric',
-                hour: 'numeric',
-                minute: '2-digit',
-              })}`
+            ? `Last sync: ${formatUSDateShort(new Date(connection.last_sync_at))} ${formatUSTime(new Date(connection.last_sync_at))}`
             : 'Never synced'}
         </span>
       </div>

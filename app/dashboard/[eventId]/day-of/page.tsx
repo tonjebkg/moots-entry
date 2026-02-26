@@ -2,11 +2,12 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import { useParams } from 'next/navigation'
-import { Sparkles, RotateCw, UserCheck, Grid3X3, ArrowLeftRight, Info } from 'lucide-react'
+import { Sparkles, RotateCw, UserCheck, Grid3X3, ArrowLeftRight, Info, Settings, Plus, Trash2, Save } from 'lucide-react'
 import { CheckinDashboard } from '@/app/components/CheckinDashboard'
 import { SeatingChart } from '@/app/components/SeatingChart'
 import { SeatingAssignPanel } from '@/app/components/SeatingAssignPanel'
 import { IntroductionPairings } from '@/app/components/IntroductionPairings'
+import { DossierPanel } from '@/app/components/DossierPanel'
 
 type SubTab = 'checkin' | 'seating' | 'introductions'
 type SeatingFormat = 'STANDING' | 'SEATED' | 'MIXED'
@@ -23,6 +24,7 @@ interface Assignment {
   full_name: string
   company: string | null
   title: string | null
+  tags: string[] | null
   table_assignment: number | null
   seat_assignment: number | null
   status: string
@@ -40,6 +42,14 @@ interface Pairing {
   priority: number
 }
 
+interface SuggestionLogEntry {
+  contact_id: string
+  full_name: string
+  table_number: number
+  rationale: string
+  confidence: number
+}
+
 export default function DayOfPage() {
   const { eventId } = useParams<{ eventId: string }>()
   const [activeTab, setActiveTab] = useState<SubTab>('checkin')
@@ -54,6 +64,21 @@ export default function DayOfPage() {
   const [generatingIntros, setGeneratingIntros] = useState(false)
   const [strategy, setStrategy] = useState<Strategy>('MIXED_INTERESTS')
   const [error, setError] = useState<string | null>(null)
+
+  // Dossier panel
+  const [dossierContactId, setDossierContactId] = useState<string | null>(null)
+
+  // Table management
+  const [showTableManager, setShowTableManager] = useState(false)
+  const [editTables, setEditTables] = useState<TableConfig[]>([])
+  const [savingTables, setSavingTables] = useState(false)
+
+  // AI reasoning log
+  const [lastSuggestionLog, setLastSuggestionLog] = useState<SuggestionLogEntry[] | null>(null)
+  const [showReasoningLog, setShowReasoningLog] = useState(false)
+
+  // Seating rationale map
+  const [rationaleMap, setRationaleMap] = useState<Record<string, string>>({})
 
   const fetchSeatingData = useCallback(async () => {
     try {
@@ -75,6 +100,17 @@ export default function DayOfPage() {
       if (pairRes.ok) {
         const pairData = await pairRes.json()
         setPairings(pairData.pairings || [])
+      }
+
+      // Fetch seating rationale
+      try {
+        const ratRes = await fetch(`/api/events/${eventId}/seating/rationale`)
+        if (ratRes.ok) {
+          const ratData = await ratRes.json()
+          setRationaleMap(ratData.rationale || {})
+        }
+      } catch {
+        // rationale endpoint may not exist yet, ignore
       }
     } catch (err: any) {
       setError(err.message)
@@ -99,8 +135,11 @@ export default function DayOfPage() {
         contact_id: a.contact_id,
         full_name: a.full_name,
         company: a.company,
+        title: a.title,
+        tags: a.tags,
         relevance_score: a.relevance_score,
         seat_assignment: a.seat_assignment,
+        rationale: rationaleMap[a.contact_id] || undefined,
       })),
   }))
 
@@ -143,6 +182,10 @@ export default function DayOfPage() {
     }
   }
 
+  function handleMoveGuest(contactId: string, newTable: number) {
+    handleAssign(contactId, newTable)
+  }
+
   async function handleGenerateSuggestions() {
     try {
       setGenerating(true)
@@ -155,6 +198,21 @@ export default function DayOfPage() {
       if (!res.ok) {
         const data = await res.json()
         throw new Error(data.error || 'Failed to generate suggestions')
+      }
+      const data = await res.json()
+      // Store AI reasoning log
+      if (data.assignments) {
+        const enriched = data.assignments.map((a: any) => {
+          const match = assignments.find(x => x.contact_id === a.contact_id)
+          return {
+            contact_id: a.contact_id,
+            full_name: match?.full_name || a.contact_id,
+            table_number: a.table_number,
+            rationale: a.rationale || '',
+            confidence: a.confidence || 0,
+          }
+        })
+        setLastSuggestionLog(enriched)
       }
       await fetchSeatingData()
     } catch (err: any) {
@@ -184,6 +242,47 @@ export default function DayOfPage() {
       setError(err.message)
     } finally {
       setGeneratingIntros(false)
+    }
+  }
+
+  // Table management
+  function openTableManager() {
+    setEditTables([...tables])
+    setShowTableManager(true)
+  }
+
+  function addTable() {
+    const maxNum = editTables.length > 0 ? Math.max(...editTables.map(t => t.number)) : 0
+    setEditTables([...editTables, { number: maxNum + 1, seats: 8 }])
+  }
+
+  function removeTable(idx: number) {
+    setEditTables(editTables.filter((_, i) => i !== idx))
+  }
+
+  function updateTableSeats(idx: number, seats: number) {
+    setEditTables(editTables.map((t, i) => i === idx ? { ...t, seats: Math.max(1, seats) } : t))
+  }
+
+  async function saveTableConfig() {
+    try {
+      setSavingTables(true)
+      const res = await fetch(`/api/events/${eventId}/capacity`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tables_config: { tables: editTables } }),
+      })
+      if (!res.ok) {
+        const data = await res.json()
+        throw new Error(data.error || 'Failed to save table config')
+      }
+      setTables(editTables)
+      setShowTableManager(false)
+      await fetchSeatingData()
+    } catch (err: any) {
+      setError(err.message)
+    } finally {
+      setSavingTables(false)
     }
   }
 
@@ -237,9 +336,16 @@ export default function DayOfPage() {
           </button>
         </div>
 
-        {/* Seating actions (only when seating tab active and not standing) */}
+        {/* Seating actions */}
         {activeTab === 'seating' && seatingFormat !== 'STANDING' && (
           <div className="flex items-center gap-3">
+            <button
+              onClick={openTableManager}
+              className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-ui-tertiary hover:text-brand-charcoal border border-ui-border rounded-lg transition-colors"
+            >
+              <Settings size={14} />
+              Manage Tables
+            </button>
             <select
               value={strategy}
               onChange={(e) => setStrategy(e.target.value as Strategy)}
@@ -288,6 +394,59 @@ export default function DayOfPage() {
             </div>
           )}
 
+          {/* Table Management Panel */}
+          {showTableManager && (
+            <div className="bg-white border border-ui-border rounded-lg p-5 space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-semibold text-brand-charcoal">Manage Tables</h3>
+                <button
+                  onClick={() => setShowTableManager(false)}
+                  className="text-ui-tertiary hover:text-brand-charcoal text-sm"
+                >
+                  Cancel
+                </button>
+              </div>
+              <div className="space-y-2">
+                {editTables.map((t, idx) => (
+                  <div key={idx} className="flex items-center gap-3">
+                    <span className="text-sm font-medium text-brand-charcoal w-20">Table {t.number}</span>
+                    <input
+                      type="number"
+                      min={1}
+                      value={t.seats}
+                      onChange={(e) => updateTableSeats(idx, parseInt(e.target.value, 10) || 1)}
+                      className="w-20 px-2 py-1.5 text-sm border border-ui-border rounded-lg focus:outline-none focus:border-brand-terracotta"
+                    />
+                    <span className="text-xs text-ui-tertiary">seats</span>
+                    <button
+                      onClick={() => removeTable(idx)}
+                      className="p-1 text-red-500 hover:bg-red-50 rounded transition-colors"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={addTable}
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-brand-terracotta border border-brand-terracotta rounded-lg hover:bg-brand-terracotta/5 transition-colors"
+                >
+                  <Plus size={12} />
+                  Add Table
+                </button>
+                <button
+                  onClick={saveTableConfig}
+                  disabled={savingTables}
+                  className="flex items-center gap-1.5 px-4 py-1.5 text-xs font-semibold text-white bg-brand-forest rounded-lg hover:bg-brand-forest/90 transition-colors disabled:opacity-50"
+                >
+                  <Save size={12} />
+                  {savingTables ? 'Saving...' : 'Save'}
+                </button>
+              </div>
+            </div>
+          )}
+
           {seatingLoading ? (
             <div className="flex items-center justify-center py-32">
               <div className="text-ui-tertiary text-sm font-medium">Loading seating...</div>
@@ -312,6 +471,9 @@ export default function DayOfPage() {
                 <SeatingChart
                   tables={tableData}
                   onRemoveGuest={handleRemoveGuest}
+                  onGuestClick={setDossierContactId}
+                  onMoveGuest={handleMoveGuest}
+                  allTableNumbers={tables.map(t => t.number)}
                 />
               </div>
               <div>
@@ -321,6 +483,41 @@ export default function DayOfPage() {
                   onAssign={handleAssign}
                 />
               </div>
+            </div>
+          )}
+
+          {/* AI Reasoning Log */}
+          {lastSuggestionLog && lastSuggestionLog.length > 0 && (
+            <div className="bg-white border border-ui-border rounded-lg overflow-hidden">
+              <button
+                onClick={() => setShowReasoningLog(!showReasoningLog)}
+                className="w-full px-4 py-3 flex items-center justify-between hover:bg-brand-cream transition-colors"
+              >
+                <div className="flex items-center gap-2">
+                  <Sparkles size={14} className="text-brand-terracotta" />
+                  <h3 className="text-sm font-semibold text-brand-charcoal">
+                    AI Reasoning ({lastSuggestionLog.length} assignments)
+                  </h3>
+                </div>
+                <span className="text-xs text-ui-tertiary">{showReasoningLog ? 'Hide' : 'Show'}</span>
+              </button>
+              {showReasoningLog && (
+                <div className="border-t border-ui-border divide-y divide-ui-border">
+                  {lastSuggestionLog.map((entry, idx) => (
+                    <div key={idx} className="px-4 py-2.5 text-sm">
+                      <div className="flex items-center justify-between">
+                        <span className="font-medium text-brand-charcoal">{entry.full_name}</span>
+                        <span className="text-xs text-ui-tertiary">
+                          Table {entry.table_number} · {Math.round(entry.confidence * 100)}% confidence
+                        </span>
+                      </div>
+                      {entry.rationale && (
+                        <p className="text-xs text-ui-secondary mt-0.5">{entry.rationale}</p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
         </>
@@ -347,6 +544,15 @@ export default function DayOfPage() {
             />
           )}
         </>
+      )}
+
+      {/* Dossier Panel */}
+      {dossierContactId && (
+        <DossierPanel
+          eventId={eventId}
+          contactId={dossierContactId}
+          onClose={() => setDossierContactId(null)}
+        />
       )}
     </div>
   )

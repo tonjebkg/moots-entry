@@ -1,8 +1,9 @@
 'use client'
 
-import { ChevronDown, ChevronUp, MessageSquare } from 'lucide-react'
+import { ChevronDown, ChevronUp, MessageSquare, Plus } from 'lucide-react'
 import Image from 'next/image'
 import { useState } from 'react'
+import { formatUSDateTime } from '@/lib/datetime'
 
 interface MatchedObjective {
   objective_id: string
@@ -21,11 +22,34 @@ interface ScoreCardProps {
   matchedObjectives: MatchedObjective[] | null
   talkingPoints: string[] | null
   scoredAt: string | null
+  source?: string | null
+  eventStatus?: string | null
+  onAddToWave?: () => void
+}
+
+const SOURCE_LABELS: Record<string, { label: string; color: string }> = {
+  RSVP_SUBMISSION: { label: 'RSVP', color: 'bg-blue-50 text-blue-700 border-blue-200' },
+  JOIN_REQUEST: { label: 'Join Request', color: 'bg-purple-50 text-purple-700 border-purple-200' },
+  CSV_IMPORT: { label: 'Import', color: 'bg-gray-100 text-gray-700 border-gray-200' },
+  EVENT_IMPORT: { label: 'Import', color: 'bg-gray-100 text-gray-700 border-gray-200' },
+  MANUAL: { label: 'Manual', color: 'bg-gray-100 text-gray-700 border-gray-200' },
+  ENRICHMENT: { label: 'Enriched', color: 'bg-teal-50 text-teal-700 border-teal-200' },
+  API: { label: 'API', color: 'bg-gray-100 text-gray-700 border-gray-200' },
+}
+
+const STATUS_LABELS: Record<string, { label: string; color: string }> = {
+  CONSIDERING: { label: 'Selected', color: 'bg-blue-50 text-blue-700 border-blue-200' },
+  INVITED: { label: 'Invited', color: 'bg-amber-50 text-amber-700 border-amber-200' },
+  ACCEPTED: { label: 'Confirmed', color: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
+  DECLINED: { label: 'Declined', color: 'bg-red-50 text-red-700 border-red-200' },
+  WAITLIST: { label: 'Waitlist', color: 'bg-gray-100 text-gray-600 border-gray-200' },
+  BOUNCED: { label: 'Bounced', color: 'bg-red-50 text-red-700 border-red-200' },
 }
 
 export function ScoreCard({
   contactName, company, title, photoUrl, score,
   rationale, matchedObjectives, talkingPoints, scoredAt,
+  source, eventStatus, onAddToWave,
 }: ScoreCardProps) {
   const [expanded, setExpanded] = useState(false)
 
@@ -34,6 +58,9 @@ export function ScoreCard({
     : score >= 40
       ? 'bg-amber-100 text-amber-700 border-amber-200'
       : 'bg-gray-100 text-ui-tertiary border-gray-200'
+
+  const srcInfo = source ? SOURCE_LABELS[source] : null
+  const statusInfo = eventStatus ? STATUS_LABELS[eventStatus] : null
 
   return (
     <div className="bg-white rounded-card shadow-card overflow-hidden">
@@ -63,6 +90,20 @@ export function ScoreCard({
               </div>
             )}
           </div>
+        </div>
+
+        {/* Badges */}
+        <div className="flex items-center gap-2 shrink-0">
+          {srcInfo && (
+            <span className={`inline-flex px-2 py-0.5 text-[10px] font-semibold rounded border ${srcInfo.color}`}>
+              {srcInfo.label}
+            </span>
+          )}
+          {statusInfo && (
+            <span className={`inline-flex px-2 py-0.5 text-[10px] font-semibold rounded border ${statusInfo.color}`}>
+              {statusInfo.label}
+            </span>
+          )}
         </div>
 
         {/* Talking points indicator */}
@@ -126,11 +167,22 @@ export function ScoreCard({
             </div>
           )}
 
-          {scoredAt && (
-            <div className="text-xs text-ui-tertiary">
-              Scored {new Date(scoredAt).toLocaleString()}
-            </div>
-          )}
+          <div className="flex items-center justify-between">
+            {scoredAt && (
+              <div className="text-xs text-ui-tertiary">
+                Scored {formatUSDateTime(new Date(scoredAt))}
+              </div>
+            )}
+            {onAddToWave && !eventStatus && (
+              <button
+                onClick={(e) => { e.stopPropagation(); onAddToWave() }}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-brand-terracotta hover:bg-brand-terracotta/90 text-white text-xs font-semibold rounded-md transition-colors"
+              >
+                <Plus size={12} />
+                Add to Wave
+              </button>
+            )}
+          </div>
         </div>
       )}
     </div>

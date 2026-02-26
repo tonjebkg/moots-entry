@@ -4,6 +4,7 @@ import { useState } from 'react'
 import Image from 'next/image'
 import { ChevronUp, ChevronDown, User } from 'lucide-react'
 import { EnrichmentStatusBadge } from './EnrichmentStatusBadge'
+import { formatUSDate } from '@/lib/datetime'
 
 interface ContactRow {
   id: string
@@ -172,7 +173,7 @@ export function ContactsTable({
                 <EnrichmentStatusBadge status={contact.enrichment_status} />
               </td>
               <td className="px-4 py-3 text-ui-tertiary text-xs">
-                {new Date(contact.created_at).toLocaleDateString()}
+                {formatUSDate(new Date(contact.created_at))}
               </td>
             </tr>
           ))}

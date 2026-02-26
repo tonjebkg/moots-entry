@@ -10,6 +10,7 @@ import {
 } from 'lucide-react'
 import { EnrichmentStatusBadge } from '@/app/components/EnrichmentStatusBadge'
 import { TagEditor } from '@/app/components/TagEditor'
+import { formatUSDate } from '@/lib/datetime'
 
 interface ContactDetail {
   id: string
@@ -314,7 +315,7 @@ export default function ContactDetailPage() {
                       )}
                     </div>
                     <div className="text-xs text-ui-tertiary">
-                      {new Date(score.scored_at).toLocaleDateString()}
+                      {formatUSDate(new Date(score.scored_at))}
                     </div>
                   </div>
                 ))}

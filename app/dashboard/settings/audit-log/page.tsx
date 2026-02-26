@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { ScrollText, Download, Loader2, Search, X } from 'lucide-react';
+import { formatUSDateShort, formatUSTime } from '@/lib/datetime';
 
 interface AuditLogEntry {
   id: string;
@@ -70,12 +71,8 @@ export default function AuditLogPage() {
   }
 
   function formatDate(iso: string): string {
-    return new Date(iso).toLocaleString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      hour: 'numeric',
-      minute: '2-digit',
-    });
+    const d = new Date(iso);
+    return `${formatUSDateShort(d)} ${formatUSTime(d)}`;
   }
 
   function getActionColor(action: string): string {

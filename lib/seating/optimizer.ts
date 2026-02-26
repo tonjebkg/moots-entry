@@ -256,6 +256,7 @@ export async function getSeatingAssignments(
       c.full_name,
       c.company,
       c.title,
+      c.tags,
       ci.table_assignment,
       ci.seat_assignment,
       ci.status,
@@ -267,6 +268,27 @@ export async function getSeatingAssignments(
       AND ci.status = 'ACCEPTED'
     ORDER BY ci.table_assignment NULLS LAST, ci.seat_assignment NULLS LAST
   `;
+}
+
+/**
+ * Get latest seating rationale per contact for an event.
+ */
+export async function getSeatingRationale(
+  eventId: number,
+  workspaceId: string
+): Promise<Record<string, string>> {
+  const db = getDb();
+  const rows = await db`
+    SELECT DISTINCT ON (contact_id) contact_id, rationale
+    FROM seating_suggestions
+    WHERE event_id = ${eventId} AND workspace_id = ${workspaceId}
+    ORDER BY contact_id, created_at DESC
+  `;
+  const map: Record<string, string> = {};
+  for (const row of rows) {
+    if (row.rationale) map[row.contact_id] = row.rationale;
+  }
+  return map;
 }
 
 // ─── Prompt Builders ──────────────────────────────────────────────────────
@@ -361,7 +383,9 @@ Respond in this exact JSON format (no markdown, just raw JSON):
 }
 
 Priority: 1 = highest (must-meet), 2 = high, 3 = nice-to-have.
-Focus on pairings that create the most business or networking value.`;
+Focus on pairings that create the most business or networking value.
+
+CRITICAL: In "reason" and "mutual_interest", reference ONLY the two paired guests by their exact names. Do NOT mention any other guests.`;
 }
 
 // ─── Response Parsers ─────────────────────────────────────────────────────
@@ -451,13 +475,31 @@ function parseIntroductionResponse(
           a >= 0 && a < guests.length && b >= 0 && b < guests.length && a !== b;
       })
       .slice(0, maxPairings)
-      .map((p: any) => ({
-        contact_a_id: guests[p.guest_a_index].contact_id,
-        contact_b_id: guests[p.guest_b_index].contact_id,
-        reason: p.reason || '',
-        mutual_interest: p.mutual_interest || '',
-        priority: Math.min(3, Math.max(1, Math.round(Number(p.priority) || 2))),
-      }));
+      .map((p: any) => {
+        const guestA = guests[p.guest_a_index];
+        const guestB = guests[p.guest_b_index];
+        let reason = p.reason || '';
+        const mutual_interest = p.mutual_interest || '';
+
+        // Validate that the reason text references at least one of the paired guests
+        const nameA = guestA.full_name.toLowerCase();
+        const nameB = guestB.full_name.toLowerCase();
+        const reasonLower = reason.toLowerCase();
+        const mentionsEither = reasonLower.includes(nameA) || reasonLower.includes(nameB) ||
+          reasonLower.includes(nameA.split(' ')[0]) || reasonLower.includes(nameB.split(' ')[0]);
+
+        if (!mentionsEither && reason.length > 0) {
+          reason = `${guestA.full_name} and ${guestB.full_name} should connect based on complementary backgrounds and shared interests.`;
+        }
+
+        return {
+          contact_a_id: guestA.contact_id,
+          contact_b_id: guestB.contact_id,
+          reason,
+          mutual_interest,
+          priority: Math.min(3, Math.max(1, Math.round(Number(p.priority) || 2))),
+        };
+      });
   } catch {
     return [];
   }

@@ -73,6 +73,21 @@ export function combineToISO(date: USDate, time: USTime): string {
 }
 
 /**
+ * Format a Date into MM/DD/YYYY h:mm AM/PM (US only)
+ */
+export function formatUSDateTime(date: Date): string {
+  return `${formatUSDate(date)} ${formatUSTime(date)}`;
+}
+
+/**
+ * Format a Date into short display: "Jan 15"
+ */
+export function formatUSDateShort(date: Date): string {
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  return `${months[date.getMonth()]} ${date.getDate()}`;
+}
+
+/**
  * Split an ISO string into US date + time for editing
  */
 export function splitFromISO(iso: string): { date: USDate; time: USTime } {

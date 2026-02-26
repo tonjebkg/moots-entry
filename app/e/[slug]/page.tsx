@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import Image from 'next/image'
 import { useParams } from 'next/navigation'
 import { Calendar, MapPin, Check } from 'lucide-react'
+import { formatUSDate } from '@/lib/datetime'
 
 interface RsvpPageData {
   id: string
@@ -172,7 +173,7 @@ export default function PublicRsvpPage() {
             {pageData.show_date && pageData.start_time && (
               <div className="flex items-center gap-3 text-sm text-ui-secondary">
                 <Calendar className="w-4 h-4 text-ui-tertiary" />
-                <span>{new Date(pageData.start_time).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</span>
+                <span>{formatUSDate(new Date(pageData.start_time))}</span>
               </div>
             )}
             {pageData.show_location && pageData.location && (

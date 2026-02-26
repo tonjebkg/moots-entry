@@ -6,6 +6,7 @@ import { EventHeaderActions } from '@/app/components/EventHeaderActions'
 import { CollaboratorAvatarStack } from '@/app/components/CollaboratorAvatarStack'
 import { DashboardHeader } from '@/app/components/DashboardHeader'
 import { getDb } from '@/lib/db'
+import { formatUSDate, formatUSTime } from '@/lib/datetime'
 
 type LayoutProps = {
   children: React.ReactNode
@@ -184,13 +185,7 @@ async function fetchMembers(workspaceId: string | null | undefined): Promise<Mem
 
 function formatDate(isoDate: string): string {
   const date = new Date(isoDate)
-  return date.toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-  })
+  return `${formatUSDate(date)} ${formatUSTime(date)}`
 }
 
 function formatLocation(location?: Location | null): string {

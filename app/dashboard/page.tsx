@@ -6,6 +6,7 @@ import Image from 'next/image'
 import { CreateEventWizard } from '@/app/components/CreateEventWizard'
 import { DashboardHeader } from '@/app/components/DashboardHeader'
 import { Calendar, MapPin, Users, Lock, Plus, Search, X, Mail, CheckCircle2, Clock, UserCheck } from 'lucide-react'
+import { formatUSDate as formatUSDateFn, formatUSDateTime as formatUSDateTimeFn } from '@/lib/datetime'
 
 type ApproveMode = 'MANUAL' | 'AUTO'
 type EventStatus = 'DRAFT' | 'PUBLISHED' | 'COMPLETE' | 'CANCELLED'
@@ -55,24 +56,14 @@ function formatDate(iso: string): string {
   if (!iso) return ''
   const d = new Date(iso)
   if (isNaN(d.getTime())) return ''
-  return d.toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  })
+  return formatUSDateFn(d)
 }
 
 function formatDateTime(iso: string): string {
   if (!iso) return ''
   const d = new Date(iso)
   if (isNaN(d.getTime())) return ''
-  return d.toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-  })
+  return formatUSDateTimeFn(d)
 }
 
 function getStatusColor(status: EventStatus): string {
