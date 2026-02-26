@@ -1,12 +1,13 @@
 'use client'
 
 import Link from 'next/link'
-import { AlertCircle, Users, Sparkles, Brain, Target } from 'lucide-react'
+import { AlertCircle, Users, Sparkles, Brain, Target, AlertTriangle, Mail, Send, UserCheck } from 'lucide-react'
 
 interface AttentionItem {
   type: string
   count: number
   label: string
+  action?: string
 }
 
 interface NeedsAttentionSectionProps {
@@ -14,26 +15,41 @@ interface NeedsAttentionSectionProps {
   eventId: string
 }
 
-const ITEM_CONFIG: Record<string, { icon: React.ElementType; href: (eventId: string) => string; action: string }> = {
-  pending_approval: {
+const ITEM_CONFIG: Record<string, { icon: React.ElementType; href: (eventId: string) => string; defaultAction: string }> = {
+  event_day: {
+    icon: UserCheck,
+    href: (id) => `/dashboard/${id}/day-of`,
+    defaultAction: 'Open Check-in',
+  },
+  over_capacity: {
+    icon: AlertTriangle,
+    href: (id) => `/dashboard/${id}/campaigns`,
+    defaultAction: 'Manage Invitations',
+  },
+  awaiting_rsvp: {
+    icon: Mail,
+    href: (id) => `/dashboard/${id}/campaigns`,
+    defaultAction: 'View in Campaigns',
+  },
+  pending_review: {
     icon: Users,
-    href: (id) => `/dashboard/${id}/guest-intelligence`,
-    action: 'Review',
+    href: (id) => `/dashboard/${id}/guest-intelligence?filter=pending`,
+    defaultAction: 'Review',
   },
   high_score_not_invited: {
     icon: Sparkles,
-    href: (id) => `/dashboard/${id}/guest-intelligence`,
-    action: 'Invite',
+    href: (id) => `/dashboard/${id}/guest-intelligence?filter=high_uninvited`,
+    defaultAction: 'Invite',
   },
-  enrichment_ready: {
+  unscored_contacts: {
     icon: Brain,
-    href: (id) => `/dashboard/${id}/guest-intelligence`,
-    action: 'View',
+    href: (id) => `/dashboard/${id}/guest-intelligence?action=score`,
+    defaultAction: 'Run AI Scoring',
   },
   no_objectives: {
     icon: Target,
     href: (id) => `/dashboard/${id}/objectives`,
-    action: 'Set Up',
+    defaultAction: 'Set Up',
   },
 }
 
@@ -50,7 +66,7 @@ export function NeedsAttentionSection({ items, eventId }: NeedsAttentionSectionP
       </div>
       <div className="divide-y divide-ui-border">
         {items.map((item) => {
-          const config = ITEM_CONFIG[item.type] || { icon: AlertCircle, href: () => '#', action: 'View' }
+          const config = ITEM_CONFIG[item.type] || { icon: AlertCircle, href: () => '#', defaultAction: 'View' }
           const Icon = config.icon
           return (
             <div key={item.type} className="flex items-center justify-between px-5 py-3">
@@ -66,7 +82,7 @@ export function NeedsAttentionSection({ items, eventId }: NeedsAttentionSectionP
                 href={config.href(eventId)}
                 className="px-3 py-1.5 text-xs font-semibold text-brand-terracotta hover:bg-brand-terracotta/5 rounded-md transition-colors"
               >
-                {config.action} →
+                {item.action || config.defaultAction} →
               </Link>
             </div>
           )

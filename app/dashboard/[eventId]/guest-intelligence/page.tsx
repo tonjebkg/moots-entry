@@ -1,7 +1,7 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
-import { useParams, useSearchParams } from 'next/navigation'
+import React, { useEffect, useState, useCallback, useRef } from 'react'
+import { useParams, useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 import {
@@ -12,12 +12,13 @@ import { StatCard } from '@/app/components/ui/StatCard'
 import { ScoringJobProgress } from '@/app/components/ScoringJobProgress'
 import { DossierPanel } from '@/app/components/DossierPanel'
 import { AddToWaveModal } from '@/app/components/AddToWaveModal'
+import { AddGuestModal } from '@/app/components/AddGuestModal'
 import { ScoreBar } from '@/app/components/ui/ScoreBar'
 import { TagBadge } from '@/app/components/ui/TagBadge'
 import { AvatarInitials } from '@/app/components/ui/AvatarInitials'
 
-type ViewMode = 'ranked' | 'table' | 'pending'
-type FilterMode = '' | 'scored' | 'qualified' | 'selected' | 'confirmed' | 'pending'
+type ViewMode = 'all' | 'pending'
+type FilterMode = '' | 'scored' | 'qualified' | 'selected' | 'confirmed' | 'pending' | 'high_uninvited' | 'unscored'
 
 interface ScoredContact {
   contact_id: string
@@ -82,6 +83,8 @@ const FILTER_LABELS: Record<string, string> = {
   selected: 'Selected',
   confirmed: 'Confirmed',
   pending: 'Pending Review',
+  high_uninvited: 'High Score, Not Invited',
+  unscored: 'Unscored',
 }
 
 const DEFAULT_STATS: Stats = {
@@ -111,6 +114,9 @@ function ContactRow({
   onOpenDossier,
   onAddToWave,
   onDecline,
+  onChangeStatus,
+  isSelected,
+  onToggleSelect,
 }: {
   contact: ScoredContact
   isExpanded: boolean
@@ -118,12 +124,23 @@ function ContactRow({
   onOpenDossier: () => void
   onAddToWave: () => void
   onDecline?: () => void
+  onChangeStatus?: (invitationId: string, newStatus: string) => void
+  isSelected?: boolean
+  onToggleSelect?: () => void
 }) {
   const hasScore = contact.score_id !== null && contact.relevance_score !== null
   const firstTag = contact.tags?.[0] || null
   const srcInfo = contact.source ? SOURCE_LABELS[contact.source] : null
-  const statusInfo = contact.invitation_status ? EVENT_STATUS_LABELS[contact.invitation_status] : null
   const isPending = ['RSVP_SUBMISSION', 'JOIN_REQUEST'].includes(contact.source || '') && !contact.invitation_id
+
+  // Compute status for every contact — never blank
+  const computedStatus: { label: string; color: string } = contact.invitation_status
+    ? EVENT_STATUS_LABELS[contact.invitation_status] || { label: contact.invitation_status, color: 'bg-gray-100 text-gray-600 border-gray-200' }
+    : hasScore && contact.relevance_score! >= 60
+      ? { label: 'Qualified', color: 'bg-violet-50 text-violet-700 border-violet-200' }
+      : hasScore
+        ? { label: 'Scored', color: 'bg-sky-50 text-sky-700 border-sky-200' }
+        : { label: 'In Pool', color: 'bg-gray-50 text-gray-500 border-gray-200' }
 
   return (
     <div className="bg-white rounded-card shadow-card overflow-hidden">
@@ -132,6 +149,18 @@ function ContactRow({
         className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-brand-cream/50 transition-colors"
         onClick={onToggle}
       >
+        {/* Checkbox */}
+        {onToggleSelect && (
+          <div onClick={(e) => e.stopPropagation()} className="shrink-0">
+            <input
+              type="checkbox"
+              checked={isSelected || false}
+              onChange={onToggleSelect}
+              className="rounded border-gray-300"
+            />
+          </div>
+        )}
+
         {/* Avatar */}
         {contact.photo_url ? (
           <Image src={contact.photo_url} alt={contact.full_name} width={36} height={36} className="w-9 h-9 rounded-full object-cover shrink-0" unoptimized />
@@ -151,30 +180,30 @@ function ContactRow({
           )}
         </div>
 
-        {/* Score bar or enrichment badge */}
-        <div className="shrink-0 w-28 flex justify-end">
+        {/* Score bar — always present, shows "--" if unscored */}
+        <div className="shrink-0 w-24 flex justify-end">
           {hasScore ? (
-            <ScoreBar score={contact.relevance_score!} width={80} />
+            <ScoreBar score={contact.relevance_score!} width={72} />
           ) : (
-            <EnrichmentBadge status={contact.enrichment_status} />
+            <span className="text-xs text-ui-tertiary font-medium">--</span>
           )}
         </div>
 
-        {/* Tag badge */}
-        {firstTag && (
-          <div className="shrink-0 hidden lg:block">
+        {/* Tag badge — always present, shows category or placeholder */}
+        <div className="shrink-0 w-20 hidden lg:flex justify-center">
+          {firstTag ? (
             <TagBadge label={firstTag} variant={getTagVariant(firstTag)} />
-          </div>
-        )}
+          ) : (
+            <span className="text-xs text-ui-tertiary">—</span>
+          )}
+        </div>
 
-        {/* Event status badge */}
-        {statusInfo && (
-          <div className="shrink-0 hidden md:block">
-            <span className={`inline-flex px-2 py-0.5 text-[10px] font-semibold rounded border ${statusInfo.color}`}>
-              {statusInfo.label}
-            </span>
-          </div>
-        )}
+        {/* Status badge — always present for every contact */}
+        <div className="shrink-0 w-24 hidden md:flex justify-center">
+          <span className={`inline-flex px-2 py-0.5 text-[10px] font-semibold rounded border whitespace-nowrap ${computedStatus.color}`}>
+            {computedStatus.label}
+          </span>
+        </div>
 
         {/* Expand chevron */}
         <ChevronDown
@@ -273,8 +302,22 @@ function ContactRow({
               onClick={(e) => { e.stopPropagation(); onOpenDossier() }}
               className="px-3 py-1.5 border border-ui-border rounded-lg text-xs font-medium text-ui-secondary hover:bg-white transition-colors"
             >
-              View Full Dossier
+              View Guest Profile
             </button>
+            {contact.invitation_id && onChangeStatus && (
+              <select
+                value={contact.invitation_status || ''}
+                onChange={(e) => { e.stopPropagation(); onChangeStatus(contact.invitation_id!, e.target.value) }}
+                onClick={(e) => e.stopPropagation()}
+                className="px-2 py-1.5 border border-ui-border rounded-lg text-xs font-medium text-ui-secondary bg-white focus:outline-none focus:border-brand-terracotta"
+              >
+                <option value="CONSIDERING">Selected</option>
+                <option value="INVITED">Invited</option>
+                <option value="ACCEPTED">Confirmed</option>
+                <option value="DECLINED">Declined</option>
+                <option value="WAITLIST">Waitlist</option>
+              </select>
+            )}
             {!contact.invitation_id && (
               <button
                 onClick={(e) => { e.stopPropagation(); onAddToWave() }}
@@ -308,9 +351,11 @@ function ContactRow({
 export default function GuestIntelligencePage() {
   const { eventId } = useParams<{ eventId: string }>()
   const searchParams = useSearchParams()
+  const router = useRouter()
 
-  // Read filter from URL
+  // Read filter and action from URL
   const urlFilter = (searchParams.get('filter') || '') as FilterMode
+  const urlAction = searchParams.get('action') || ''
 
   // Scoring state
   const [contacts, setContacts] = useState<ScoredContact[]>([])
@@ -321,18 +366,29 @@ export default function GuestIntelligencePage() {
 
   // UI state
   const [loading, setLoading] = useState(true)
-  const [viewMode, setViewMode] = useState<ViewMode>(urlFilter === 'pending' ? 'pending' : 'ranked')
+  const [viewMode, setViewMode] = useState<ViewMode>(urlFilter === 'pending' ? 'pending' : 'all')
   const [activeFilter, setActiveFilter] = useState<FilterMode>(urlFilter === 'pending' ? '' : urlFilter)
   const [searchQuery, setSearchQuery] = useState('')
   const [sourceFilter, setSourceFilter] = useState<string>('all')
   const [dossierContactId, setDossierContactId] = useState<string | null>(null)
   const [expandedId, setExpandedId] = useState<string | null>(null)
+  const [sortColumn, setSortColumn] = useState<'score' | 'name' | 'company' | 'title' | 'source' | 'status'>('score')
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc')
 
   // Selection state
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
 
   // Add to wave modal
   const [waveModalContactIds, setWaveModalContactIds] = useState<string[] | null>(null)
+
+  // Add guest modal
+  const [showAddGuest, setShowAddGuest] = useState(false)
+
+  // Scoring feedback
+  const [scoringComplete, setScoringComplete] = useState(false)
+
+  // Auto-trigger scoring guard
+  const autoScoreTriggered = useRef(false)
 
   const fetchData = useCallback(async () => {
     setLoading(true)
@@ -366,10 +422,30 @@ export default function GuestIntelligencePage() {
       setViewMode('pending')
       setActiveFilter('')
     } else if (urlFilter) {
-      setViewMode('ranked')
-      setActiveFilter(urlFilter)
+      setViewMode('all')
+      setActiveFilter(urlFilter as FilterMode)
     }
   }, [urlFilter])
+
+  // Auto-trigger scoring when navigated with ?action=score
+  useEffect(() => {
+    if (urlAction === 'score' && !autoScoreTriggered.current && !loading && !triggering && !activeJobId) {
+      autoScoreTriggered.current = true
+      triggerScoring()
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [urlAction, loading])
+
+  // Helper: update filter in local state AND URL
+  function applyUrlFilter(filter: FilterMode, mode: ViewMode = 'all') {
+    setActiveFilter(filter)
+    setViewMode(mode)
+    const params = new URLSearchParams()
+    if (filter) params.set('filter', filter)
+    if (mode === 'pending') params.set('filter', 'pending')
+    const qs = params.toString()
+    router.replace(`/dashboard/${eventId}/guest-intelligence${qs ? `?${qs}` : ''}`)
+  }
 
   async function triggerScoring() {
     setTriggering(true)
@@ -406,6 +482,19 @@ export default function GuestIntelligencePage() {
       }
     } catch (err) {
       console.error('Failed to decline contact:', err)
+    }
+  }
+
+  async function handleChangeStatus(invitationId: string, newStatus: string) {
+    try {
+      await fetch(`/api/invitations/${invitationId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus }),
+      })
+      fetchData()
+    } catch (err) {
+      console.error('Failed to update status:', err)
     }
   }
 
@@ -461,6 +550,8 @@ export default function GuestIntelligencePage() {
       case 'qualified': return list.filter(c => c.relevance_score !== null && c.relevance_score >= 60)
       case 'selected': return list.filter(c => c.invitation_id !== null)
       case 'confirmed': return list.filter(c => c.invitation_status === 'ACCEPTED')
+      case 'high_uninvited': return list.filter(c => c.relevance_score !== null && c.relevance_score >= 70 && !c.invitation_id)
+      case 'unscored': return list.filter(c => c.score_id === null)
       default: return list
     }
   }
@@ -469,18 +560,46 @@ export default function GuestIntelligencePage() {
   const allFiltered = applyFilters(contacts)
   const rankedFiltered = applyActiveFilter(allFiltered)
 
-  const scoredContacts = rankedFiltered.filter(c => c.score_id !== null)
-  const enrichedUnscored = rankedFiltered.filter(c => c.score_id === null && c.enrichment_status === 'COMPLETED')
-  const unenriched = rankedFiltered.filter(c => c.score_id === null && c.enrichment_status !== 'COMPLETED')
-
   const viewContacts = viewMode === 'pending'
     ? applyFilters(pendingContacts)
-    : viewMode === 'table'
-      ? allFiltered
-      : rankedFiltered
+    : rankedFiltered
 
-  // For table bulk selection
-  const selectableContactIds = viewContacts.filter(c => !c.invitation_id).map(c => c.contact_id)
+  // Sorting
+  function getStatusOrder(c: ScoredContact): number {
+    if (c.invitation_status === 'ACCEPTED') return 6
+    if (c.invitation_status === 'INVITED') return 5
+    if (c.invitation_status === 'CONSIDERING') return 4
+    if (c.invitation_status === 'DECLINED') return 7
+    if (c.invitation_status === 'WAITLIST') return 3
+    if (c.score_id && c.relevance_score !== null && c.relevance_score >= 60) return 2
+    if (c.score_id) return 1
+    return 0
+  }
+
+  const sortedViewContacts = [...viewContacts].sort((a, b) => {
+    const dir = sortDirection === 'asc' ? 1 : -1
+    switch (sortColumn) {
+      case 'score': return ((a.relevance_score ?? -1) - (b.relevance_score ?? -1)) * dir
+      case 'name': return (a.full_name || '').localeCompare(b.full_name || '') * dir
+      case 'company': return (a.company || '').localeCompare(b.company || '') * dir
+      case 'title': return (a.title || '').localeCompare(b.title || '') * dir
+      case 'source': return (a.source || '').localeCompare(b.source || '') * dir
+      case 'status': return (getStatusOrder(a) - getStatusOrder(b)) * dir
+      default: return 0
+    }
+  })
+
+  function handleSort(col: typeof sortColumn) {
+    if (sortColumn === col) {
+      setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc')
+    } else {
+      setSortColumn(col)
+      setSortDirection(col === 'score' ? 'desc' : 'asc')
+    }
+  }
+
+  // For table bulk selection — all contacts selectable regardless of invitation status
+  const selectableContactIds = viewContacts.map(c => c.contact_id)
 
   return (
     <div className="space-y-6">
@@ -498,6 +617,13 @@ export default function GuestIntelligencePage() {
           </div>
         </div>
         <div className="flex items-center gap-3">
+          <button
+            onClick={() => setShowAddGuest(true)}
+            className="flex items-center gap-1.5 px-3 py-2 border border-ui-border rounded-lg text-sm font-medium text-ui-secondary hover:bg-brand-cream transition-colors"
+          >
+            <UserPlus size={14} />
+            Add Guest
+          </button>
           <Link
             href={`/dashboard/${eventId}/objectives`}
             className="flex items-center gap-1.5 px-3 py-2 border border-ui-border rounded-lg text-sm font-medium text-ui-secondary hover:bg-brand-cream transition-colors"
@@ -523,9 +649,21 @@ export default function GuestIntelligencePage() {
           type="scoring"
           onComplete={() => {
             setActiveJobId(null)
+            setScoringComplete(true)
             fetchData()
+            setTimeout(() => setScoringComplete(false), 4000)
           }}
         />
+      )}
+
+      {/* Scoring complete banner (C2) */}
+      {scoringComplete && (
+        <div className="flex items-center gap-3 p-4 bg-emerald-50 border border-emerald-200 rounded-card">
+          <CheckCircle size={16} className="text-emerald-600 shrink-0" />
+          <p className="text-sm font-medium text-emerald-800">
+            AI scoring complete. Contacts have been ranked below.
+          </p>
+        </div>
       )}
 
       {loading ? (
@@ -537,11 +675,12 @@ export default function GuestIntelligencePage() {
           {/* Stat Cards Row — Vetting Funnel */}
           <div className="grid grid-cols-6 gap-3">
             <StatCard
-              label="Pool"
+              label="Guest Pool"
               value={stats.total_contacts}
               icon={Users}
               iconColor="text-brand-charcoal"
               iconBg="bg-brand-cream"
+              onClick={() => applyUrlFilter('', 'all')}
             />
             <StatCard
               label="Scored"
@@ -549,6 +688,7 @@ export default function GuestIntelligencePage() {
               icon={Target}
               iconColor="text-brand-terracotta"
               iconBg="bg-brand-terracotta/10"
+              onClick={() => applyUrlFilter('scored')}
             />
             <StatCard
               label="Qualified (60+)"
@@ -556,6 +696,7 @@ export default function GuestIntelligencePage() {
               icon={CheckCircle}
               iconColor="text-emerald-700"
               iconBg="bg-emerald-50"
+              onClick={() => applyUrlFilter('qualified')}
             />
             <StatCard
               label="Pending Review"
@@ -563,6 +704,7 @@ export default function GuestIntelligencePage() {
               icon={Clock}
               iconColor="text-amber-700"
               iconBg="bg-amber-50"
+              onClick={() => applyUrlFilter('', 'pending')}
             />
             <StatCard
               label="Selected"
@@ -570,6 +712,7 @@ export default function GuestIntelligencePage() {
               icon={Send}
               iconColor="text-blue-700"
               iconBg="bg-blue-50"
+              onClick={() => applyUrlFilter('selected')}
             />
             <StatCard
               label="Confirmed"
@@ -577,31 +720,61 @@ export default function GuestIntelligencePage() {
               icon={CheckCircle}
               iconColor="text-emerald-700"
               iconBg="bg-emerald-50"
+              onClick={() => applyUrlFilter('confirmed')}
             />
           </div>
 
-          {/* Active filter chip */}
-          {activeFilter && (
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-ui-tertiary font-medium">Filtered:</span>
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-brand-terracotta/10 text-brand-terracotta text-xs font-semibold rounded-full">
-                {FILTER_LABELS[activeFilter] || activeFilter}
-                <button
-                  onClick={() => setActiveFilter('')}
-                  className="hover:text-brand-charcoal transition-colors"
-                >
-                  <X size={12} />
+          {/* AI Insight Callout */}
+          {stats.qualified_count > 0 && stats.selected_count < stats.qualified_count && (
+            <div className="flex items-center gap-3 p-4 bg-brand-cream rounded-card border border-brand-forest/10">
+              <Sparkles size={16} className="text-brand-terracotta shrink-0" />
+              <p className="text-sm text-brand-charcoal">
+                <span className="font-semibold">{stats.qualified_count - stats.selected_count} qualified contacts</span>{' '}
+                scoring 60+ haven&apos;t been added to a campaign yet.{' '}
+                <button onClick={() => applyUrlFilter('qualified')} className="text-brand-terracotta font-semibold hover:underline">
+                  View them →
                 </button>
-              </span>
+              </p>
             </div>
           )}
+
+          {/* Composite filter readout (D2) */}
+          {(() => {
+            const parts: string[] = []
+            if (activeFilter) parts.push(FILTER_LABELS[activeFilter] || activeFilter)
+            if (searchQuery.trim()) parts.push(`"${searchQuery.trim()}"`)
+            if (sourceFilter !== 'all') parts.push(SOURCE_LABELS[sourceFilter]?.label || sourceFilter)
+            if (minScoreFilter > 0) parts.push(`Min score ${minScoreFilter}`)
+            if (viewMode === 'pending') parts.push('Pending Review')
+
+            if (parts.length > 0) {
+              return (
+                <div className="flex items-center gap-2 text-sm">
+                  <span className="text-ui-secondary">
+                    Showing <strong>{sortedViewContacts.length}</strong> contact{sortedViewContacts.length !== 1 ? 's' : ''} · {parts.join(' + ')}
+                  </span>
+                  <button
+                    onClick={() => {
+                      setSearchQuery('')
+                      setSourceFilter('all')
+                      setMinScoreFilter(0)
+                      applyUrlFilter('', 'all')
+                    }}
+                    className="text-xs font-semibold text-brand-terracotta hover:underline"
+                  >
+                    Clear all
+                  </button>
+                </div>
+              )
+            }
+            return null
+          })()}
 
           {/* View Mode Toggle + Search + Filters */}
           <div className="flex items-center justify-between gap-4">
             <div className="flex gap-1 bg-brand-cream rounded-lg p-1">
               {([
-                { key: 'ranked' as ViewMode, label: `Ranked (${rankedFiltered.length})` },
-                { key: 'table' as ViewMode, label: 'Table View' },
+                { key: 'all' as ViewMode, label: `All Contacts (${rankedFiltered.length})` },
                 { key: 'pending' as ViewMode, label: `Pending Review (${pendingContacts.length})` },
               ]).map(tab => (
                 <button
@@ -629,13 +802,14 @@ export default function GuestIntelligencePage() {
                 >
                   <option value="all">All Sources</option>
                   <option value="RSVP_SUBMISSION">RSVP Inbound</option>
-                  <option value="CSV_IMPORT">Import</option>
-                  <option value="MANUAL">Manual</option>
+                  <option value="CSV_IMPORT">CSV Import</option>
                   <option value="EVENT_IMPORT">Event Import</option>
+                  <option value="MANUAL">Manual</option>
+                  <option value="JOIN_REQUEST">Join Request</option>
                 </select>
               </div>
 
-              {viewMode === 'ranked' && !activeFilter && (
+              {viewMode === 'all' && !activeFilter && (
                 <div className="flex items-center gap-2">
                   <label className="text-xs font-medium text-ui-tertiary">Min Score:</label>
                   <input
@@ -688,215 +862,291 @@ export default function GuestIntelligencePage() {
             </div>
           )}
 
-          {/* Ranked List View — Platform Preview */}
-          {viewMode === 'ranked' && (
-            <div className="space-y-6">
-              {rankedFiltered.length > 0 ? (
-                <>
-                  {/* Tier 1: Scored */}
-                  {scoredContacts.length > 0 && (
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2 px-1">
-                        <Target size={14} className="text-brand-terracotta" />
-                        <h3 className="text-xs font-semibold text-ui-tertiary uppercase tracking-wider">
-                          Ranked by AI Score ({scoredContacts.length})
-                        </h3>
-                      </div>
-                      {scoredContacts.map(c => (
-                        <ContactRow
-                          key={c.contact_id}
-                          contact={c}
-                          isExpanded={expandedId === c.contact_id}
-                          onToggle={() => setExpandedId(expandedId === c.contact_id ? null : c.contact_id)}
-                          onOpenDossier={() => setDossierContactId(c.contact_id)}
-                          onAddToWave={() => setWaveModalContactIds([c.contact_id])}
-                          onDecline={
-                            ['RSVP_SUBMISSION', 'JOIN_REQUEST'].includes(c.source || '') && !c.invitation_id
-                              ? () => declineContact(c.contact_id) : undefined
-                          }
-                        />
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Tier 2: Enriched, not scored */}
-                  {enrichedUnscored.length > 0 && (
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2 px-1">
-                        <Database size={14} className="text-emerald-600" />
-                        <h3 className="text-xs font-semibold text-ui-tertiary uppercase tracking-wider">
-                          Enriched — Awaiting Scoring ({enrichedUnscored.length})
-                        </h3>
-                      </div>
-                      {enrichedUnscored.map(c => (
-                        <ContactRow
-                          key={c.contact_id}
-                          contact={c}
-                          isExpanded={expandedId === c.contact_id}
-                          onToggle={() => setExpandedId(expandedId === c.contact_id ? null : c.contact_id)}
-                          onOpenDossier={() => setDossierContactId(c.contact_id)}
-                          onAddToWave={() => setWaveModalContactIds([c.contact_id])}
-                          onDecline={
-                            ['RSVP_SUBMISSION', 'JOIN_REQUEST'].includes(c.source || '') && !c.invitation_id
-                              ? () => declineContact(c.contact_id) : undefined
-                          }
-                        />
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Tier 3: Not yet enriched */}
-                  {unenriched.length > 0 && (
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2 px-1">
-                        <Clock size={14} className="text-amber-600" />
-                        <h3 className="text-xs font-semibold text-ui-tertiary uppercase tracking-wider">
-                          In Pool — Enrichment Pending ({unenriched.length})
-                        </h3>
-                      </div>
-                      {unenriched.map(c => (
-                        <ContactRow
-                          key={c.contact_id}
-                          contact={c}
-                          isExpanded={expandedId === c.contact_id}
-                          onToggle={() => setExpandedId(expandedId === c.contact_id ? null : c.contact_id)}
-                          onOpenDossier={() => setDossierContactId(c.contact_id)}
-                          onAddToWave={() => setWaveModalContactIds([c.contact_id])}
-                          onDecline={
-                            ['RSVP_SUBMISSION', 'JOIN_REQUEST'].includes(c.source || '') && !c.invitation_id
-                              ? () => declineContact(c.contact_id) : undefined
-                          }
-                        />
-                      ))}
-                    </div>
-                  )}
-                </>
-              ) : (
-                <div className="text-center py-12 bg-white rounded-card shadow-card">
-                  <Sparkles size={32} className="mx-auto mb-3 text-ui-tertiary opacity-50" />
-                  <h3 className="font-display text-lg font-semibold text-brand-charcoal mb-2">
-                    {contacts.length === 0 ? 'No contacts to score' : 'No matching contacts'}
-                  </h3>
-                  <p className="text-sm text-ui-tertiary mb-4">
-                    {contacts.length === 0
-                      ? 'Add contacts to your People Database, then define event objectives to start scoring.'
-                      : 'Try adjusting your search or filters.'}
-                  </p>
-                  {contacts.length === 0 && (
-                    <div className="flex items-center justify-center gap-3">
-                      <Link href="/dashboard/people" className="px-4 py-2 border border-ui-border rounded-lg text-sm font-medium text-ui-secondary hover:bg-brand-cream">
-                        Go to People
-                      </Link>
-                      <Link href={`/dashboard/${eventId}/objectives`} className="px-5 py-2.5 bg-brand-terracotta text-white text-sm font-semibold rounded-pill hover:bg-brand-terracotta/90 shadow-cta">
-                        Set Objectives
-                      </Link>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Table View */}
-          {viewMode === 'table' && (
-            <div className="bg-white border border-ui-border rounded-card shadow-card overflow-hidden">
-              <table className="w-full text-sm">
-                <thead className="bg-brand-cream border-b border-ui-border">
-                  <tr>
-                    <th className="px-3 py-3 w-10">
-                      <input
-                        type="checkbox"
-                        checked={selectableContactIds.length > 0 && selectableContactIds.every(id => selectedIds.has(id))}
-                        onChange={() => toggleSelectAll(selectableContactIds)}
-                        className="rounded border-gray-300"
-                      />
-                    </th>
-                    <th className="px-4 py-3 text-center font-semibold text-brand-charcoal w-20">Score</th>
-                    <th className="px-4 py-3 text-left font-semibold text-brand-charcoal">Name</th>
-                    <th className="px-4 py-3 text-left font-semibold text-brand-charcoal">Company</th>
-                    <th className="px-4 py-3 text-left font-semibold text-brand-charcoal">Title</th>
-                    <th className="px-4 py-3 text-left font-semibold text-brand-charcoal">Source</th>
-                    <th className="px-4 py-3 text-left font-semibold text-brand-charcoal">Event Status</th>
-                    <th className="px-4 py-3 text-right font-semibold text-brand-charcoal">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-ui-border">
-                  {viewContacts.length === 0 ? (
+          {/* Unified Table View */}
+          {viewMode === 'all' && (
+            sortedViewContacts.length > 0 ? (
+              <div className="bg-white border border-ui-border rounded-card shadow-card overflow-hidden">
+                <table className="w-full text-sm">
+                  <thead className="bg-brand-cream border-b border-ui-border">
                     <tr>
-                      <td colSpan={8} className="px-4 py-12 text-center text-ui-tertiary text-sm">
-                        No contacts in pool
-                      </td>
-                    </tr>
-                  ) : (
-                    viewContacts.map(c => {
-                      const srcInfo = c.source ? SOURCE_LABELS[c.source] : null
-                      const statusInfo = c.invitation_status ? EVENT_STATUS_LABELS[c.invitation_status] : null
-                      return (
-                        <tr
-                          key={c.contact_id}
-                          className="hover:bg-brand-cream transition-colors cursor-pointer"
+                      <th className="px-3 py-3 w-10">
+                        <input
+                          type="checkbox"
+                          checked={selectableContactIds.length > 0 && selectableContactIds.every(id => selectedIds.has(id))}
+                          onChange={() => toggleSelectAll(selectableContactIds)}
+                          className="rounded border-gray-300"
+                        />
+                      </th>
+                      {([
+                        { key: 'score' as const, label: 'Score', align: 'text-center', width: 'w-20' },
+                        { key: 'name' as const, label: 'Name', align: 'text-left', width: '' },
+                        { key: 'company' as const, label: 'Company', align: 'text-left', width: '' },
+                        { key: 'title' as const, label: 'Title', align: 'text-left', width: '' },
+                      ] as const).map(col => (
+                        <th
+                          key={col.key}
+                          onClick={() => handleSort(col.key)}
+                          className={`px-4 py-3 ${col.align} font-semibold text-brand-charcoal ${col.width} cursor-pointer select-none hover:bg-brand-cream/80 transition-colors`}
                         >
-                          <td className="px-3 py-3" onClick={(e) => e.stopPropagation()}>
-                            {!c.invitation_id && (
+                          <span className="inline-flex items-center gap-1">
+                            {col.label}
+                            {sortColumn === col.key && (
+                              <span className="text-brand-terracotta text-[10px]">{sortDirection === 'asc' ? '▲' : '▼'}</span>
+                            )}
+                          </span>
+                        </th>
+                      ))}
+                      <th className="px-4 py-3 text-left font-semibold text-brand-charcoal">Tags</th>
+                      {([
+                        { key: 'source' as const, label: 'Source' },
+                        { key: 'status' as const, label: 'Event Status' },
+                      ] as const).map(col => (
+                        <th
+                          key={col.key}
+                          onClick={() => handleSort(col.key)}
+                          className="px-4 py-3 text-left font-semibold text-brand-charcoal cursor-pointer select-none hover:bg-brand-cream/80 transition-colors"
+                        >
+                          <span className="inline-flex items-center gap-1">
+                            {col.label}
+                            {sortColumn === col.key && (
+                              <span className="text-brand-terracotta text-[10px]">{sortDirection === 'asc' ? '▲' : '▼'}</span>
+                            )}
+                          </span>
+                        </th>
+                      ))}
+                      <th className="px-4 py-3 text-right font-semibold text-brand-charcoal w-10"></th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-ui-border">
+                    {sortedViewContacts.map(c => {
+                      const srcInfo = c.source ? SOURCE_LABELS[c.source] : null
+                      const cHasScore = c.score_id !== null && c.relevance_score !== null
+                      const statusInfo: { label: string; color: string } = c.invitation_status
+                        ? EVENT_STATUS_LABELS[c.invitation_status] || { label: c.invitation_status, color: 'bg-gray-100 text-gray-600 border-gray-200' }
+                        : cHasScore && c.relevance_score! >= 60
+                          ? { label: 'Qualified', color: 'bg-violet-50 text-violet-700 border-violet-200' }
+                          : cHasScore
+                            ? { label: 'Scored', color: 'bg-sky-50 text-sky-700 border-sky-200' }
+                            : { label: 'In Pool', color: 'bg-gray-50 text-gray-500 border-gray-200' }
+                      const isExpanded = expandedId === c.contact_id
+                      const firstTag = c.tags?.[0] || null
+                      const isPending = ['RSVP_SUBMISSION', 'JOIN_REQUEST'].includes(c.source || '') && !c.invitation_id
+                      return (
+                        <React.Fragment key={c.contact_id}>
+                          <tr
+                            className={`hover:bg-brand-cream/50 transition-colors cursor-pointer ${isExpanded ? 'bg-brand-cream/30' : ''}`}
+                            onClick={() => setExpandedId(isExpanded ? null : c.contact_id)}
+                          >
+                            <td className="px-3 py-3" onClick={(e) => e.stopPropagation()}>
                               <input
                                 type="checkbox"
                                 checked={selectedIds.has(c.contact_id)}
                                 onChange={() => toggleSelect(c.contact_id)}
                                 className="rounded border-gray-300"
                               />
-                            )}
-                          </td>
-                          <td className="px-4 py-3 text-center" onClick={() => setDossierContactId(c.contact_id)}>
-                            {c.relevance_score != null ? (
-                              <ScoreBar score={c.relevance_score} width={60} />
-                            ) : (
-                              <span className="text-xs text-ui-tertiary">--</span>
-                            )}
-                          </td>
-                          <td className="px-4 py-3" onClick={() => setDossierContactId(c.contact_id)}>
-                            <div className="flex items-center gap-2.5">
-                              <AvatarInitials name={c.full_name || '?'} size={28} />
-                              <span className="font-medium text-brand-charcoal">{c.full_name}</span>
-                            </div>
-                          </td>
-                          <td className="px-4 py-3 text-ui-secondary" onClick={() => setDossierContactId(c.contact_id)}>{c.company || '—'}</td>
-                          <td className="px-4 py-3 text-ui-secondary" onClick={() => setDossierContactId(c.contact_id)}>{c.title || '—'}</td>
-                          <td className="px-4 py-3" onClick={() => setDossierContactId(c.contact_id)}>
-                            {srcInfo ? (
-                              <span className={`inline-flex px-2 py-0.5 text-[10px] font-semibold rounded border ${srcInfo.color}`}>
-                                {srcInfo.label}
-                              </span>
-                            ) : (
-                              <span className="text-xs text-ui-tertiary">—</span>
-                            )}
-                          </td>
-                          <td className="px-4 py-3" onClick={() => setDossierContactId(c.contact_id)}>
-                            {statusInfo ? (
-                              <span className={`inline-flex px-2 py-0.5 text-[10px] font-semibold rounded border ${statusInfo.color}`}>
+                            </td>
+                            <td className="px-4 py-3 text-center">
+                              {c.relevance_score != null ? (
+                                <ScoreBar score={c.relevance_score} width={60} />
+                              ) : (
+                                <span className="text-xs text-ui-tertiary">--</span>
+                              )}
+                            </td>
+                            <td className="px-4 py-3">
+                              <div className="flex items-center gap-2.5">
+                                <AvatarInitials name={c.full_name || '?'} size={28} />
+                                <span className="font-medium text-brand-charcoal">{c.full_name}</span>
+                              </div>
+                            </td>
+                            <td className="px-4 py-3 text-ui-secondary">{c.company || '—'}</td>
+                            <td className="px-4 py-3 text-ui-secondary">{c.title || '—'}</td>
+                            <td className="px-4 py-3">
+                              {firstTag ? (
+                                <TagBadge label={firstTag} variant={getTagVariant(firstTag)} />
+                              ) : (
+                                <span className="text-xs text-ui-tertiary">—</span>
+                              )}
+                            </td>
+                            <td className="px-4 py-3">
+                              {srcInfo ? (
+                                <span className={`inline-flex px-2 py-0.5 text-[10px] font-semibold rounded border ${srcInfo.color}`}>
+                                  {srcInfo.label}
+                                </span>
+                              ) : (
+                                <span className="text-xs text-ui-tertiary">—</span>
+                              )}
+                            </td>
+                            <td className="px-4 py-3">
+                              <span className={`inline-flex px-2 py-0.5 text-[10px] font-semibold rounded border whitespace-nowrap ${statusInfo.color}`}>
                                 {statusInfo.label}
                               </span>
-                            ) : (
-                              <span className="text-xs text-ui-tertiary">Not invited</span>
-                            )}
-                          </td>
-                          <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
-                            {!c.invitation_id && (
-                              <button
-                                onClick={() => setWaveModalContactIds([c.contact_id])}
-                                className="flex items-center gap-1 px-3 py-1 bg-brand-terracotta hover:bg-brand-terracotta/90 text-white text-xs font-semibold rounded-md transition-colors ml-auto"
-                              >
-                                <Plus size={12} />
-                                Add to Wave
-                              </button>
-                            )}
-                          </td>
-                        </tr>
+                            </td>
+                            <td className="px-4 py-3 text-center">
+                              <ChevronDown
+                                size={14}
+                                className={`text-ui-tertiary transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+                              />
+                            </td>
+                          </tr>
+                          {/* Expandable detail row */}
+                          {isExpanded && (
+                            <tr>
+                              <td colSpan={9} className="px-0 py-0">
+                                <div className="border-t border-ui-border bg-brand-cream px-6 py-4 space-y-4">
+                                  {/* Source badges row */}
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    {c.linkedin_url && (
+                                      <a href={c.linkedin_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 px-2 py-1 bg-[#0077b5]/10 text-[#0077b5] text-[11px] font-semibold rounded-md hover:bg-[#0077b5]/20 transition-colors">
+                                        <Linkedin size={12} /> LinkedIn
+                                      </a>
+                                    )}
+                                    {c.enrichment_status === 'COMPLETED' && (
+                                      <span className="inline-flex items-center gap-1 px-2 py-1 bg-emerald-50 text-emerald-700 text-[11px] font-semibold rounded-md">
+                                        <Database size={12} /> Enriched
+                                      </span>
+                                    )}
+                                    {cHasScore && (
+                                      <span className="inline-flex items-center gap-1 px-2 py-1 bg-brand-terracotta/10 text-brand-terracotta text-[11px] font-semibold rounded-md">
+                                        <Target size={12} /> AI Scored
+                                      </span>
+                                    )}
+                                  </div>
+
+                                  {/* AI Insights */}
+                                  {c.ai_summary && (
+                                    <div>
+                                      <h4 className="text-xs font-semibold text-ui-tertiary uppercase tracking-wider mb-1.5">AI-Generated Insights</h4>
+                                      <p className="text-sm text-ui-secondary leading-relaxed">{c.ai_summary}</p>
+                                    </div>
+                                  )}
+
+                                  {/* Score rationale */}
+                                  {c.score_rationale && (
+                                    <div>
+                                      <h4 className="text-xs font-semibold text-ui-tertiary uppercase tracking-wider mb-1.5">Why They Match</h4>
+                                      <p className="text-sm text-ui-secondary leading-relaxed">{c.score_rationale}</p>
+                                    </div>
+                                  )}
+
+                                  {/* Objective breakdown */}
+                                  {c.matched_objectives && c.matched_objectives.length > 0 && (
+                                    <div>
+                                      <h4 className="text-xs font-semibold text-ui-tertiary uppercase tracking-wider mb-2">Objective Breakdown</h4>
+                                      <div className="space-y-1.5">
+                                        {c.matched_objectives.map((mo: any, i: number) => (
+                                          <div key={i} className="flex items-center gap-2">
+                                            <div className={`w-7 h-7 rounded flex items-center justify-center text-xs font-bold shrink-0 ${
+                                              mo.match_score >= 70 ? 'bg-emerald-50 text-emerald-700'
+                                                : mo.match_score >= 40 ? 'bg-amber-50 text-amber-700'
+                                                : 'bg-gray-50 text-ui-tertiary'
+                                            }`}>
+                                              {mo.match_score}
+                                            </div>
+                                            <span className="text-sm text-brand-charcoal">{mo.objective_text || 'Objective'}</span>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  )}
+
+                                  {/* Talking Points */}
+                                  <div>
+                                    <h4 className="text-xs font-semibold text-ui-tertiary uppercase tracking-wider mb-2">Suggested Talking Points</h4>
+                                    {c.talking_points && c.talking_points.length > 0 ? (
+                                      <ul className="space-y-1">
+                                        {c.talking_points.map((tp, i) => (
+                                          <li key={i} className="flex items-start gap-2 text-sm text-ui-secondary">
+                                            <span className="text-brand-terracotta mt-0.5">•</span>
+                                            <span className="font-display italic">{tp}</span>
+                                          </li>
+                                        ))}
+                                      </ul>
+                                    ) : (
+                                      <p className="text-sm text-ui-tertiary italic">
+                                        {cHasScore ? 'No talking points generated for this contact.' : 'Score this contact to generate personalized talking points.'}
+                                      </p>
+                                    )}
+                                  </div>
+
+                                  {/* Actions */}
+                                  <div className="flex items-center gap-3 pt-1">
+                                    <button
+                                      onClick={(e) => { e.stopPropagation(); setDossierContactId(c.contact_id) }}
+                                      className="px-3 py-1.5 border border-ui-border rounded-lg text-xs font-medium text-ui-secondary hover:bg-white transition-colors"
+                                    >
+                                      View Guest Profile
+                                    </button>
+                                    {c.invitation_id && (
+                                      <select
+                                        value={c.invitation_status || ''}
+                                        onChange={(e) => { e.stopPropagation(); handleChangeStatus(c.invitation_id!, e.target.value) }}
+                                        onClick={(e) => e.stopPropagation()}
+                                        className="px-2 py-1.5 border border-ui-border rounded-lg text-xs font-medium text-ui-secondary bg-white focus:outline-none focus:border-brand-terracotta"
+                                      >
+                                        <option value="CONSIDERING">Selected</option>
+                                        <option value="INVITED">Invited</option>
+                                        <option value="ACCEPTED">Confirmed</option>
+                                        <option value="DECLINED">Declined</option>
+                                        <option value="WAITLIST">Waitlist</option>
+                                      </select>
+                                    )}
+                                    {!c.invitation_id && (
+                                      <button
+                                        onClick={(e) => { e.stopPropagation(); setWaveModalContactIds([c.contact_id]) }}
+                                        className="flex items-center gap-1.5 px-3 py-1.5 bg-brand-terracotta hover:bg-brand-terracotta/90 text-white text-xs font-semibold rounded-md transition-colors"
+                                      >
+                                        <Plus size={12} />
+                                        Add to Wave
+                                      </button>
+                                    )}
+                                    {isPending && (
+                                      <button
+                                        onClick={(e) => { e.stopPropagation(); declineContact(c.contact_id) }}
+                                        className="flex items-center gap-1.5 px-3 py-1.5 border border-red-200 text-red-600 hover:bg-red-50 text-xs font-semibold rounded-md transition-colors"
+                                      >
+                                        <XCircle size={12} />
+                                        Decline
+                                      </button>
+                                    )}
+                                    {c.scored_at && (
+                                      <span className="text-[11px] text-ui-tertiary ml-auto">
+                                        Scored {new Date(c.scored_at).toLocaleDateString()}
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                              </td>
+                            </tr>
+                          )}
+                        </React.Fragment>
                       )
-                    })
-                  )}
-                </tbody>
-              </table>
-            </div>
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="text-center py-12 bg-white rounded-card shadow-card">
+                <Sparkles size={32} className="mx-auto mb-3 text-ui-tertiary opacity-50" />
+                <h3 className="font-display text-lg font-semibold text-brand-charcoal mb-2">
+                  {contacts.length === 0 ? 'No contacts to score' : 'No matching contacts'}
+                </h3>
+                <p className="text-sm text-ui-tertiary mb-4">
+                  {contacts.length === 0
+                    ? 'Add contacts to your People Database, then define event objectives to start scoring.'
+                    : 'Try adjusting your search or filters.'}
+                </p>
+                {contacts.length === 0 && (
+                  <div className="flex items-center justify-center gap-3">
+                    <Link href="/dashboard/people" className="px-4 py-2 border border-ui-border rounded-lg text-sm font-medium text-ui-secondary hover:bg-brand-cream">
+                      Go to People
+                    </Link>
+                    <Link href={`/dashboard/${eventId}/objectives`} className="px-5 py-2.5 bg-brand-terracotta text-white text-sm font-semibold rounded-pill hover:bg-brand-terracotta/90 shadow-cta">
+                      Set Objectives
+                    </Link>
+                  </div>
+                )}
+              </div>
+            )
           )}
 
           {/* Pending Review View */}
@@ -919,6 +1169,7 @@ export default function GuestIntelligencePage() {
                         onToggle={() => setExpandedId(expandedId === c.contact_id ? null : c.contact_id)}
                         onOpenDossier={() => setDossierContactId(c.contact_id)}
                         onAddToWave={() => setWaveModalContactIds([c.contact_id])}
+                        onChangeStatus={handleChangeStatus}
                         onDecline={() => declineContact(c.contact_id)}
                       />
                     ))}
@@ -954,6 +1205,17 @@ export default function GuestIntelligencePage() {
           onSuccess={() => {
             setWaveModalContactIds(null)
             setSelectedIds(new Set())
+            fetchData()
+          }}
+        />
+      )}
+
+      {/* Add Guest Modal */}
+      {showAddGuest && (
+        <AddGuestModal
+          onClose={() => setShowAddGuest(false)}
+          onSuccess={() => {
+            setShowAddGuest(false)
             fetchData()
           }}
         />

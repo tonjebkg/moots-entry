@@ -6,7 +6,9 @@ type RouteParams = { params: Promise<{ eventId: string }> }
 
 /**
  * GET /api/events/[eventId]/overview-stats
- * Composite endpoint returning funnel stats, needs-attention items, and recent activity
+ * Composite endpoint returning vetting-first funnel stats, needs-attention items, and recent activity.
+ *
+ * Funnel: Pool → Scored → Qualified (60+) → Selected (in campaign) → Confirmed (ACCEPTED)
  */
 export const GET = withErrorHandling(async (_request: NextRequest, { params }: RouteParams) => {
   const { eventId } = await params
@@ -18,120 +20,217 @@ export const GET = withErrorHandling(async (_request: NextRequest, { params }: R
 
   const db = getDb()
 
+  // Get workspace_id for this event
+  const eventRows = await db`
+    SELECT workspace_id, total_capacity, start_date FROM events WHERE id = ${eventIdNum} LIMIT 1
+  `
+  if (eventRows.length === 0) {
+    return NextResponse.json({ error: 'Event not found' }, { status: 404 })
+  }
+  const wsId = eventRows[0].workspace_id
+  const totalCapacity = Number(eventRows[0].total_capacity) || 0
+  const startDate = eventRows[0].start_date ? new Date(eventRows[0].start_date) : null
+  const today = new Date()
+  const isEventDay = startDate !== null &&
+    startDate.getFullYear() === today.getFullYear() &&
+    startDate.getMonth() === today.getMonth() &&
+    startDate.getDate() === today.getDate()
+
   // Run all queries in parallel
   const [
-    scoringStats,
-    guestCounts,
-    capacityResult,
+    funnelStats,
+    pendingReviewResult,
+    highScoreNotInvitedResult,
+    unscoredResult,
+    awaitingRsvpResult,
     objectiveCount,
-    recentJoinRequests,
+    recentActivity,
   ] = await Promise.all([
-    // Scoring funnel stats
+    // Vetting funnel: Pool → Scored → Qualified → Selected → Confirmed
     db`
       SELECT
-        COUNT(DISTINCT c.id) as total_contacts,
-        COUNT(DISTINCT gs.id) as scored_count,
-        COUNT(DISTINCT CASE WHEN gs.relevance_score >= 60 THEN gs.id END) as qualified_count
+        COUNT(DISTINCT c.id)::int AS pool,
+        COUNT(DISTINCT gs.id)::int AS scored,
+        COUNT(DISTINCT CASE WHEN gs.relevance_score >= 60 THEN gs.id END)::int AS qualified,
+        COUNT(DISTINCT ci.id)::int AS selected,
+        COUNT(DISTINCT CASE WHEN ci.status = 'ACCEPTED' THEN ci.id END)::int AS confirmed
       FROM people_contacts c
       LEFT JOIN guest_scores gs ON gs.contact_id = c.id AND gs.event_id = ${eventIdNum}
-      WHERE c.workspace_id = (SELECT workspace_id FROM events WHERE id = ${eventIdNum} LIMIT 1)
-    `.catch(() => [{ total_contacts: 0, scored_count: 0, qualified_count: 0 }]),
+      LEFT JOIN campaign_invitations ci ON ci.contact_id = c.id AND ci.event_id = ${eventIdNum}
+      WHERE c.workspace_id = ${wsId}
+    `.catch(() => [{ pool: 0, scored: 0, qualified: 0, selected: 0, confirmed: 0 }]),
 
-    // Guest status counts (from both join requests and campaign invitations)
+    // Pending review: inbound RSVP/join-request contacts with no invitation decision
     db`
-      SELECT
-        COUNT(*) as total,
-        COUNT(CASE WHEN status = 'PENDING' THEN 1 END) as pending,
-        COUNT(CASE WHEN status = 'APPROVED' THEN 1 END) as approved,
-        COUNT(CASE WHEN status = 'REJECTED' THEN 1 END) as rejected
-      FROM event_join_requests
+      SELECT COUNT(DISTINCT c.id)::int AS count
+      FROM people_contacts c
+      LEFT JOIN campaign_invitations ci ON ci.contact_id = c.id AND ci.event_id = ${eventIdNum}
+      WHERE c.workspace_id = ${wsId}
+        AND c.source IN ('RSVP_SUBMISSION', 'JOIN_REQUEST')
+        AND ci.id IS NULL
+    `.catch(() => [{ count: 0 }]),
+
+    // High-score contacts (70+) not yet in a campaign
+    db`
+      SELECT COUNT(DISTINCT gs.contact_id)::int AS count
+      FROM guest_scores gs
+      JOIN people_contacts c ON c.id = gs.contact_id AND c.workspace_id = ${wsId}
+      LEFT JOIN campaign_invitations ci ON ci.contact_id = gs.contact_id AND ci.event_id = ${eventIdNum}
+      WHERE gs.event_id = ${eventIdNum}
+        AND gs.relevance_score >= 70
+        AND ci.id IS NULL
+    `.catch(() => [{ count: 0 }]),
+
+    // Unscored contacts
+    db`
+      SELECT COUNT(DISTINCT c.id)::int AS count
+      FROM people_contacts c
+      LEFT JOIN guest_scores gs ON gs.contact_id = c.id AND gs.event_id = ${eventIdNum}
+      WHERE c.workspace_id = ${wsId}
+        AND gs.id IS NULL
+    `.catch(() => [{ count: 0 }]),
+
+    // Awaiting RSVP: invitations sent (INVITED) with no response
+    db`
+      SELECT COUNT(*)::int AS count
+      FROM campaign_invitations
       WHERE event_id = ${eventIdNum}
-    `.catch(() => [{ total: 0, pending: 0, approved: 0, rejected: 0 }]),
-
-    // Capacity
-    db`
-      SELECT total_capacity,
-        (SELECT COUNT(*) FROM campaign_invitations WHERE event_id = ${eventIdNum} AND status = 'ACCEPTED') as confirmed
-      FROM events WHERE id = ${eventIdNum} LIMIT 1
-    `.catch(() => [{ total_capacity: 0, confirmed: 0 }]),
+        AND status = 'INVITED'
+        AND rsvp_responded_at IS NULL
+    `.catch(() => [{ count: 0 }]),
 
     // Objectives count
     db`
-      SELECT COUNT(*) as count FROM event_objectives WHERE event_id = ${eventIdNum}
+      SELECT COUNT(*)::int AS count FROM event_objectives WHERE event_id = ${eventIdNum}
     `.catch(() => [{ count: 0 }]),
 
-    // Recent join requests for activity feed
+    // Recent activity from audit_logs + campaign_invitations + rsvp_submissions
     db`
-      SELECT
-        COALESCE(TRIM(CONCAT(up.first_name, ' ', up.last_name)), 'Unknown') AS full_name,
-        ejr.status,
-        ejr.created_at,
-        ejr.updated_at
-      FROM event_join_requests ejr
-      LEFT JOIN user_profiles up ON up.owner_id = ejr.owner_id
-      WHERE ejr.event_id = ${eventIdNum}
-      ORDER BY COALESCE(ejr.updated_at, ejr.created_at) DESC
+      (
+        SELECT ci.full_name AS actor,
+          ci.contact_id,
+          CASE ci.status
+            WHEN 'ACCEPTED' THEN 'confirmed attendance'
+            WHEN 'DECLINED' THEN 'declined invitation'
+            WHEN 'CONSIDERING' THEN 'added to invitation wave'
+            WHEN 'INVITED' THEN 'was sent RSVP email'
+            ELSE ci.status::text
+          END AS action,
+          COALESCE(ci.updated_at, ci.created_at) AS timestamp
+        FROM campaign_invitations ci
+        WHERE ci.event_id = ${eventIdNum}
+        ORDER BY COALESCE(ci.updated_at, ci.created_at) DESC
+        LIMIT 8
+      )
+      UNION ALL
+      (
+        SELECT rs.full_name AS actor,
+          rs.contact_id,
+          'submitted RSVP' AS action,
+          rs.created_at AS timestamp
+        FROM rsvp_submissions rs
+        WHERE rs.event_id = ${eventIdNum}
+        ORDER BY rs.created_at DESC
+        LIMIT 7
+      )
+      ORDER BY timestamp DESC
       LIMIT 15
     `.catch(() => []),
   ])
 
-  const scoring = scoringStats[0] || { total_contacts: 0, scored_count: 0, qualified_count: 0 }
-  const guests = guestCounts[0] || { total: 0, pending: 0, approved: 0, rejected: 0 }
-  const capacity = capacityResult[0] || { total_capacity: 0, confirmed: 0 }
+  const funnel = funnelStats[0] || { pool: 0, scored: 0, qualified: 0, selected: 0, confirmed: 0 }
   const objectives = objectiveCount[0] || { count: 0 }
+  const awaitingRsvp = Number(awaitingRsvpResult[0]?.count) || 0
 
-  // Build funnel — Evaluated = total contacts, Qualified = scored >= 60, Invited = all campaign invites, Confirmed = accepted invites
-  const invitedResult = await db`
-    SELECT COUNT(*) as total_invited FROM campaign_invitations WHERE event_id = ${eventIdNum}
-  `.catch(() => [{ total_invited: 0 }])
+  // Build needs-attention items (ordered by urgency)
+  const needsAttention: { type: string; count: number; label: string; action?: string }[] = []
 
-  const funnel = {
-    evaluated: Number(scoring.total_contacts) || 0,
-    qualified: Number(scoring.qualified_count) || 0,
-    invited: Number(invitedResult[0]?.total_invited) || 0,
-    confirmed: Number(capacity.confirmed) || 0,
+  // Event day: check-in is live
+  if (isEventDay && Number(funnel.confirmed) > 0) {
+    needsAttention.push({
+      type: 'event_day',
+      count: Number(funnel.confirmed),
+      label: 'guests confirmed — check-in is live',
+      action: 'Open Check-in',
+    })
   }
 
-  // Build needs-attention items
-  const needsAttention: { type: string; count: number; label: string }[] = []
+  // Over capacity warning
+  if (totalCapacity > 0 && Number(funnel.selected) > totalCapacity) {
+    needsAttention.push({
+      type: 'over_capacity',
+      count: Number(funnel.selected) - totalCapacity,
+      label: `over event capacity (${funnel.selected} selected for ${totalCapacity} seats)`,
+      action: 'Manage Invitations',
+    })
+  }
 
-  if (Number(guests.pending) > 0) {
-    needsAttention.push({ type: 'pending_approval', count: Number(guests.pending), label: 'guests pending review' })
+  // Awaiting RSVP responses
+  if (awaitingRsvp > 0) {
+    needsAttention.push({
+      type: 'awaiting_rsvp',
+      count: awaitingRsvp,
+      label: 'invited guests haven\'t responded',
+      action: 'View in Campaigns',
+    })
+  }
+
+  const pendingReview = Number(pendingReviewResult[0]?.count) || 0
+  if (pendingReview > 0) {
+    needsAttention.push({
+      type: 'pending_review',
+      count: pendingReview,
+      label: 'inbound RSVPs need your review — the AI has scored them for you',
+      action: 'Review in Guest Intelligence',
+    })
+  }
+
+  const highScoreNotInvited = Number(highScoreNotInvitedResult[0]?.count) || 0
+  if (highScoreNotInvited > 0) {
+    needsAttention.push({
+      type: 'high_score_not_invited',
+      count: highScoreNotInvited,
+      label: 'contacts scoring 70+ haven\'t been invited — consider adding them to your next wave',
+      action: 'Review in Guest Intelligence',
+    })
   }
 
   if (Number(objectives.count) === 0) {
-    needsAttention.push({ type: 'no_objectives', count: 1, label: 'event objectives not set' })
+    needsAttention.push({
+      type: 'no_objectives',
+      count: 1,
+      label: 'event objectives not set',
+      action: 'Set Objectives',
+    })
   }
 
-  const highScoreNotInvited = Number(scoring.qualified_count) - Number(guests.approved)
-  if (highScoreNotInvited > 0 && Number(scoring.scored_count) > 0) {
-    needsAttention.push({ type: 'high_score_not_invited', count: highScoreNotInvited, label: 'high-score matches not yet invited' })
+  const unscoredCount = Number(unscoredResult[0]?.count) || 0
+  if (unscoredCount > 0 && Number(objectives.count) > 0) {
+    needsAttention.push({
+      type: 'unscored_contacts',
+      count: unscoredCount,
+      label: 'contacts haven\'t been scored yet — run AI scoring to identify your best candidates',
+      action: 'Run AI Scoring',
+    })
   }
 
-  // Build activity from recent join requests
-  const activity = recentJoinRequests.map((r: any) => {
-    const actionMap: Record<string, string> = {
-      PENDING: 'requested to join',
-      APPROVED: 'was approved',
-      REJECTED: 'was declined',
-      CANCELLED: 'cancelled their request',
-    }
-    return {
-      actor: r.full_name || 'Unknown',
-      action: actionMap[r.status] || r.status?.toLowerCase() || 'updated',
-      timestamp: r.updated_at || r.created_at,
-    }
-  })
+  // Activity feed
+  const activity = recentActivity.map((r: any) => ({
+    actor: r.actor || 'Unknown',
+    action: r.action || 'updated',
+    timestamp: r.timestamp,
+    contact_id: r.contact_id || null,
+  }))
 
   return NextResponse.json({
     funnel,
     needs_attention: needsAttention,
     activity,
     meta: {
-      total_capacity: Number(capacity.total_capacity) || 0,
+      total_capacity: totalCapacity,
       has_objectives: Number(objectives.count) > 0,
-      has_scored_contacts: Number(scoring.scored_count) > 0,
-      pending_guests: Number(guests.pending) > 0,
+      has_scored_contacts: Number(funnel.scored) > 0,
+      is_event_day: isEventDay,
     },
   })
 })

@@ -11,6 +11,8 @@ interface Objective {
   weight: number
   criteria_config: Record<string, unknown>
   sort_order: number
+  ai_interpretation?: string | null
+  qualifying_count?: number
 }
 
 export default function ObjectivesPage() {
@@ -74,6 +76,7 @@ export default function ObjectivesPage() {
           eventId={eventId}
           objectives={objectives}
           onSave={handleSave}
+          hasScoredContacts={objectives.some(o => o.qualifying_count !== undefined)}
         />
       )}
     </div>

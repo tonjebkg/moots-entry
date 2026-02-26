@@ -1,7 +1,8 @@
 'use client'
 
 import { useState } from 'react'
-import { Plus, Trash2, Save, Target } from 'lucide-react'
+import Link from 'next/link'
+import { Plus, Trash2, Save, Target, Sparkles, CheckCircle } from 'lucide-react'
 
 interface Objective {
   id?: string
@@ -9,12 +10,15 @@ interface Objective {
   weight: number
   criteria_config: Record<string, unknown>
   sort_order: number
+  ai_interpretation?: string | null
+  qualifying_count?: number
 }
 
 interface ObjectivesEditorProps {
   eventId: string
   objectives: Objective[]
   onSave: (objectives: Objective[]) => Promise<void>
+  hasScoredContacts?: boolean
 }
 
 const PLACEHOLDER_EXAMPLES = [
@@ -26,7 +30,7 @@ const PLACEHOLDER_EXAMPLES = [
   'Creative agency leads with Cannes credentials',
 ]
 
-export function ObjectivesEditor({ eventId, objectives: initial, onSave }: ObjectivesEditorProps) {
+export function ObjectivesEditor({ eventId, objectives: initial, onSave, hasScoredContacts }: ObjectivesEditorProps) {
   const [objectives, setObjectives] = useState<Objective[]>(initial)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
@@ -94,6 +98,30 @@ export function ObjectivesEditor({ eventId, objectives: initial, onSave }: Objec
               <p className="text-xs text-ui-tertiary mt-1.5">
                 Describe who you want at this event in plain language. Moots handles the scoring.
               </p>
+              {obj.ai_interpretation && (
+                <div className="mt-3 p-3 bg-brand-cream rounded-lg border border-brand-forest/10">
+                  <div className="flex items-center gap-1.5 mb-1.5">
+                    <Sparkles size={12} className="text-brand-terracotta" />
+                    <span className="text-xs font-semibold text-brand-forest uppercase tracking-wider">AI Interpretation</span>
+                  </div>
+                  <p className="text-sm text-ui-secondary leading-relaxed italic">{obj.ai_interpretation}</p>
+                  <p className="text-xs font-semibold mt-2">
+                    {(obj.qualifying_count ?? 0) > 0 ? (
+                      <span className="text-brand-terracotta">
+                        {obj.qualifying_count} contacts currently qualify based on this objective
+                      </span>
+                    ) : hasScoredContacts ? (
+                      <span className="text-ui-tertiary">
+                        No contacts matched this objective
+                      </span>
+                    ) : (
+                      <span className="text-ui-tertiary">
+                        Score contacts to see how many qualify
+                      </span>
+                    )}
+                  </p>
+                </div>
+              )}
             </div>
             <button
               onClick={() => removeObjective(index)}
@@ -122,14 +150,25 @@ export function ObjectivesEditor({ eventId, objectives: initial, onSave }: Objec
       <div className="flex items-center gap-3">
         <button
           onClick={addObjective}
-          className="flex items-center gap-1.5 px-4 py-2.5 border border-dashed border-ui-border rounded-lg text-sm font-medium text-ui-tertiary hover:border-brand-terracotta hover:text-brand-terracotta transition-colors"
+          className="flex items-center gap-1.5 px-4 py-2.5 border border-brand-forest text-brand-forest rounded-pill text-sm font-semibold hover:bg-brand-forest hover:text-white transition-colors"
         >
           <Plus size={16} />
           Add Objective
         </button>
         <div className="flex-1" />
         {saved && (
-          <span className="text-sm text-emerald-600 font-medium">Saved</span>
+          <div className="flex items-center gap-3">
+            <span className="flex items-center gap-1.5 text-sm text-emerald-600 font-medium">
+              <CheckCircle size={14} />
+              Objectives saved
+            </span>
+            <Link
+              href={`/dashboard/${eventId}/guest-intelligence`}
+              className="text-sm font-semibold text-brand-terracotta hover:underline"
+            >
+              Score Contacts Now →
+            </Link>
+          </div>
         )}
         <button
           onClick={handleSave}
