@@ -1,6 +1,6 @@
 'use client'
 
-import { Send, Eye, MessageSquare, CalendarCheck } from 'lucide-react'
+import { Send, Eye, MessageSquare, CalendarCheck, Mail } from 'lucide-react'
 import type { FollowUpSequence } from '@/types/phase3'
 import { FOLLOW_UP_STATUS_META } from '@/types/phase3'
 
@@ -14,7 +14,11 @@ export function FollowUpStatusTable({ followUps, onSend, onUpdateStatus }: Follo
   if (followUps.length === 0) {
     return (
       <div className="bg-white border border-ui-border rounded-lg p-8 text-center">
-        <p className="text-sm text-ui-tertiary">No follow-ups configured. Generate follow-ups above.</p>
+        <Mail className="w-10 h-10 text-ui-tertiary opacity-50 mx-auto mb-3" />
+        <h4 className="text-sm font-semibold text-brand-charcoal mb-1">No Follow-Ups Yet</h4>
+        <p className="text-sm text-ui-tertiary max-w-md mx-auto">
+          Follow-up drafts will appear here once generated. Use the form above to create AI-personalized emails for your scored contacts.
+        </p>
       </div>
     )
   }

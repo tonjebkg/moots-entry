@@ -1,19 +1,29 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useParams } from 'next/navigation'
-import { Plus, Sparkles } from 'lucide-react'
+import { useParams, useSearchParams, useRouter } from 'next/navigation'
+import { Plus, Sparkles, AlertCircle, ArrowRight } from 'lucide-react'
 import { BriefingCard } from '@/app/components/BriefingCard'
 import { BriefingViewer } from '@/app/components/BriefingViewer'
 import type { BriefingPacket, BriefingType } from '@/types/phase3'
 
 export default function BriefingsPage() {
   const params = useParams()
+  const searchParams = useSearchParams()
+  const router = useRouter()
   const eventId = params.eventId as string
   const [briefings, setBriefings] = useState<BriefingPacket[]>([])
   const [loading, setLoading] = useState(true)
   const [generating, setGenerating] = useState(false)
   const [viewingId, setViewingId] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  const initialFilter = searchParams.get('type') as BriefingType | 'ALL' | null
+  const [typeFilter, setTypeFilter] = useState<BriefingType | 'ALL'>(
+    initialFilter && ['ALL', 'PRE_EVENT', 'MORNING', 'END_OF_DAY'].includes(initialFilter)
+      ? initialFilter
+      : 'ALL'
+  )
 
   async function fetchBriefings() {
     try {
@@ -34,8 +44,20 @@ export default function BriefingsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [eventId])
 
+  function handleFilterChange(key: BriefingType | 'ALL') {
+    setTypeFilter(key)
+    const params = new URLSearchParams(searchParams.toString())
+    if (key === 'ALL') {
+      params.delete('type')
+    } else {
+      params.set('type', key)
+    }
+    router.replace(`?${params.toString()}`, { scroll: false })
+  }
+
   async function handleGenerate(type: BriefingType = 'PRE_EVENT') {
     setGenerating(true)
+    setError(null)
     try {
       const res = await fetch(`/api/events/${eventId}/briefings`, {
         method: 'POST',
@@ -43,13 +65,27 @@ export default function BriefingsPage() {
         body: JSON.stringify({ briefing_type: type }),
       })
       if (res.ok) {
-        fetchBriefings()
+        const refreshRes = await fetch(`/api/events/${eventId}/briefings`)
+        if (refreshRes.ok) {
+          const data = await refreshRes.json()
+          const updated = data.briefings || []
+          setBriefings(updated)
+          // Auto-open the newest briefing
+          if (updated.length > 0) {
+            const sorted = [...updated].sort((a: BriefingPacket, b: BriefingPacket) =>
+              new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+            )
+            if (sorted[0].status === 'READY') {
+              setViewingId(sorted[0].id)
+            }
+          }
+        }
       } else {
         const data = await res.json()
-        alert(data.error || 'Failed to generate briefing')
+        setError(data.error || 'Failed to generate briefing')
       }
     } catch {
-      alert('Failed to generate briefing')
+      setError('Failed to generate briefing')
     } finally {
       setGenerating(false)
     }
@@ -57,11 +93,12 @@ export default function BriefingsPage() {
 
   async function handleDelete(briefingId: string) {
     if (!confirm('Delete this briefing?')) return
+    setError(null)
     try {
       await fetch(`/api/events/${eventId}/briefings/${briefingId}`, { method: 'DELETE' })
       fetchBriefings()
     } catch {
-      alert('Failed to delete')
+      setError('Failed to delete briefing')
     }
   }
 
@@ -84,7 +121,7 @@ export default function BriefingsPage() {
         </div>
         <div className="flex gap-2">
           <button
-            onClick={() => handleGenerate('PRE_EVENT')}
+            onClick={() => handleGenerate(typeFilter === 'ALL' ? 'PRE_EVENT' : typeFilter)}
             disabled={generating}
             className="flex items-center gap-2 px-4 py-2 bg-[#2F4F3F] hover:bg-[#1a3a2a] text-white text-sm font-semibold rounded-lg transition-colors disabled:opacity-50"
           >
@@ -96,39 +133,67 @@ export default function BriefingsPage() {
             ) : (
               <>
                 <Plus className="w-4 h-4" />
-                Generate Briefing
+                {typeFilter === 'ALL' ? 'Generate Briefing' :
+                  typeFilter === 'PRE_EVENT' ? 'Generate Pre Event Briefing' :
+                  typeFilter === 'MORNING' ? 'Generate Morning Briefing' :
+                  'Generate End of Day Briefing'}
               </>
             )}
           </button>
         </div>
       </div>
 
-      {/* Quick generate buttons */}
-      <div className="flex gap-2">
-        {(['PRE_EVENT', 'MORNING', 'END_OF_DAY'] as BriefingType[]).map((type) => (
+      {error && (
+        <div className="flex items-center gap-3 p-4 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+          <AlertCircle className="w-4 h-4 shrink-0" />
+          <span className="flex-1">{error}</span>
+          <button onClick={() => setError(null)} className="text-red-500 hover:text-red-800 font-medium">×</button>
+        </div>
+      )}
+
+      {/* Filter by type */}
+      <div className="flex gap-1 bg-brand-cream rounded-lg p-1 w-fit">
+        {([
+          { key: 'ALL' as const, label: 'All' },
+          { key: 'PRE_EVENT' as const, label: 'Pre Event' },
+          { key: 'MORNING' as const, label: 'Morning' },
+          { key: 'END_OF_DAY' as const, label: 'End of Day' },
+        ]).map((tab) => (
           <button
-            key={type}
-            onClick={() => handleGenerate(type)}
-            disabled={generating}
-            className="px-3 py-1.5 text-xs font-medium text-ui-secondary bg-white border border-ui-border rounded-lg hover:bg-brand-cream transition-colors disabled:opacity-50"
+            key={tab.key}
+            onClick={() => handleFilterChange(tab.key)}
+            className={`px-4 py-2 text-sm font-semibold rounded-md transition-colors ${
+              typeFilter === tab.key
+                ? 'bg-white text-brand-charcoal shadow-sm'
+                : 'text-ui-tertiary hover:text-brand-charcoal'
+            }`}
           >
-            {type.replace(/_/g, ' ')}
+            {tab.label}
           </button>
         ))}
       </div>
 
       {/* Briefing list */}
-      {briefings.length === 0 ? (
+      {(() => {
+        const filtered = typeFilter === 'ALL' ? briefings : briefings.filter(b => b.briefing_type === typeFilter)
+        return filtered.length === 0 ? (
         <div className="bg-white rounded-card shadow-card p-12 text-center">
           <Sparkles className="w-10 h-10 text-[#B8755E] mx-auto mb-4" />
           <h3 className="text-lg font-semibold font-display text-brand-charcoal mb-2">No Briefings Yet</h3>
-          <p className="text-sm text-ui-tertiary max-w-md mx-auto">
-            Generate your first briefing to get AI-powered guest intel, talking points, and conversation starters.
+          <p className="text-sm text-ui-tertiary max-w-md mx-auto mb-4">
+            Briefings are generated from scored guest data. Make sure you have scored contacts and confirmed guests before generating.
           </p>
+          <a
+            href={`/dashboard/${eventId}/guest-intelligence`}
+            className="inline-flex items-center gap-1 text-sm font-semibold text-brand-terracotta hover:text-brand-terracotta/80 transition-colors"
+          >
+            View Guest Intelligence
+            <ArrowRight className="w-4 h-4" />
+          </a>
         </div>
       ) : (
         <div className="space-y-3">
-          {briefings.map((b) => (
+          {filtered.map((b) => (
             <BriefingCard
               key={b.id}
               briefing={b}
@@ -137,7 +202,8 @@ export default function BriefingsPage() {
             />
           ))}
         </div>
-      )}
+      )
+      })()}
 
       {viewingId && (
         <BriefingViewer

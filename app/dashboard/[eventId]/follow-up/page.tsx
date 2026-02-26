@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
-import { Download } from 'lucide-react'
+import { Download, AlertCircle } from 'lucide-react'
 import { FollowUpConfigPanel } from '@/app/components/FollowUpConfigPanel'
 import { FollowUpStatusTable } from '@/app/components/FollowUpStatusTable'
 import type { FollowUpSequence } from '@/types/phase3'
@@ -13,6 +13,7 @@ export default function FollowUpPage() {
   const [followUps, setFollowUps] = useState<FollowUpSequence[]>([])
   const [stats, setStats] = useState<Record<string, number>>({})
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   async function fetchFollowUps() {
     try {
@@ -45,10 +46,10 @@ export default function FollowUpPage() {
         fetchFollowUps()
       } else {
         const data = await res.json()
-        alert(data.error || 'Failed to send')
+        setError(data.error || 'Failed to send')
       }
     } catch {
-      alert('Failed to send')
+      setError('Failed to send')
     }
   }
 
@@ -61,7 +62,7 @@ export default function FollowUpPage() {
       })
       if (res.ok) fetchFollowUps()
     } catch {
-      alert('Failed to update')
+      setError('Failed to update')
     }
   }
 
@@ -92,6 +93,14 @@ export default function FollowUpPage() {
           </a>
         )}
       </div>
+
+      {error && (
+        <div className="flex items-center gap-3 p-4 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+          <AlertCircle className="w-4 h-4 shrink-0" />
+          <span className="flex-1">{error}</span>
+          <button onClick={() => setError(null)} className="text-red-500 hover:text-red-800 font-medium">×</button>
+        </div>
+      )}
 
       {/* Stats */}
       {followUps.length > 0 && (

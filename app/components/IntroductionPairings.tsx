@@ -48,7 +48,7 @@ export function IntroductionPairings({ pairings, onGenerate, generating }: Intro
       {pairings.length === 0 ? (
         <div className="text-center py-8 bg-white border border-ui-border rounded-lg">
           <ArrowLeftRight size={28} className="mx-auto mb-3 text-ui-tertiary opacity-50" />
-          <p className="text-sm text-ui-tertiary">No pairings yet. Generate AI suggestions above.</p>
+          <p className="text-sm text-ui-tertiary">No pairings yet. Click Generate Pairings to create AI-suggested introductions based on guest profiles.</p>
         </div>
       ) : (
         <div className="space-y-3">

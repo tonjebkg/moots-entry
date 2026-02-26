@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useParams } from 'next/navigation';
-import { Download, BarChart3 } from 'lucide-react';
+import { Download, BarChart3, AlertCircle, ArrowRight } from 'lucide-react';
 import { AnalyticsFunnel } from '@/app/components/AnalyticsFunnel';
 import { AnalyticsMetricsGrid } from '@/app/components/AnalyticsMetricsGrid';
 import { TeamPerformanceTable } from '@/app/components/TeamPerformanceTable';
@@ -50,8 +50,16 @@ export default function AnalyticsPage() {
 
   if (error || !metrics) {
     return (
-      <div className="p-8">
-        <div className="text-red-600 text-sm">{error || 'Failed to load analytics'}</div>
+      <div className="flex flex-col items-center justify-center py-32 text-center">
+        <AlertCircle className="w-10 h-10 text-red-400 mb-4" />
+        <h3 className="text-lg font-semibold text-brand-charcoal mb-2">Failed to Load Analytics</h3>
+        <p className="text-sm text-ui-tertiary mb-4">{error || 'Something went wrong. Please try again.'}</p>
+        <button
+          onClick={fetchData}
+          className="px-4 py-2 text-sm font-semibold text-white bg-brand-terracotta rounded-lg hover:bg-brand-terracotta/90 transition-colors"
+        >
+          Retry
+        </button>
       </div>
     );
   }
@@ -82,6 +90,28 @@ export default function AnalyticsPage() {
           </button>
         </div>
       </div>
+
+      {/* Empty state guidance */}
+      {metrics.headline.guest_pool === 0 && (
+        <div className="bg-white rounded-card shadow-card p-6 border border-ui-border">
+          <div className="flex items-start gap-3">
+            <BarChart3 className="w-5 h-5 text-brand-terracotta shrink-0 mt-0.5" />
+            <div>
+              <h3 className="text-sm font-semibold text-brand-charcoal mb-1">No Analytics Data Yet</h3>
+              <p className="text-sm text-ui-tertiary mb-3">
+                Score contacts and run campaigns to see your event funnel, team stats, and ROI.
+              </p>
+              <a
+                href={`/dashboard/${eventId}/guest-intelligence`}
+                className="inline-flex items-center gap-1 text-sm font-semibold text-brand-terracotta hover:text-brand-terracotta/80 transition-colors"
+              >
+                View Guest Intelligence
+                <ArrowRight className="w-4 h-4" />
+              </a>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Metrics Grid */}
       <AnalyticsMetricsGrid metrics={metrics.headline} />

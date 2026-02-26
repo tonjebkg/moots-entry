@@ -2,13 +2,13 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import { useParams } from 'next/navigation'
-import { Sparkles, RotateCw, Settings, UserCheck, Grid3X3 } from 'lucide-react'
+import { Sparkles, RotateCw, UserCheck, Grid3X3, ArrowLeftRight, Info } from 'lucide-react'
 import { CheckinDashboard } from '@/app/components/CheckinDashboard'
 import { SeatingChart } from '@/app/components/SeatingChart'
 import { SeatingAssignPanel } from '@/app/components/SeatingAssignPanel'
 import { IntroductionPairings } from '@/app/components/IntroductionPairings'
 
-type SubTab = 'checkin' | 'seating'
+type SubTab = 'checkin' | 'seating' | 'introductions'
 type SeatingFormat = 'STANDING' | 'SEATED' | 'MIXED'
 type Strategy = 'MIXED_INTERESTS' | 'SIMILAR_INTERESTS' | 'SCORE_BALANCED'
 
@@ -54,15 +54,13 @@ export default function DayOfPage() {
   const [generatingIntros, setGeneratingIntros] = useState(false)
   const [strategy, setStrategy] = useState<Strategy>('MIXED_INTERESTS')
   const [error, setError] = useState<string | null>(null)
-  const [seatingSubTab, setSeatingSubTab] = useState<'chart' | 'introductions'>('chart')
 
   const fetchSeatingData = useCallback(async () => {
     try {
       setSeatingLoading(true)
       const eventRes = await fetch(`/api/events/${eventId}`)
       if (eventRes.ok) {
-        const eventData = await eventRes.json()
-        const evt = eventData.event
+        const evt = await eventRes.json()
         setSeatingFormat(evt.seating_format || 'STANDING')
         setTables(evt.tables_config?.tables || [])
       }
@@ -86,7 +84,7 @@ export default function DayOfPage() {
   }, [eventId])
 
   useEffect(() => {
-    if (activeTab === 'seating') {
+    if (activeTab === 'seating' || activeTab === 'introductions') {
       fetchSeatingData()
     }
   }, [activeTab, fetchSeatingData])
@@ -224,11 +222,22 @@ export default function DayOfPage() {
             }`}
           >
             <Grid3X3 size={15} />
-            Seating & Introductions
+            Seating
+          </button>
+          <button
+            onClick={() => setActiveTab('introductions')}
+            className={`flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-md transition-colors ${
+              activeTab === 'introductions'
+                ? 'bg-white text-brand-charcoal shadow-sm'
+                : 'text-ui-tertiary hover:text-brand-charcoal'
+            }`}
+          >
+            <ArrowLeftRight size={15} />
+            Introductions
           </button>
         </div>
 
-        {/* Seating actions (only when seating tab active) */}
+        {/* Seating actions (only when seating tab active and not standing) */}
         {activeTab === 'seating' && seatingFormat !== 'STANDING' && (
           <div className="flex items-center gap-3">
             <select
@@ -249,6 +258,18 @@ export default function DayOfPage() {
               {generating ? 'Generating...' : 'AI Suggest'}
             </button>
           </div>
+        )}
+
+        {/* Introduction actions */}
+        {activeTab === 'introductions' && (
+          <button
+            onClick={handleGenerateIntroductions}
+            disabled={generatingIntros}
+            className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-brand-terracotta rounded-lg hover:bg-brand-terracotta/90 transition-colors disabled:opacity-50"
+          >
+            <Sparkles size={14} />
+            {generatingIntros ? 'Generating...' : 'Generate Pairings'}
+          </button>
         )}
       </div>
 
@@ -271,65 +292,59 @@ export default function DayOfPage() {
             <div className="flex items-center justify-center py-32">
               <div className="text-ui-tertiary text-sm font-medium">Loading seating...</div>
             </div>
+          ) : seatingFormat === 'STANDING' ? (
+            <div className="bg-white rounded-card shadow-card p-8 text-center">
+              <Info size={32} className="mx-auto mb-3 text-ui-tertiary opacity-50" />
+              <p className="text-sm text-ui-tertiary mb-4">
+                This event uses a standing format. Table assignments are not applicable for standing events.
+              </p>
+              <button
+                onClick={() => setActiveTab('introductions')}
+                className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-brand-terracotta hover:bg-brand-terracotta/5 border border-brand-terracotta rounded-lg transition-colors"
+              >
+                <ArrowLeftRight size={14} />
+                View Introduction Pairings instead
+              </button>
+            </div>
           ) : (
-            <>
-              {/* Seating Sub-tabs */}
-              <div className="flex gap-1 bg-brand-cream rounded-lg p-1 w-fit">
-                <button
-                  onClick={() => setSeatingSubTab('chart')}
-                  className={`px-4 py-2 text-sm font-semibold rounded-md transition-colors ${
-                    seatingSubTab === 'chart'
-                      ? 'bg-white text-brand-charcoal shadow-sm'
-                      : 'text-ui-tertiary hover:text-brand-charcoal'
-                  }`}
-                >
-                  Seating Chart
-                </button>
-                <button
-                  onClick={() => setSeatingSubTab('introductions')}
-                  className={`px-4 py-2 text-sm font-semibold rounded-md transition-colors ${
-                    seatingSubTab === 'introductions'
-                      ? 'bg-white text-brand-charcoal shadow-sm'
-                      : 'text-ui-tertiary hover:text-brand-charcoal'
-                  }`}
-                >
-                  Introduction Pairings ({pairings.length})
-                </button>
-              </div>
-
-              {seatingSubTab === 'chart' ? (
-                seatingFormat === 'STANDING' ? (
-                  <div className="bg-white rounded-card shadow-card p-8 text-center">
-                    <Settings size={32} className="mx-auto mb-3 text-ui-tertiary opacity-50" />
-                    <p className="text-sm text-ui-tertiary">
-                      This event uses a standing format. Switch to &quot;Seated&quot; or &quot;Mixed&quot; format in event settings to enable table assignments.
-                    </p>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    <div className="lg:col-span-2">
-                      <SeatingChart
-                        tables={tableData}
-                        onRemoveGuest={handleRemoveGuest}
-                      />
-                    </div>
-                    <div>
-                      <SeatingAssignPanel
-                        unassigned={unassigned}
-                        tableNumbers={tables.map(t => t.number)}
-                        onAssign={handleAssign}
-                      />
-                    </div>
-                  </div>
-                )
-              ) : (
-                <IntroductionPairings
-                  pairings={pairings}
-                  onGenerate={handleGenerateIntroductions}
-                  generating={generatingIntros}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <div className="lg:col-span-2">
+                <SeatingChart
+                  tables={tableData}
+                  onRemoveGuest={handleRemoveGuest}
                 />
-              )}
-            </>
+              </div>
+              <div>
+                <SeatingAssignPanel
+                  unassigned={unassigned}
+                  tableNumbers={tables.map(t => t.number)}
+                  onAssign={handleAssign}
+                />
+              </div>
+            </div>
+          )}
+        </>
+      )}
+
+      {/* Introductions Content */}
+      {activeTab === 'introductions' && (
+        <>
+          {error && (
+            <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+              {error}
+              <button onClick={() => setError(null)} className="ml-3 text-red-500 hover:text-red-800 font-medium">×</button>
+            </div>
+          )}
+
+          {seatingLoading ? (
+            <div className="flex items-center justify-center py-32">
+              <div className="text-ui-tertiary text-sm font-medium">Loading introductions...</div>
+            </div>
+          ) : (
+            <IntroductionPairings
+              pairings={pairings}
+              generating={generatingIntros}
+            />
           )}
         </>
       )}
