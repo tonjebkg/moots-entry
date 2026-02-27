@@ -61,7 +61,7 @@ export function NeedsAttentionSection({ items, eventId }: NeedsAttentionSectionP
       <div className="px-5 py-4 border-b border-ui-border">
         <div className="flex items-center gap-2">
           <AlertCircle size={18} className="text-brand-terracotta" />
-          <h3 className="text-lg font-semibold text-brand-charcoal">Needs Attention</h3>
+          <h3 className="text-xl font-semibold text-brand-charcoal">Needs Attention</h3>
         </div>
       </div>
       <div className="divide-y divide-ui-border">
@@ -69,18 +69,18 @@ export function NeedsAttentionSection({ items, eventId }: NeedsAttentionSectionP
           const config = ITEM_CONFIG[item.type] || { icon: AlertCircle, href: () => '#', defaultAction: 'View' }
           const Icon = config.icon
           return (
-            <div key={item.type} className="flex items-center justify-between px-5 py-3">
+            <div key={item.type} className="flex items-center justify-between px-5 py-3.5">
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-lg bg-brand-terracotta/10 flex items-center justify-center">
-                  <Icon size={15} className="text-brand-terracotta" />
+                <div className="w-9 h-9 rounded-lg bg-brand-terracotta/10 flex items-center justify-center">
+                  <Icon size={17} className="text-brand-terracotta" />
                 </div>
-                <span className="text-sm text-brand-charcoal leading-snug">
-                  <strong className="text-base font-bold text-brand-terracotta">{item.count}</strong> {item.label}
+                <span className="text-base text-brand-charcoal leading-snug">
+                  <strong className="text-lg font-bold text-brand-terracotta">{item.count}</strong> {item.label}
                 </span>
               </div>
               <Link
                 href={config.href(eventId)}
-                className="px-3 py-1.5 text-sm font-semibold text-brand-terracotta hover:bg-brand-terracotta/5 rounded-md transition-colors"
+                className="px-3 py-1.5 text-[15px] font-semibold text-brand-terracotta hover:bg-brand-terracotta/5 rounded-md transition-colors"
               >
                 {item.action || config.defaultAction} →
               </Link>

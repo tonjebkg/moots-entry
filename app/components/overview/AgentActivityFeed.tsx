@@ -62,7 +62,7 @@ export function AgentActivityFeed({ activities }: AgentActivityFeedProps) {
     return (
       <div className="bg-white rounded-card shadow-card p-8 text-center">
         <Sparkles size={28} className="mx-auto mb-2 text-brand-terracotta opacity-60" />
-        <p className="text-sm text-ui-secondary">
+        <p className="text-[15px] text-ui-secondary">
           I&apos;m ready to start working on your event. Set objectives and I&apos;ll begin analyzing your guest pool.
         </p>
       </div>
@@ -73,7 +73,7 @@ export function AgentActivityFeed({ activities }: AgentActivityFeedProps) {
     <div className="bg-white rounded-card shadow-card overflow-hidden">
       <div className="px-5 py-4 border-b border-ui-border flex items-center gap-2">
         <AgentAvatar size="sm" />
-        <h3 className="text-lg font-semibold text-brand-charcoal">AI Activity</h3>
+        <h3 className="text-xl font-semibold text-brand-charcoal">AI Agent Activity</h3>
       </div>
       <div className="divide-y divide-ui-border">
         {activities.map(activity => {
@@ -92,14 +92,14 @@ export function AgentActivityFeed({ activities }: AgentActivityFeedProps) {
                 <AgentAvatar size="sm" />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-0.5">
-                    <span className={`inline-flex px-1.5 py-0.5 text-[11px] font-semibold rounded border ${colorClass}`}>
+                    <span className={`inline-flex px-2 py-0.5 text-[13px] font-semibold rounded border ${colorClass}`}>
                       {isSuggestion ? 'Suggestion' : (TYPE_LABELS[activity.activity_type] || activity.activity_type)}
                     </span>
-                    <span className="text-[12px] text-ui-tertiary">
+                    <span className="text-[14px] text-ui-tertiary">
                       {timeAgo(activity.created_at)}
                     </span>
                   </div>
-                  <p className="text-sm text-brand-charcoal">{activity.headline}</p>
+                  <p className="text-base text-brand-charcoal">{activity.headline}</p>
                 </div>
                 {activity.detail && (
                   <div className="shrink-0 mt-1 text-ui-tertiary">
@@ -108,12 +108,12 @@ export function AgentActivityFeed({ activities }: AgentActivityFeedProps) {
                 )}
               </div>
               {isExpanded && activity.detail && (
-                <div className="ml-9 mt-2 text-sm text-ui-secondary bg-brand-cream rounded-lg p-3 animate-fade-in">
+                <div className="ml-9 mt-2 text-base text-ui-secondary bg-brand-cream rounded-lg p-3 animate-fade-in">
                   {activity.detail}
                   {nav && (
                     <button
                       onClick={(e) => { e.stopPropagation(); router.push(`/dashboard/${eventId}/${nav.tab}`); }}
-                      className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-brand-terracotta hover:text-brand-terracotta/80 transition-colors"
+                      className="mt-2 inline-flex items-center gap-1 text-sm font-semibold text-brand-terracotta hover:text-brand-terracotta/80 transition-colors"
                     >
                       <ExternalLink size={10} />
                       {nav.label}

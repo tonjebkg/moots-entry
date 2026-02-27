@@ -37,7 +37,7 @@ export function ActivityFeed({ activities, onContactClick }: ActivityFeedProps) 
     return (
       <div className="bg-white rounded-card shadow-card p-8 text-center">
         <Sparkles size={28} className="mx-auto mb-2 text-brand-terracotta opacity-60" />
-        <p className="text-sm text-ui-secondary">I&apos;m ready to start working on your event. Set objectives and I&apos;ll begin analyzing your guest pool.</p>
+        <p className="text-[15px] text-ui-secondary">I&apos;m ready to start working on your event. Set objectives and I&apos;ll begin analyzing your guest pool.</p>
       </div>
     )
   }
@@ -45,23 +45,23 @@ export function ActivityFeed({ activities, onContactClick }: ActivityFeedProps) 
   return (
     <div className="bg-white rounded-card shadow-card overflow-hidden">
       <div className="px-5 py-4 border-b border-ui-border">
-        <h3 className="text-lg font-semibold text-brand-charcoal">Guest Activity</h3>
+        <h3 className="text-xl font-semibold text-brand-charcoal">Guest Activity</h3>
       </div>
       <div className="divide-y divide-ui-border">
         {activities.map((activity, idx) => {
           const isAgent = activity.actor === 'Moots' || activity.actor === 'System' || activity.actor === 'system'
           return (
-          <div key={idx} className="flex items-center gap-3 px-5 py-3">
+          <div key={idx} className="flex items-center gap-3 px-5 py-3.5">
             {isAgent ? (
               <AgentAvatar size="sm" />
             ) : (
               <AvatarInitials
                 name={activity.actor || 'System'}
-                size={28}
+                size={32}
               />
             )}
             <div className="flex-1 min-w-0">
-              <p className="text-sm text-brand-charcoal">
+              <p className="text-base text-brand-charcoal">
                 {activity.contact_id && onContactClick ? (
                   <button
                     onClick={() => onContactClick(activity.contact_id!)}
@@ -75,7 +75,7 @@ export function ActivityFeed({ activities, onContactClick }: ActivityFeedProps) 
                 <span className="text-ui-secondary">{activity.action}</span>
               </p>
             </div>
-            <span className="text-[12px] text-ui-tertiary shrink-0">
+            <span className="text-[14px] text-ui-tertiary shrink-0">
               {timeAgo(activity.timestamp)}
             </span>
           </div>

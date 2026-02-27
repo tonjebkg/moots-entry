@@ -36,7 +36,7 @@ export async function getFullEventContext(
 
       // 2. Event details (including new Phase 2 fields)
       db`
-        SELECT id, title, description, start_date, end_date,
+        SELECT id, title, start_date, end_date,
                location::text as location_raw, total_capacity, seating_format, status,
                event_theme, success_criteria,
                key_stakeholders::text as key_stakeholders_raw,
@@ -70,7 +70,7 @@ export async function getFullEventContext(
           COUNT(*) FILTER (WHERE gs.relevance_score IS NOT NULL) AS scored,
           COUNT(*) FILTER (WHERE gs.relevance_score >= 60) AS qualified,
           COUNT(*) FILTER (WHERE ci.status = 'ACCEPTED') AS confirmed,
-          COUNT(*) FILTER (WHERE ci.status = 'PENDING') AS pending_rsvp,
+          COUNT(*) FILTER (WHERE ci.status = 'INVITED') AS pending_rsvp,
           COUNT(*) FILTER (WHERE ci.status = 'DECLINED') AS declined,
           ROUND(AVG(gs.relevance_score)::numeric, 1) AS avg_score,
           MAX(gs.relevance_score) AS top_score

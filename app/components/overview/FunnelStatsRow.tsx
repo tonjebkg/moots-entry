@@ -79,7 +79,7 @@ export function FunnelStatsRow({ funnel, totalCapacity, eventId }: FunnelStatsRo
     : 0
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-2">
       <div className="flex items-stretch gap-2">
         {steps.map((step, idx) => (
           <div key={step.label} className="flex items-stretch flex-1">
@@ -105,12 +105,12 @@ export function FunnelStatsRow({ funnel, totalCapacity, eventId }: FunnelStatsRo
 
       {/* Capacity bar */}
       {totalCapacity != null && totalCapacity > 0 && (
-        <div className="bg-white rounded-card shadow-card px-5 py-3">
-          <div className="flex items-center justify-between mb-1.5">
-            <span className="text-sm font-semibold text-ui-tertiary uppercase tracking-wider">
+        <div className="bg-white rounded-card shadow-card px-5 py-2.5">
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-[14px] font-semibold text-ui-tertiary uppercase tracking-wider">
               Event Capacity
             </span>
-            <span className={`text-sm font-semibold ${isOverCapacity ? 'text-red-600' : 'text-brand-charcoal'}`}>
+            <span className={`text-[15px] font-semibold ${isOverCapacity ? 'text-red-600' : 'text-brand-charcoal'}`}>
               {funnel.confirmed} / {totalCapacity} seats
               {isOverCapacity && ` (${funnel.confirmed - totalCapacity} over)`}
             </span>

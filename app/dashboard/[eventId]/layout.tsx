@@ -8,6 +8,7 @@ import { DashboardHeader } from '@/app/components/DashboardHeader'
 import { AgentContextProvider } from '@/app/components/agent/AgentContextProvider'
 import { ChatPanel } from '@/app/components/agent/ChatPanel'
 import { getDb } from '@/lib/db'
+import { getSession } from '@/lib/auth'
 import { formatUSDate, formatUSTime } from '@/lib/datetime'
 
 type LayoutProps = {
@@ -203,9 +204,10 @@ function formatLocation(location?: Location | null): string {
 export default async function EventLayout({ children, params }: LayoutProps) {
   const { eventId } = await params
 
-  const [event, capacity] = await Promise.all([
+  const [event, capacity, session] = await Promise.all([
     fetchEvent(eventId),
     fetchCapacity(eventId),
+    getSession(),
   ])
 
   const members = await fetchMembers(event?.workspace_id)
@@ -232,7 +234,7 @@ export default async function EventLayout({ children, params }: LayoutProps) {
 
   return (
     <div className="min-h-screen bg-brand-cream">
-      <DashboardHeader activeNav="events" />
+      <DashboardHeader activeNav="events" userName={session?.user?.full_name || undefined} />
 
       {/* Content with top padding for fixed header */}
       <div className="pt-[73px]">

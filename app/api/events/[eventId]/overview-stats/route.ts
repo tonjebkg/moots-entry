@@ -181,7 +181,7 @@ export const GET = withErrorHandling(async (_request: NextRequest, { params }: R
     needsAttention.push({
       type: 'pending_review',
       count: pendingReview,
-      label: `I've scored ${pendingReview} new RSVP submissions. Review them to approve or decline.`,
+      label: 'new RSVP submissions scored. Review them to approve or decline.',
       action: 'Review in Guest Intelligence',
     })
   }
@@ -191,7 +191,7 @@ export const GET = withErrorHandling(async (_request: NextRequest, { params }: R
     needsAttention.push({
       type: 'high_score_not_invited',
       count: highScoreNotInvited,
-      label: `${highScoreNotInvited} contacts score 70+ but haven't been invited. They're strong matches for your objectives.`,
+      label: 'contacts score 70+ but haven\'t been invited. Strong matches for your objectives.',
       action: 'Review in Guest Intelligence',
     })
   }

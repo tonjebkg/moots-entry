@@ -143,7 +143,7 @@ export function ChatPanel({ eventId }: ChatPanelProps) {
             <div className="flex items-center justify-between px-4 py-2 border-b border-ui-border">
               <div className="flex items-center gap-2">
                 <AgentAvatar size="sm" />
-                <span className="text-xs font-semibold text-brand-charcoal">Moots Agent</span>
+                <span className="text-sm font-semibold text-brand-charcoal">Moots Agent</span>
               </div>
               <button
                 onClick={() => setChatOpen(false)}
@@ -157,7 +157,7 @@ export function ChatPanel({ eventId }: ChatPanelProps) {
                 <div key={msg.id} className={`flex gap-2.5 ${msg.role === 'user' ? 'justify-end' : ''}`}>
                   {msg.role === 'assistant' && <AgentAvatar size="sm" />}
                   <div
-                    className={`max-w-[80%] rounded-xl px-3.5 py-2 text-sm leading-relaxed ${
+                    className={`max-w-[80%] rounded-xl px-3.5 py-2 text-[15px] leading-relaxed ${
                       msg.role === 'user'
                         ? 'bg-brand-charcoal text-white rounded-br-sm'
                         : 'bg-brand-cream text-brand-charcoal rounded-bl-sm'
@@ -171,7 +171,7 @@ export function ChatPanel({ eventId }: ChatPanelProps) {
               {streaming && (
                 <div className="flex gap-2.5">
                   <AgentAvatar size="sm" />
-                  <div className="max-w-[80%] rounded-xl rounded-bl-sm px-3.5 py-2 bg-brand-cream text-brand-charcoal text-sm leading-relaxed">
+                  <div className="max-w-[80%] rounded-xl rounded-bl-sm px-3.5 py-2 bg-brand-cream text-brand-charcoal text-[15px] leading-relaxed">
                     {streamingText ? (
                       <div className="whitespace-pre-wrap">{streamingText}</div>
                     ) : (
@@ -196,7 +196,7 @@ export function ChatPanel({ eventId }: ChatPanelProps) {
             className="mx-4 bg-white border border-b-0 border-ui-border rounded-t-xl px-4 py-2 flex items-center gap-2 text-left hover:bg-brand-cream/50 transition-colors w-[calc(100%-2rem)]"
           >
             <AgentAvatar size="sm" />
-            <p className="text-xs text-ui-secondary truncate flex-1">
+            <p className="text-sm text-ui-secondary truncate flex-1">
               {peekMessages[peekMessages.length - 1].content.slice(0, 80)}
               {peekMessages[peekMessages.length - 1].content.length > 80 ? '...' : ''}
             </p>
@@ -213,7 +213,7 @@ export function ChatPanel({ eventId }: ChatPanelProps) {
                 <button
                   key={q}
                   onClick={() => handleSend(q)}
-                  className="shrink-0 text-[13px] px-3 py-1.5 rounded-full bg-brand-cream text-brand-charcoal/70 hover:text-brand-terracotta hover:bg-brand-terracotta/5 transition-colors border border-[#D5CEC6] hover:border-brand-terracotta/30"
+                  className="shrink-0 text-[14px] px-3 py-1.5 rounded-full bg-brand-cream text-brand-charcoal/70 hover:text-brand-terracotta hover:bg-brand-terracotta/5 transition-colors border border-[#D5CEC6] hover:border-brand-terracotta/30"
                 >
                   {q}
                 </button>
@@ -230,7 +230,7 @@ export function ChatPanel({ eventId }: ChatPanelProps) {
               onFocus={() => { if (hasMessages && !chatOpen) setChatOpen(true); }}
               placeholder="Ask Moots about your event..."
               rows={1}
-              className="flex-1 resize-none rounded-lg border border-ui-border px-3 py-2 text-[15px] text-brand-charcoal placeholder:text-ui-tertiary focus:outline-none focus:ring-2 focus:ring-brand-terracotta/30 focus:border-brand-terracotta max-h-24"
+              className="flex-1 resize-none rounded-lg border border-ui-border px-3 py-2.5 text-base text-brand-charcoal placeholder:text-ui-tertiary focus:outline-none focus:ring-2 focus:ring-brand-terracotta/30 focus:border-brand-terracotta max-h-24"
               style={{ minHeight: '36px' }}
             />
             <button

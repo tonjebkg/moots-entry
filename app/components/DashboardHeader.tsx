@@ -3,13 +3,15 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { Settings } from 'lucide-react'
+import { AvatarInitials } from '@/app/components/ui/AvatarInitials'
 
 interface DashboardHeaderProps {
   activeNav?: 'events' | 'people'
   rightSlot?: React.ReactNode
+  userName?: string
 }
 
-export function DashboardHeader({ activeNav, rightSlot }: DashboardHeaderProps) {
+export function DashboardHeader({ activeNav, rightSlot, userName }: DashboardHeaderProps) {
   const pathname = usePathname()
 
   // Auto-detect active nav from pathname if not explicitly set
@@ -26,7 +28,7 @@ export function DashboardHeader({ activeNav, rightSlot }: DashboardHeaderProps) 
           <nav className="flex items-center gap-6">
             <Link
               href="/dashboard"
-              className={`text-sm font-semibold pb-0.5 border-b-2 transition-colors ${
+              className={`text-base font-semibold pb-0.5 border-b-2 transition-colors ${
                 active === 'events'
                   ? 'text-brand-terracotta border-brand-terracotta'
                   : 'text-ui-tertiary border-transparent hover:text-brand-charcoal'
@@ -36,7 +38,7 @@ export function DashboardHeader({ activeNav, rightSlot }: DashboardHeaderProps) 
             </Link>
             <Link
               href="/dashboard/people"
-              className={`text-sm font-semibold pb-0.5 border-b-2 transition-colors ${
+              className={`text-base font-semibold pb-0.5 border-b-2 transition-colors ${
                 active === 'people'
                   ? 'text-brand-terracotta border-brand-terracotta'
                   : 'text-ui-tertiary border-transparent hover:text-brand-charcoal'
@@ -48,6 +50,7 @@ export function DashboardHeader({ activeNav, rightSlot }: DashboardHeaderProps) 
         </div>
 
         <div className="flex items-center gap-3">
+          {rightSlot}
           <Link
             href="/dashboard/settings"
             className="p-2 text-ui-tertiary hover:text-brand-terracotta transition-colors rounded-lg hover:bg-brand-cream"
@@ -55,7 +58,9 @@ export function DashboardHeader({ activeNav, rightSlot }: DashboardHeaderProps) 
           >
             <Settings size={18} />
           </Link>
-          {rightSlot}
+          {userName && (
+            <AvatarInitials name={userName} size={32} />
+          )}
         </div>
       </div>
     </header>

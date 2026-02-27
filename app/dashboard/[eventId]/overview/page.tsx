@@ -118,10 +118,10 @@ export default function OverviewPage() {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-5">
       {/* Header */}
       <div>
-        <h1 className="font-display text-2xl font-bold text-brand-charcoal tracking-tight mb-2">Event Overview</h1>
+        <h1 className="font-display text-2xl font-bold text-brand-charcoal tracking-tight mb-1">Event Overview</h1>
         <p className="text-base text-ui-secondary">Intelligence-first snapshot of your event pipeline</p>
       </div>
 

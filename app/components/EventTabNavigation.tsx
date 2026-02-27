@@ -53,14 +53,14 @@ export function EventTabNavigation({ eventId }: EventTabNavigationProps) {
                 <div className="h-5 w-px bg-ui-border mx-3 shrink-0" />
               )}
               {showPhaseLabel && (
-                <span className="text-[12px] font-semibold text-ui-tertiary uppercase tracking-wider mr-2 shrink-0 hidden lg:inline">
+                <span className="text-[13px] font-semibold text-ui-tertiary uppercase tracking-wider mr-2 shrink-0 hidden lg:inline">
                   {tab.phase}
                 </span>
               )}
               <Link
                 href={tab.href}
                 className={`
-                  relative py-4 px-3 text-sm font-semibold whitespace-nowrap transition-all duration-200
+                  relative py-4 px-3 text-base font-semibold whitespace-nowrap transition-all duration-200
                   focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-terracotta focus-visible:ring-offset-2 rounded-sm
                   ${activeTab === tab.key
                     ? 'text-brand-charcoal'
