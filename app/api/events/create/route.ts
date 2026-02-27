@@ -36,6 +36,12 @@ type CreateEventPayload = {
     is_private?: boolean;
     approve_mode?: 'MANUAL' | 'AUTO';
     status?: 'DRAFT' | 'PUBLISHED' | 'COMPLETE' | 'CANCELLED';
+    // Phase 2: Event context fields
+    success_criteria?: string | null;
+    key_stakeholders?: { name: string; role?: string }[] | null;
+    event_theme?: string | null;
+    budget_range?: string | null;
+    additional_context?: string | null;
     // Legacy field names (backward compatibility)
     name?: string; // Maps to title
     city?: string; // Maps to location.city
@@ -118,6 +124,11 @@ export async function POST(req: Request) {
       throw new Error('status must be DRAFT, PUBLISHED, COMPLETE, or CANCELLED');
     }
 
+    // Prepare Phase 2 context fields
+    const keyStakeholdersJson = event.key_stakeholders
+      ? JSON.stringify(event.key_stakeholders)
+      : null;
+
     // Insert event into Neon
     const result = await db`
       INSERT INTO events (
@@ -133,7 +144,12 @@ export async function POST(req: Request) {
         is_private,
         approve_mode,
         status,
-        workspace_id
+        workspace_id,
+        success_criteria,
+        key_stakeholders,
+        event_theme,
+        budget_range,
+        additional_context
       ) VALUES (
         ${title},
         ${hostsJson}::jsonb,
@@ -147,7 +163,12 @@ export async function POST(req: Request) {
         ${event.is_private ?? false},
         ${approveMode},
         ${status},
-        ${auth.workspace.id}
+        ${auth.workspace.id},
+        ${event.success_criteria || null},
+        ${keyStakeholdersJson}::jsonb,
+        ${event.event_theme || null},
+        ${event.budget_range || null},
+        ${event.additional_context || null}
       ) RETURNING id
     `;
 

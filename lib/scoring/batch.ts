@@ -1,6 +1,7 @@
 import { getDb } from '@/lib/db';
 import { logger } from '@/lib/logger';
 import { scoreContactForEvent, saveScoringResult } from './engine';
+import { getFullEventContext, formatContextForPrompt } from '@/lib/agent/event-context';
 
 /**
  * Batch score contacts for an event with async job tracking.
@@ -26,6 +27,16 @@ export async function scoreBatchForEvent(
     SELECT title FROM events WHERE id = ${eventId} LIMIT 1
   `;
   const eventTitle = events[0]?.title || 'Event';
+
+  // Fetch rich context once for the entire batch
+  let contextBlock: string | undefined;
+  try {
+    const fullContext = await getFullEventContext(eventId, workspaceId);
+    contextBlock = formatContextForPrompt(fullContext);
+  } catch (err) {
+    logger.error('Failed to fetch event context for scoring', err as Error, { eventId });
+    // Continue without context — backward compatible
+  }
 
   // Fetch objectives
   const objectiveRows = await db`
@@ -90,7 +101,8 @@ export async function scoreBatchForEvent(
           enrichment_data: contact.enrichment_data || {},
         },
         objectives,
-        eventTitle
+        eventTitle,
+        contextBlock
       );
 
       await saveScoringResult(contact.id, eventId, workspaceId, result);

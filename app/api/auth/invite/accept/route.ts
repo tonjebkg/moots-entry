@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { withErrorHandling } from '@/lib/with-error-handling';
 import { validateRequest } from '@/lib/validate-request';
 import { inviteAcceptSchema } from '@/lib/schemas/auth';
-import { hashPassword, createSession, setSessionCookie } from '@/lib/auth';
+import { hashPassword, createSession } from '@/lib/auth';
 import { validatePassword, hasCommonPatterns } from '@/lib/password-validation';
 import { logAction } from '@/lib/audit-log';
 import { getDb } from '@/lib/db';
@@ -11,6 +11,8 @@ import { getClientIdentifier, checkAuthRateLimit } from '@/lib/rate-limit';
 import { RateLimitError } from '@/lib/errors';
 
 export const runtime = 'nodejs';
+
+const SESSION_COOKIE_NAME = 'moots_session';
 
 /**
  * POST /api/auth/invite/accept — Accept a workspace invitation
@@ -117,7 +119,6 @@ export const POST = withErrorHandling(async (request: NextRequest) => {
 
   // Create session
   const session = await createSession(userId, workspaceId, request);
-  await setSessionCookie(session.id, session.expires_at);
 
   // Audit log
   logAction({
@@ -131,9 +132,19 @@ export const POST = withErrorHandling(async (request: NextRequest) => {
     ipAddress: ip,
   });
 
-  return NextResponse.json({
+  const response = NextResponse.json({
     user: { id: userId, email, full_name },
     workspace: { id: workspaceId, name: wsResult[0].name },
     role,
   }, { status: 201 });
+
+  response.cookies.set(SESSION_COOKIE_NAME, session.id, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    path: '/',
+    expires: new Date(session.expires_at),
+  });
+
+  return response;
 });

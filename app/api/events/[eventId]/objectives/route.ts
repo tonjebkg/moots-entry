@@ -120,6 +120,32 @@ export const PUT = withErrorHandling(async (request: NextRequest, { params }: Ro
     }
   }
 
+  // Compute qualifying_count for each objective
+  for (const obj of upserted) {
+    try {
+      const countResult = await db`
+        SELECT COUNT(DISTINCT gs.contact_id)::int AS count
+        FROM guest_scores gs
+        WHERE gs.event_id = ${eventIdNum}
+          AND EXISTS (
+            SELECT 1 FROM jsonb_array_elements(gs.matched_objectives) elem
+            WHERE (elem->>'objective_id')::uuid = ${obj.id}::uuid
+              AND (elem->>'match_score')::int >= 50
+          )
+      `;
+      const qualCount = countResult[0]?.count || 0;
+      if (qualCount !== obj.qualifying_count) {
+        await db`
+          UPDATE event_objectives SET qualifying_count = ${qualCount}
+          WHERE id = ${obj.id}
+        `;
+        obj.qualifying_count = qualCount;
+      }
+    } catch {
+      // Non-critical — skip if matched_objectives structure differs
+    }
+  }
+
   // Delete objectives that are not in the new list
   const existingIds = upserted.map(o => o.id);
   if (existingIds.length > 0) {

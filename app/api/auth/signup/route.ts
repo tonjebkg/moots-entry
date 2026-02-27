@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { withErrorHandling } from '@/lib/with-error-handling';
 import { validateRequest } from '@/lib/validate-request';
 import { signupSchema } from '@/lib/schemas/auth';
-import { hashPassword, createSession, setSessionCookie, generateToken } from '@/lib/auth';
+import { hashPassword, createSession, generateToken } from '@/lib/auth';
 import { validatePassword, hasCommonPatterns } from '@/lib/password-validation';
 import { logAction } from '@/lib/audit-log';
 import { getDb } from '@/lib/db';
@@ -11,6 +11,8 @@ import { getClientIdentifier, checkAuthRateLimit } from '@/lib/rate-limit';
 import { RateLimitError } from '@/lib/errors';
 
 export const runtime = 'nodejs';
+
+const SESSION_COOKIE_NAME = 'moots_session';
 
 function slugify(text: string): string {
   return text
@@ -88,7 +90,6 @@ export const POST = withErrorHandling(async (request: NextRequest) => {
 
   // Create session
   const session = await createSession(user.id, workspace.id, request);
-  await setSessionCookie(session.id, session.expires_at);
 
   // Audit log
   logAction({
@@ -102,7 +103,7 @@ export const POST = withErrorHandling(async (request: NextRequest) => {
     ipAddress: ip,
   });
 
-  return NextResponse.json({
+  const response = NextResponse.json({
     user: {
       id: user.id,
       email: user.email,
@@ -118,4 +119,14 @@ export const POST = withErrorHandling(async (request: NextRequest) => {
     },
     role: 'OWNER',
   }, { status: 201 });
+
+  response.cookies.set(SESSION_COOKIE_NAME, session.id, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    path: '/',
+    expires: new Date(session.expires_at),
+  });
+
+  return response;
 });

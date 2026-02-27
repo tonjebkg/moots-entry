@@ -1,6 +1,7 @@
 import { getAnthropicClient } from '@/lib/anthropic';
 import { getDb } from '@/lib/db';
 import { logger } from '@/lib/logger';
+import { getFullEventContext, formatContextForPrompt } from '@/lib/agent/event-context';
 
 const MODEL_VERSION = 'claude-sonnet-4-20250514';
 
@@ -40,10 +41,20 @@ export async function generateFollowUpContent(
   const contact = contacts[0];
   const client = getAnthropicClient();
 
+  // Get rich event context (Phase 2)
+  let contextBlock = '';
+  try {
+    const fullContext = await getFullEventContext(eventId, workspaceId);
+    contextBlock = formatContextForPrompt(fullContext);
+  } catch {
+    // Fall back to thin context
+  }
+
+  const eventSection = contextBlock || `## Event\nTitle: ${eventTitle}`;
+
   const prompt = `Generate a personalized follow-up email for a guest who attended an event. Return ONLY raw JSON.
 
-## Event
-Title: ${eventTitle}
+${eventSection}
 
 ## Guest
 Name: ${contact.full_name}

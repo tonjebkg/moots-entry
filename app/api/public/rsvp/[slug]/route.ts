@@ -8,6 +8,8 @@ import { validateAccessCode } from '@/lib/rsvp-page/slug';
 import { checkRsvpSubmissionRateLimit, getClientIdentifier } from '@/lib/rate-limit';
 import { RateLimitError, NotFoundError } from '@/lib/errors';
 import { sendRsvpConfirmationEmail } from '@/lib/email-service';
+import { findByEmail, computeDedupKey } from '@/lib/contacts/dedup';
+import { autoEnrichAndScore } from '@/lib/auto-pipeline';
 
 export const runtime = 'nodejs';
 
@@ -130,15 +132,75 @@ export const POST = withErrorHandling(async (request: NextRequest, context: any)
     RETURNING id, created_at
   `;
 
+  const submissionId = result[0].id;
+
   logAction({
     workspaceId: page.workspace_id,
     actorId: null,
     actorEmail: d.email,
     action: 'rsvp_submission.created',
     entityType: 'rsvp_submission',
-    entityId: result[0].id,
+    entityId: submissionId,
     newValue: { full_name: d.full_name, email: d.email, event_id: page.event_id },
   });
+
+  // ─── Auto-create or match contact in People Database ─────────────
+  let contactId: string | null = null;
+  try {
+    const existing = await findByEmail(page.workspace_id, d.email);
+    if (existing.length > 0) {
+      contactId = existing[0].id;
+    } else {
+      const emailLower = d.email.toLowerCase().trim();
+      const emailsJson = JSON.stringify([{ email: emailLower, type: 'personal', primary: true }]);
+      const dedupKey = computeDedupKey(d.full_name, [{ email: emailLower }]);
+      const tagsJson = JSON.stringify(['rsvp-inbound']);
+
+      const newContact = await db`
+        INSERT INTO people_contacts (
+          workspace_id, full_name, emails, company, title,
+          source, source_detail, dedup_key, tags
+        ) VALUES (
+          ${page.workspace_id}::uuid, ${d.full_name}, ${emailsJson}::jsonb,
+          ${d.company || null}, ${d.title || null},
+          'RSVP_SUBMISSION'::contact_source, ${'rsvp_page:' + slug},
+          ${dedupKey}, ${tagsJson}::jsonb
+        )
+        RETURNING id
+      `;
+      contactId = newContact[0].id;
+
+      logAction({
+        workspaceId: page.workspace_id,
+        actorId: null,
+        actorEmail: 'system',
+        action: 'contact.auto_created',
+        entityType: 'contact',
+        entityId: contactId,
+        metadata: { source: 'rsvp_submission', rsvp_submission_id: submissionId },
+      });
+    }
+
+    // Link contact to RSVP submission and trigger pipeline
+    if (contactId) {
+      await db`
+        UPDATE rsvp_submissions SET contact_id = ${contactId}::uuid WHERE id = ${submissionId}
+      `;
+
+      // Fire-and-forget: auto-enrich and score
+      autoEnrichAndScore({
+        contactId,
+        workspaceId: page.workspace_id,
+        eventId: page.event_id,
+        source: 'rsvp_submission',
+      }).catch((err) => {
+        console.error('Auto-pipeline error (non-blocking):', err);
+      });
+    }
+  } catch (pipelineError) {
+    // Non-blocking — RSVP submission was already saved
+    console.error('Contact creation from RSVP failed (non-blocking):', pipelineError);
+  }
 
   // Send confirmation email (fire and forget)
   sendRsvpConfirmationEmail({
@@ -148,7 +210,7 @@ export const POST = withErrorHandling(async (request: NextRequest, context: any)
   }).catch(() => {});
 
   return NextResponse.json(
-    { success: true, submission_id: result[0].id },
+    { success: true, submission_id: submissionId },
     { status: 201 }
   );
 });

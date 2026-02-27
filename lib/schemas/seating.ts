@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 export const assignTableSchema = z.object({
   contact_id: z.string().uuid(),
-  table_number: z.number().int().min(1),
+  table_number: z.number().int().min(0).nullable(),
   seat_number: z.number().int().min(1).optional().nullable(),
 });
 
@@ -30,3 +30,11 @@ export const generateIntroductionsSchema = z.object({
 });
 
 export type GenerateIntroductionsInput = z.infer<typeof generateIntroductionsSchema>;
+
+export const createManualPairingSchema = z.object({
+  contact_a_id: z.string().uuid(),
+  contact_b_id: z.string().uuid(),
+  reason: z.string().min(1).max(500),
+});
+
+export type CreateManualPairingInput = z.infer<typeof createManualPairingSchema>;

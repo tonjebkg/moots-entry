@@ -2,7 +2,7 @@
 
 import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { X, ChevronRight, ChevronLeft, Check, Upload, Database, History, Users as UsersIcon, Plus, Trash2, GripVertical } from 'lucide-react'
+import { X, ChevronRight, ChevronLeft, Check, Upload, Database, History, Users as UsersIcon, Plus, Trash2, GripVertical, Sparkles, Loader2 } from 'lucide-react'
 
 type WizardStep = 'basics' | 'objectives' | 'guest-pool' | 'collaboration'
 type EventFormat = 'curated-dinner' | 'branded-house' | 'annual-retreat' | 'custom'
@@ -131,6 +131,10 @@ export function CreateEventWizard({ onClose, onSuccess }: CreateEventWizardProps
   const startDateRef = useRef<HTMLInputElement>(null)
   const endDateRef = useRef<HTMLInputElement>(null)
 
+  // Event Brief (for AI extraction)
+  const [eventBrief, setEventBrief] = useState('')
+  const [extracting, setExtracting] = useState(false)
+
   // Step 2: Objectives
   const [objectives, setObjectives] = useState<Objective[]>([])
   const [objectivesSaved, setObjectivesSaved] = useState(false)
@@ -143,6 +147,37 @@ export function CreateEventWizard({ onClose, onSuccess }: CreateEventWizardProps
 
   const currentStepIndex = STEPS.findIndex(s => s.key === currentStep)
   const isLastStep = currentStepIndex === STEPS.length - 1
+
+  async function handleExtractBrief() {
+    if (!eventId || !eventBrief.trim() || eventBrief.trim().length < 10) return
+    setExtracting(true)
+    setError(null)
+    try {
+      const res = await fetch(`/api/events/${eventId}/extract-brief`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ brief_text: eventBrief }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Extraction failed')
+
+      if (data.objectives && data.objectives.length > 0) {
+        setObjectives(
+          data.objectives.map((o: any, i: number) => ({
+            objective_text: o.objective_text,
+            weight: o.weight || 1.0,
+            criteria_config: {},
+            sort_order: i,
+          }))
+        )
+        setObjectivesSaved(false)
+      }
+    } catch (err: any) {
+      setError(err.message || 'Failed to extract from brief')
+    } finally {
+      setExtracting(false)
+    }
+  }
 
   function goBack() {
     if (currentStepIndex > 0) {
@@ -485,6 +520,37 @@ export function CreateEventWizard({ onClose, onSuccess }: CreateEventWizardProps
                 <p className="text-sm text-ui-tertiary">
                   What kind of guests matter for this event? The AI will score contacts against these criteria.
                 </p>
+              </div>
+
+              {/* Event Brief — AI extraction */}
+              <div className="bg-brand-cream/50 rounded-lg border border-ui-border p-4 space-y-3">
+                <label className="block text-sm font-semibold text-brand-charcoal">
+                  Event Brief <span className="text-xs font-normal text-ui-tertiary">(optional)</span>
+                </label>
+                <textarea
+                  value={eventBrief}
+                  onChange={(e) => setEventBrief(e.target.value)}
+                  placeholder="Paste your event brief, planning doc, or describe your ideal guest list. The AI will extract objectives from it..."
+                  rows={4}
+                  className="w-full px-3 py-2 text-sm border border-ui-border rounded-lg focus:outline-none focus:border-brand-terracotta focus:ring-1 focus:ring-brand-terracotta resize-none bg-white"
+                />
+                <button
+                  onClick={handleExtractBrief}
+                  disabled={extracting || !eventBrief.trim() || eventBrief.trim().length < 10}
+                  className="flex items-center gap-1.5 px-3 py-2 bg-brand-forest hover:bg-brand-forest/90 text-white text-sm font-semibold rounded-pill transition-colors disabled:opacity-50"
+                >
+                  {extracting ? (
+                    <>
+                      <Loader2 size={14} className="animate-spin" />
+                      Extracting...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles size={14} />
+                      Extract from Brief
+                    </>
+                  )}
+                </button>
               </div>
 
               <div className="space-y-3">

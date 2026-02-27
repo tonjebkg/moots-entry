@@ -188,7 +188,14 @@ export async function tryAuthOrWorkspaceFallback(): Promise<{ workspaceId: strin
   }
 
   const db = getDb();
-  const result = await db`SELECT id FROM workspaces LIMIT 1`;
+  // Prefer the workspace that actually has contacts (important for demo/seed data)
+  const result = await db`
+    SELECT w.id FROM workspaces w
+    LEFT JOIN people_contacts pc ON pc.workspace_id = w.id
+    GROUP BY w.id
+    ORDER BY COUNT(pc.id) DESC
+    LIMIT 1
+  `;
   if (!result.length) {
     throw new UnauthorizedError('No workspace found and no session available');
   }

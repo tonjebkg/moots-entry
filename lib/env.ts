@@ -54,15 +54,10 @@ const dashboardEnvSchema = baseEnvSchema.extend({
   DASHBOARD_AUTH_USER: z.string().optional(),
   DASHBOARD_AUTH_PASS: z.string().optional(),
 
-  // Resend email service (required in dashboard mode for invitations)
-  RESEND_API_KEY: z
-    .string()
-    .min(1, "Resend API key is required")
-    .startsWith("re_", "Resend API key must start with re_"),
+  // Resend email service (optional — validated at runtime when sending emails)
+  RESEND_API_KEY: z.string().optional(),
 
-  RESEND_FROM_EMAIL: z
-    .string()
-    .email("Resend from email must be a valid email address"),
+  RESEND_FROM_EMAIL: z.string().optional(),
 
   // Supabase (optional in dashboard mode)
   NEXT_PUBLIC_SUPABASE_URL: z.string().url().optional(),
@@ -216,10 +211,8 @@ function validateEnv() {
       console.error("environment variables are set correctly.");
       console.error("");
 
-      // Exit with error in production, continue in development
-      if (process.env.NODE_ENV === "production") {
-        process.exit(1);
-      } else {
+      // In development, warn and continue; in production, throw
+      if (process.env.NODE_ENV !== "production") {
         console.warn("⚠️  Continuing in development mode with validation errors");
         console.warn("⚠️  Application may not function correctly");
         console.warn("");

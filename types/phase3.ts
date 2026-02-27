@@ -30,6 +30,10 @@ export interface EventCheckin {
   tags?: string[] | null;
   relevance_score?: number | null;
   table_assignment?: number | null;
+  ai_summary?: string | null;
+  score_rationale?: string | null;
+  talking_points?: string[] | null;
+  matched_objectives?: any[] | null;
 }
 
 export interface NotArrivedGuest {
@@ -245,6 +249,9 @@ export interface FollowUpSequence {
   contact_name?: string;
   contact_email?: string;
   contact_company?: string;
+  contact_title?: string;
+  relevance_score?: number | null;
+  tags?: string[] | null;
 }
 
 // ─── Status Metadata ─────────────────────────────────────────────────────

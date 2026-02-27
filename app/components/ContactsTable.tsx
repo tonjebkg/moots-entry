@@ -181,7 +181,7 @@ export function ContactsTable({
             <tr>
               <td colSpan={7} className="px-4 py-12 text-center text-ui-tertiary">
                 <User size={32} className="mx-auto mb-2 opacity-50" />
-                <div>No contacts found</div>
+                <div>No contacts match your current filters. Try adjusting your search or import new contacts to grow your pool.</div>
               </td>
             </tr>
           )}

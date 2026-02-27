@@ -1,6 +1,7 @@
 import { getAnthropicClient } from '@/lib/anthropic';
 import { getDb } from '@/lib/db';
 import { logger } from '@/lib/logger';
+import { getFullEventContext, formatContextForPrompt } from '@/lib/agent/event-context';
 import crypto from 'crypto';
 
 interface GuestForSeating {
@@ -93,13 +94,23 @@ export async function generateSeatingPlan(
     return { batchId, assignments: [] };
   }
 
+  // Fetch rich context for smarter seating
+  let contextBlock: string | undefined;
+  try {
+    const fullContext = await getFullEventContext(eventId, workspaceId);
+    contextBlock = formatContextForPrompt(fullContext);
+  } catch {
+    // Continue without context
+  }
+
   const client = getAnthropicClient();
 
   const prompt = buildSeatingPrompt(
     guests as GuestForSeating[],
     tables,
     event.title,
-    strategy
+    strategy,
+    contextBlock
   );
 
   const response = await client.messages.create({
@@ -182,12 +193,22 @@ export async function generateIntroductionPairings(
     return { batchId, pairings: [] };
   }
 
+  // Fetch rich context for smarter introductions
+  let contextBlock: string | undefined;
+  try {
+    const fullContext = await getFullEventContext(eventId, workspaceId);
+    contextBlock = formatContextForPrompt(fullContext);
+  } catch {
+    // Continue without context
+  }
+
   const client = getAnthropicClient();
   const prompt = buildIntroductionPrompt(
     guests as GuestForSeating[],
     objectives.map((o: any) => o.objective_text),
     events[0].title,
-    maxPairings
+    maxPairings,
+    contextBlock
   );
 
   const response = await client.messages.create({
@@ -228,14 +249,17 @@ export async function applySeatingAssignment(
   eventId: number,
   workspaceId: string,
   contactId: string,
-  tableNumber: number,
+  tableNumber: number | null,
   seatNumber?: number | null
 ): Promise<void> {
   const db = getDb();
+  // table_number 0 or null means "unassign from table"
+  const effectiveTable = tableNumber && tableNumber > 0 ? tableNumber : null;
+  const effectiveSeat = effectiveTable ? (seatNumber || null) : null;
   await db`
     UPDATE campaign_invitations
-    SET table_assignment = ${tableNumber},
-        seat_assignment = ${seatNumber || null}
+    SET table_assignment = ${effectiveTable},
+        seat_assignment = ${effectiveSeat}
     WHERE event_id = ${eventId}
       AND contact_id = ${contactId}
   `;
@@ -297,7 +321,8 @@ function buildSeatingPrompt(
   guests: GuestForSeating[],
   tables: TableConfig[],
   eventTitle: string,
-  strategy: string
+  strategy: string,
+  contextBlock?: string
 ): string {
   const strategyDesc = {
     MIXED_INTERESTS: 'Mix guests from different industries and backgrounds at each table for diverse conversation.',
@@ -317,11 +342,13 @@ function buildSeatingPrompt(
 
   const tableList = tables.map(t => `Table ${t.number}: ${t.seats} seats`).join('\n');
 
+  const contextSection = contextBlock ? `\n${contextBlock}\n` : '';
+
   return `Assign guests to tables for the event "${eventTitle}".
 
 ## Strategy
 ${strategyDesc}
-
+${contextSection}
 ## Tables
 ${tableList}
 
@@ -346,7 +373,8 @@ function buildIntroductionPrompt(
   guests: GuestForSeating[],
   objectives: string[],
   eventTitle: string,
-  maxPairings: number
+  maxPairings: number,
+  contextBlock?: string
 ): string {
   const guestList = guests.map((g, i) => {
     const parts = [`${i}: ${g.full_name}`];
@@ -362,10 +390,12 @@ function buildIntroductionPrompt(
     ? `\n## Event Objectives\n${objectives.map(o => `- ${o}`).join('\n')}`
     : '';
 
+  const contextSection = contextBlock ? `\n${contextBlock}\n` : '';
+
   return `Suggest up to ${maxPairings} guest introduction pairings for "${eventTitle}".
 These are "these two should meet" recommendations.
 ${objectiveList}
-
+${contextSection}
 ## Guests
 ${guestList}
 

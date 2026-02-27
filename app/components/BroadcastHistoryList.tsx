@@ -25,7 +25,7 @@ export function BroadcastHistoryList({ broadcasts, eventId, onSend, onDelete }: 
   if (broadcasts.length === 0) {
     return (
       <div className="bg-white border border-ui-border rounded-lg p-8 text-center">
-        <p className="text-sm text-ui-tertiary">No broadcasts yet. Compose your first message above.</p>
+        <p className="text-sm text-ui-secondary">No broadcasts yet. Compose a message above and I&apos;ll help you reach all confirmed guests at once.</p>
       </div>
     )
   }

@@ -635,10 +635,10 @@ export default function GuestIntelligencePage() {
           <button
             onClick={triggerScoring}
             disabled={triggering || !!activeJobId}
-            className="flex items-center gap-2 px-5 py-2.5 bg-brand-terracotta hover:bg-brand-terracotta/90 text-white text-sm font-semibold rounded-pill transition-colors shadow-cta disabled:opacity-50"
+            className="flex items-center gap-1.5 px-3 py-2 border border-ui-border rounded-lg text-sm font-medium text-ui-secondary hover:bg-brand-cream transition-colors disabled:opacity-50"
           >
             <Sparkles size={14} />
-            {triggering ? 'Starting...' : 'Score All Contacts'}
+            {triggering ? 'Starting...' : 'Re-score All'}
           </button>
         </div>
       </div>
@@ -963,7 +963,17 @@ export default function GuestIntelligencePage() {
                             <td className="px-4 py-3 text-ui-secondary">{c.title || '—'}</td>
                             <td className="px-4 py-3">
                               {firstTag ? (
-                                <TagBadge label={firstTag} variant={getTagVariant(firstTag)} />
+                                <div className="flex items-center gap-1">
+                                  <TagBadge label={firstTag} variant={getTagVariant(firstTag)} />
+                                  {(c.tags?.length || 0) > 1 && (
+                                    <span
+                                      className="text-[10px] font-semibold text-ui-tertiary bg-gray-100 px-1.5 py-0.5 rounded cursor-default"
+                                      title={(c.tags || []).slice(1).join(', ')}
+                                    >
+                                      +{(c.tags?.length || 0) - 1}
+                                    </span>
+                                  )}
+                                </div>
                               ) : (
                                 <span className="text-xs text-ui-tertiary">—</span>
                               )}
@@ -1150,7 +1160,7 @@ export default function GuestIntelligencePage() {
             )
           )}
 
-          {/* Pending Review View */}
+          {/* Pending Review View — same table format as All Contacts */}
           {viewMode === 'pending' && (
             <div className="space-y-4">
               {viewContacts.length > 0 ? (
@@ -1161,19 +1171,195 @@ export default function GuestIntelligencePage() {
                       Review their AI intelligence below and decide: add to an invitation wave (approve) or decline.
                     </p>
                   </div>
-                  <div className="space-y-2">
-                    {viewContacts.map(c => (
-                      <ContactRow
-                        key={c.contact_id}
-                        contact={c}
-                        isExpanded={expandedId === c.contact_id}
-                        onToggle={() => setExpandedId(expandedId === c.contact_id ? null : c.contact_id)}
-                        onOpenDossier={() => setDossierContactId(c.contact_id)}
-                        onAddToWave={() => setWaveModalContactIds([c.contact_id])}
-                        onChangeStatus={handleChangeStatus}
-                        onDecline={() => declineContact(c.contact_id)}
-                      />
-                    ))}
+                  <div className="bg-white border border-ui-border rounded-card shadow-card overflow-hidden">
+                    <table className="w-full text-sm">
+                      <thead className="bg-brand-cream border-b border-ui-border">
+                        <tr>
+                          <th className="px-4 py-3 text-center font-semibold text-brand-charcoal w-20">Score</th>
+                          <th className="px-4 py-3 text-left font-semibold text-brand-charcoal">Name</th>
+                          <th className="px-4 py-3 text-left font-semibold text-brand-charcoal">Company</th>
+                          <th className="px-4 py-3 text-left font-semibold text-brand-charcoal">Title</th>
+                          <th className="px-4 py-3 text-left font-semibold text-brand-charcoal">Tags</th>
+                          <th className="px-4 py-3 text-left font-semibold text-brand-charcoal">Source</th>
+                          <th className="px-4 py-3 text-left font-semibold text-brand-charcoal">Event Status</th>
+                          <th className="px-4 py-3 text-right font-semibold text-brand-charcoal w-10"></th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-ui-border">
+                        {viewContacts.map(c => {
+                          const srcInfo = c.source ? SOURCE_LABELS[c.source] : null
+                          const cHasScore = c.score_id !== null && c.relevance_score !== null
+                          const isExpanded = expandedId === c.contact_id
+                          const firstTag = c.tags?.[0] || null
+                          const isPending = ['RSVP_SUBMISSION', 'JOIN_REQUEST'].includes(c.source || '') && !c.invitation_id
+                          return (
+                            <React.Fragment key={c.contact_id}>
+                              <tr
+                                className={`hover:bg-brand-cream/50 transition-colors cursor-pointer ${isExpanded ? 'bg-brand-cream/30' : ''}`}
+                                onClick={() => setExpandedId(isExpanded ? null : c.contact_id)}
+                              >
+                                <td className="px-4 py-3 text-center">
+                                  {c.relevance_score != null ? (
+                                    <ScoreBar score={c.relevance_score} width={60} />
+                                  ) : (
+                                    <span className="text-xs text-ui-tertiary">--</span>
+                                  )}
+                                </td>
+                                <td className="px-4 py-3">
+                                  <div className="flex items-center gap-2.5">
+                                    <AvatarInitials name={c.full_name || '?'} size={28} />
+                                    <span className="font-medium text-brand-charcoal">{c.full_name}</span>
+                                  </div>
+                                </td>
+                                <td className="px-4 py-3 text-ui-secondary">{c.company || '—'}</td>
+                                <td className="px-4 py-3 text-ui-secondary">{c.title || '—'}</td>
+                                <td className="px-4 py-3">
+                                  {firstTag ? (
+                                    <TagBadge label={firstTag} variant={getTagVariant(firstTag)} />
+                                  ) : (
+                                    <span className="text-xs text-ui-tertiary">—</span>
+                                  )}
+                                </td>
+                                <td className="px-4 py-3">
+                                  {srcInfo ? (
+                                    <span className={`inline-flex px-2 py-0.5 text-[10px] font-semibold rounded border ${srcInfo.color}`}>
+                                      {srcInfo.label}
+                                    </span>
+                                  ) : (
+                                    <span className="text-xs text-ui-tertiary">—</span>
+                                  )}
+                                </td>
+                                <td className="px-4 py-3">
+                                  <span className="inline-flex px-2 py-0.5 text-[10px] font-semibold rounded border whitespace-nowrap bg-amber-50 text-amber-700 border-amber-200">
+                                    Pending Review
+                                  </span>
+                                </td>
+                                <td className="px-4 py-3 text-center">
+                                  <ChevronDown
+                                    size={14}
+                                    className={`text-ui-tertiary transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+                                  />
+                                </td>
+                              </tr>
+                              {/* Expandable detail row */}
+                              {isExpanded && (
+                                <tr>
+                                  <td colSpan={8} className="px-0 py-0">
+                                    <div className="border-t border-ui-border bg-brand-cream px-6 py-4 space-y-4">
+                                      {/* Source badges row */}
+                                      <div className="flex items-center gap-2 flex-wrap">
+                                        {c.linkedin_url && (
+                                          <a href={c.linkedin_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 px-2 py-1 bg-[#0077b5]/10 text-[#0077b5] text-[11px] font-semibold rounded-md hover:bg-[#0077b5]/20 transition-colors">
+                                            <Linkedin size={12} /> LinkedIn
+                                          </a>
+                                        )}
+                                        {c.enrichment_status === 'COMPLETED' && (
+                                          <span className="inline-flex items-center gap-1 px-2 py-1 bg-emerald-50 text-emerald-700 text-[11px] font-semibold rounded-md">
+                                            <Database size={12} /> Enriched
+                                          </span>
+                                        )}
+                                        {cHasScore && (
+                                          <span className="inline-flex items-center gap-1 px-2 py-1 bg-brand-terracotta/10 text-brand-terracotta text-[11px] font-semibold rounded-md">
+                                            <Target size={12} /> AI Scored
+                                          </span>
+                                        )}
+                                      </div>
+
+                                      {/* AI Insights */}
+                                      {c.ai_summary && (
+                                        <div>
+                                          <h4 className="text-xs font-semibold text-ui-tertiary uppercase tracking-wider mb-1.5">AI-Generated Insights</h4>
+                                          <p className="text-sm text-ui-secondary leading-relaxed">{c.ai_summary}</p>
+                                        </div>
+                                      )}
+
+                                      {/* Score rationale */}
+                                      {c.score_rationale && (
+                                        <div>
+                                          <h4 className="text-xs font-semibold text-ui-tertiary uppercase tracking-wider mb-1.5">Why They Match</h4>
+                                          <p className="text-sm text-ui-secondary leading-relaxed">{c.score_rationale}</p>
+                                        </div>
+                                      )}
+
+                                      {/* Objective breakdown */}
+                                      {c.matched_objectives && c.matched_objectives.length > 0 && (
+                                        <div>
+                                          <h4 className="text-xs font-semibold text-ui-tertiary uppercase tracking-wider mb-2">Objective Breakdown</h4>
+                                          <div className="space-y-1.5">
+                                            {c.matched_objectives.map((mo: any, i: number) => (
+                                              <div key={i} className="flex items-center gap-2">
+                                                <div className={`w-7 h-7 rounded flex items-center justify-center text-xs font-bold shrink-0 ${
+                                                  mo.match_score >= 70 ? 'bg-emerald-50 text-emerald-700'
+                                                    : mo.match_score >= 40 ? 'bg-amber-50 text-amber-700'
+                                                    : 'bg-gray-50 text-ui-tertiary'
+                                                }`}>
+                                                  {mo.match_score}
+                                                </div>
+                                                <span className="text-sm text-brand-charcoal">{mo.objective_text || 'Objective'}</span>
+                                              </div>
+                                            ))}
+                                          </div>
+                                        </div>
+                                      )}
+
+                                      {/* Talking Points */}
+                                      <div>
+                                        <h4 className="text-xs font-semibold text-ui-tertiary uppercase tracking-wider mb-2">Suggested Talking Points</h4>
+                                        {c.talking_points && c.talking_points.length > 0 ? (
+                                          <ul className="space-y-1">
+                                            {c.talking_points.map((tp, i) => (
+                                              <li key={i} className="flex items-start gap-2 text-sm text-ui-secondary">
+                                                <span className="text-brand-terracotta mt-0.5">•</span>
+                                                <span className="font-display italic">{tp}</span>
+                                              </li>
+                                            ))}
+                                          </ul>
+                                        ) : (
+                                          <p className="text-sm text-ui-tertiary italic">
+                                            {cHasScore ? 'No talking points generated for this contact.' : 'Score this contact to generate personalized talking points.'}
+                                          </p>
+                                        )}
+                                      </div>
+
+                                      {/* Actions */}
+                                      <div className="flex items-center gap-3 pt-1">
+                                        <button
+                                          onClick={(e) => { e.stopPropagation(); setDossierContactId(c.contact_id) }}
+                                          className="px-3 py-1.5 border border-ui-border rounded-lg text-xs font-medium text-ui-secondary hover:bg-white transition-colors"
+                                        >
+                                          View Guest Profile
+                                        </button>
+                                        <button
+                                          onClick={(e) => { e.stopPropagation(); setWaveModalContactIds([c.contact_id]) }}
+                                          className="flex items-center gap-1.5 px-3 py-1.5 bg-brand-terracotta hover:bg-brand-terracotta/90 text-white text-xs font-semibold rounded-md transition-colors"
+                                        >
+                                          <Plus size={12} />
+                                          Add to Wave
+                                        </button>
+                                        {isPending && (
+                                          <button
+                                            onClick={(e) => { e.stopPropagation(); declineContact(c.contact_id) }}
+                                            className="flex items-center gap-1.5 px-3 py-1.5 border border-red-200 text-red-600 hover:bg-red-50 text-xs font-semibold rounded-md transition-colors"
+                                          >
+                                            <XCircle size={12} />
+                                            Decline
+                                          </button>
+                                        )}
+                                        {c.scored_at && (
+                                          <span className="text-[11px] text-ui-tertiary ml-auto">
+                                            Scored {formatUSDate(new Date(c.scored_at))}
+                                          </span>
+                                        )}
+                                      </div>
+                                    </div>
+                                  </td>
+                                </tr>
+                              )}
+                            </React.Fragment>
+                          )
+                        })}
+                      </tbody>
+                    </table>
                   </div>
                 </>
               ) : (

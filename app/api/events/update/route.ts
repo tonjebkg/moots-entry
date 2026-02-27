@@ -37,6 +37,12 @@ type UpdateEventPayload = {
   is_private?: boolean;
   approve_mode?: 'MANUAL' | 'AUTO';
   status?: 'DRAFT' | 'PUBLISHED' | 'COMPLETE' | 'CANCELLED';
+  // Phase 2: Event context fields
+  success_criteria?: string | null;
+  key_stakeholders?: { name: string; role?: string }[] | null;
+  event_theme?: string | null;
+  budget_range?: string | null;
+  additional_context?: string | null;
   // Legacy field names (backward compatibility)
   name?: string; // Maps to title
   city?: string; // Maps to location.city
@@ -146,6 +152,24 @@ export async function PATCH(req: Request) {
         throw new Error('status must be DRAFT, PUBLISHED, COMPLETE, or CANCELLED');
       }
       await db`UPDATE events SET status = ${fields.status}, updated_at = ${now} WHERE id = ${eventId}`;
+    }
+
+    // Phase 2: Event context fields
+    if (fields.success_criteria !== undefined) {
+      await db`UPDATE events SET success_criteria = ${fields.success_criteria}, updated_at = ${now} WHERE id = ${eventId}`;
+    }
+    if (fields.key_stakeholders !== undefined) {
+      const json = fields.key_stakeholders ? JSON.stringify(fields.key_stakeholders) : null;
+      await db`UPDATE events SET key_stakeholders = ${json}::jsonb, updated_at = ${now} WHERE id = ${eventId}`;
+    }
+    if (fields.event_theme !== undefined) {
+      await db`UPDATE events SET event_theme = ${fields.event_theme}, updated_at = ${now} WHERE id = ${eventId}`;
+    }
+    if (fields.budget_range !== undefined) {
+      await db`UPDATE events SET budget_range = ${fields.budget_range}, updated_at = ${now} WHERE id = ${eventId}`;
+    }
+    if (fields.additional_context !== undefined) {
+      await db`UPDATE events SET additional_context = ${fields.additional_context}, updated_at = ${now} WHERE id = ${eventId}`;
     }
 
     logAction({

@@ -5,6 +5,7 @@ import { useParams, useSearchParams, useRouter } from 'next/navigation'
 import { Plus, Sparkles, AlertCircle, ArrowRight } from 'lucide-react'
 import { BriefingCard } from '@/app/components/BriefingCard'
 import { BriefingViewer } from '@/app/components/BriefingViewer'
+import { AgentThinking, THINKING_STEPS } from '@/app/components/ui/AgentThinking'
 import type { BriefingPacket, BriefingType } from '@/types/phase3'
 
 export default function BriefingsPage() {
@@ -125,12 +126,7 @@ export default function BriefingsPage() {
             disabled={generating}
             className="flex items-center gap-2 px-4 py-2 bg-[#2F4F3F] hover:bg-[#1a3a2a] text-white text-sm font-semibold rounded-lg transition-colors disabled:opacity-50"
           >
-            {generating ? (
-              <>
-                <Sparkles className="w-4 h-4 animate-pulse" />
-                Generating...
-              </>
-            ) : (
+            {generating ? null : (
               <>
                 <Plus className="w-4 h-4" />
                 {typeFilter === 'ALL' ? 'Generate Briefing' :
@@ -140,6 +136,9 @@ export default function BriefingsPage() {
               </>
             )}
           </button>
+          {generating && (
+            <AgentThinking steps={THINKING_STEPS.briefing} intervalMs={3000} />
+          )}
         </div>
       </div>
 
@@ -179,9 +178,9 @@ export default function BriefingsPage() {
         return filtered.length === 0 ? (
         <div className="bg-white rounded-card shadow-card p-12 text-center">
           <Sparkles className="w-10 h-10 text-[#B8755E] mx-auto mb-4" />
-          <h3 className="text-lg font-semibold font-display text-brand-charcoal mb-2">No Briefings Yet</h3>
-          <p className="text-sm text-ui-tertiary max-w-md mx-auto mb-4">
-            Briefings are generated from scored guest data. Make sure you have scored contacts and confirmed guests before generating.
+          <h3 className="text-lg font-semibold font-display text-brand-charcoal mb-2">Briefings</h3>
+          <p className="text-sm text-ui-secondary max-w-md mx-auto mb-4">
+            I&apos;ll generate personalized briefings once you have confirmed guests. Each briefing includes talking points, shared interests, and strategic notes tailored to your objectives.
           </p>
           <a
             href={`/dashboard/${eventId}/guest-intelligence`}

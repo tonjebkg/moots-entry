@@ -144,3 +144,14 @@ export const sendJoinLinksSchema = z.object({
 });
 
 export type SendJoinLinksInput = z.infer<typeof sendJoinLinksSchema>;
+
+// Add Contact to Campaign Schema (bridge: Guest Intelligence → Campaign)
+export const addContactToCampaignSchema = z.object({
+  contact_id: z.string().uuid(),
+  campaign_id: z.string().uuid(),
+  tier: invitationTierSchema.optional().default('TIER_2'),
+  priority: invitationPrioritySchema.optional().default('NORMAL'),
+  internal_notes: z.string().max(5000).optional(),
+});
+
+export type AddContactToCampaignInput = z.infer<typeof addContactToCampaignSchema>;

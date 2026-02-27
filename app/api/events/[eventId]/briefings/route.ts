@@ -3,6 +3,7 @@ import { withErrorHandling } from '@/lib/with-error-handling';
 import { requireAuth, requireRole, tryAuthOrEventFallback } from '@/lib/auth';
 import { validateRequest } from '@/lib/validate-request';
 import { logAction } from '@/lib/audit-log';
+import { logAgentActivity } from '@/lib/agent/activity';
 import { getDb } from '@/lib/db';
 import { generateBriefingSchema } from '@/lib/schemas/briefing';
 import { generateBriefingForUser } from '@/lib/briefing/generator';
@@ -92,6 +93,18 @@ export const POST = withErrorHandling(async (request: NextRequest, context: any)
       entityType: 'briefing_packet',
       entityId: briefingId,
       newValue: { briefing_type: briefingType, guest_count: content.key_guests.length },
+    });
+
+    const typeLabel = briefingType.replace(/_/g, ' ').toLowerCase();
+    await logAgentActivity({
+      eventId: eventIdNum,
+      workspaceId: auth.workspace.id,
+      type: 'briefing',
+      headline: `Generated ${typeLabel} briefing with ${content.key_guests.length} guest profiles`,
+      detail: content.key_guests.length > 0
+        ? `Prepared talking points and conversation starters for each guest. Key guests include ${content.key_guests.slice(0, 3).map((g: any) => g.full_name).join(', ')}${content.key_guests.length > 3 ? ` and ${content.key_guests.length - 3} more` : ''}.`
+        : undefined,
+      metadata: { briefing_id: briefingId, briefing_type: briefingType, guest_count: content.key_guests.length },
     });
 
     return NextResponse.json(result[0], { status: 201 });

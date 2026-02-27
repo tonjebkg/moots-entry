@@ -168,14 +168,32 @@ const OBJECTIVE_TEMPLATES = [
   {
     text: 'Senior PE/VC decision-makers with active deal flow and co-investment appetite — Managing Directors, Partners, and Principals at funds with $1B+ AUM',
     weight: 2.0,
+    ai_interpretation: "Based on this objective, I'll prioritize senior PE and VC decision-makers at funds with $1B+ AUM, weighting for active deal flow, board seats at portfolio companies, and prior attendance at executive-tier events. Contacts with GP or MD titles at growth equity or buyout funds will score highest.",
+    ai_questions: [
+      "Should I weight co-investment track record more heavily than current AUM?",
+      "Are there specific sectors (healthcare, tech, industrials) where PE focus matters more for this dinner?"
+    ],
+    qualifying_count: 43,
   },
   {
     text: 'C-suite executives at high-growth technology companies that represent potential acquisition targets or portfolio company partnerships in the $500M-$5B enterprise value range',
     weight: 1.5,
+    ai_interpretation: "I'll focus on CEOs, CFOs, and CTOs at technology companies in the $500M-$5B enterprise value range — particularly those in sectors complementary to Meridian's portfolio. Companies showing 30%+ revenue growth or recent strategic acquisitions will receive higher scores.",
+    ai_questions: [
+      "When you say 'high-growth,' should I use 30% YoY revenue growth as the threshold, or is 20% sufficient?",
+      "Should I include pre-IPO companies, or only those already generating $50M+ ARR?"
+    ],
+    qualifying_count: 28,
   },
   {
     text: 'Institutional LPs, family offices, and sovereign wealth fund allocators with existing or prospective commitments to mid-market and large-cap PE strategies',
     weight: 1.8,
+    ai_interpretation: "I'll prioritize institutional allocators — endowments, pension funds, family offices, and sovereign wealth representatives — who are actively increasing private equity allocations. Decision-makers with direct allocation authority and existing relationships with mid-market PE funds score highest.",
+    ai_questions: [
+      "Should I include LPs who are currently reducing PE exposure but might be re-entering, or only active allocators?",
+      "Is there a minimum commitment size that matters — e.g., $25M+ allocations?"
+    ],
+    qualifying_count: 15,
   },
 ];
 
@@ -214,6 +232,9 @@ async function main() {
   console.log('0/12 — Cleaning up previous seed data...');
   const prevEvents = await sql`SELECT id FROM events WHERE title LIKE 'Meridian Capital%'`;
   for (const ev of prevEvents) {
+    await sql`DELETE FROM agent_activity_log WHERE event_id = ${ev.id}`.catch(() => {});
+    await sql`DELETE FROM agent_conversations WHERE event_id = ${ev.id}`.catch(() => {});
+    await sql`DELETE FROM override_log WHERE event_id = ${ev.id}`.catch(() => {});
     await sql`DELETE FROM guest_scores WHERE event_id = ${ev.id}`;
     await sql`DELETE FROM event_objectives WHERE event_id = ${ev.id}`;
     await sql`DELETE FROM event_join_requests WHERE event_id = ${ev.id}`;
@@ -226,11 +247,16 @@ async function main() {
     await sql`DELETE FROM events WHERE id = ${ev.id}`;
     console.log(`   Deleted previous event #${ev.id}`);
   }
-  // Clean up previously seeded contacts
+  // Clean up ALL previously seeded contacts (by source_detail tag)
   const prevContacts = await sql`SELECT COUNT(*) as c FROM people_contacts WHERE source_detail = 'SEED_PE_DINNER'`;
   if (Number(prevContacts[0].c) > 0) {
+    // Delete scores and follow-ups that reference these contacts first
+    await sql`DELETE FROM guest_scores WHERE contact_id IN (SELECT id FROM people_contacts WHERE source_detail = 'SEED_PE_DINNER')`;
+    await sql`DELETE FROM follow_up_sequences WHERE contact_id IN (SELECT id FROM people_contacts WHERE source_detail = 'SEED_PE_DINNER')`;
+    await sql`DELETE FROM campaign_invitations WHERE contact_id IN (SELECT id FROM people_contacts WHERE source_detail = 'SEED_PE_DINNER')`;
+    await sql`DELETE FROM event_checkins WHERE contact_id IN (SELECT id FROM people_contacts WHERE source_detail = 'SEED_PE_DINNER')`;
     await sql`DELETE FROM people_contacts WHERE source_detail = 'SEED_PE_DINNER'`;
-    console.log(`   Deleted ${prevContacts[0].c} previous seed contacts`);
+    console.log(`   Deleted ${prevContacts[0].c} previous seed contacts and related records`);
   }
 
   // Step 1: Find or create a user + workspace
@@ -262,8 +288,39 @@ async function main() {
     userId = userResult[0].id;
 
     await sql`
-      INSERT INTO workspaces (id, name, slug, owner_id, plan)
-      VALUES (${workspaceId}, 'Meridian Capital Partners', 'meridian-capital', ${userId}, 'ENTERPRISE')
+      INSERT INTO workspaces (
+        id, name, slug, owner_id, plan,
+        company_website, company_description, industry, market_position,
+        key_leadership, strategic_priorities, competitors, brand_voice,
+        company_enriched_at
+      )
+      VALUES (
+        ${workspaceId}, 'Meridian Capital Partners', 'meridian-capital', ${userId}, 'ENTERPRISE',
+        'https://meridiancp.com',
+        'Meridian Capital Partners is a leading mid-market private equity firm focused on technology-enabled services and healthcare. Founded in 2008, the firm manages over $3.2B in assets across four funds and has completed 45+ platform acquisitions.',
+        'Private Equity',
+        'Top-quartile mid-market PE firm known for operational value creation. Competes primarily in the $50M-$500M enterprise value range with a strong reputation for healthcare and tech-enabled services deals.',
+        ${JSON.stringify([
+          { name: 'Marcus Sterling', title: 'Managing Partner & CEO' },
+          { name: 'Elena Rodriguez', title: 'Partner, Head of Healthcare' },
+          { name: 'James Chen', title: 'Principal, Technology Services' },
+          { name: 'Victoria Ashworth', title: 'CFO & COO' },
+        ])}::jsonb,
+        ${JSON.stringify([
+          'Expand healthcare portfolio with 2-3 new platform investments',
+          'Build strategic relationships with Fortune 500 corporate development teams',
+          'Strengthen LP relationships for Fund V fundraise',
+          'Develop AI/ML capabilities across portfolio companies',
+        ])}::jsonb,
+        ${JSON.stringify([
+          'Summit Partners',
+          'Thoma Bravo',
+          'Vista Equity Partners',
+          'Welsh Carson Anderson & Stowe',
+        ])}::jsonb,
+        'Authoritative and knowledgeable with emphasis on partnership and long-term value creation. Professional but approachable.',
+        NOW()
+      )
       ON CONFLICT (slug) DO NOTHING
     `;
 
@@ -307,7 +364,8 @@ async function main() {
       title, location, start_date, end_date, timezone,
       is_private, approve_mode, status, workspace_id,
       total_capacity, seating_format, tables_config,
-      hosts, sponsors
+      hosts, sponsors,
+      event_theme, success_criteria, key_stakeholders, additional_context
     ) VALUES (
       'Meridian Capital Partners — Q2 Executive Dinner',
       ${JSON.stringify({
@@ -336,7 +394,15 @@ async function main() {
       ])}::jsonb,
       ${JSON.stringify([
         { title: 'Meridian Capital Partners', subtitle: 'Host', url: null, logo_url: null, description: 'A leading mid-market private equity firm focused on technology-enabled services and healthcare.' },
-      ])}::jsonb
+      ])}::jsonb,
+      'Strategic Connections: Bridging Capital and Innovation',
+      'Generate 3+ qualified deal introductions, strengthen relationships with 5 target LPs, and position Meridian as the partner of choice for technology-enabled services founders.',
+      ${JSON.stringify([
+        { name: 'Marcus Sterling', role: 'Managing Partner — primary host' },
+        { name: 'Elena Rodriguez', role: 'Healthcare lead — key relationship builder' },
+        { name: 'David Park', role: 'LP Relations — Fund V conversations' },
+      ])}::jsonb,
+      'This is Meridian''s flagship quarterly dinner. The format is intimate (20 guests, 2 round tables of 10). Goal is quality over quantity — every seat should create potential deal flow or deepen an LP relationship. Avoid seating direct competitors together.'
     )
     RETURNING id
   `;
@@ -344,15 +410,74 @@ async function main() {
   const eventId = eventResult[0].id;
   console.log(`   Created event #${eventId}: Meridian Capital Q2 Executive Dinner`);
 
+  // Step 2b: Create event sponsors
+  console.log('2b/12 — Creating event sponsors...');
+
+  await sql`
+    INSERT INTO event_sponsors (
+      event_id, workspace_id, name, tier, description,
+      contact_person, contact_email, goals, promised_seats,
+      table_preference, key_attendees, sort_order
+    ) VALUES (
+      ${eventId}, ${workspaceId},
+      'Meridian Capital Partners', 'PLATINUM',
+      'Host firm. A leading mid-market private equity firm focused on technology-enabled services and healthcare.',
+      'Marcus Sterling', 'marcus@meridiancp.com',
+      ${JSON.stringify(['Showcase firm expertise to potential LPs', 'Build relationships with target company CEOs', 'Position for Fund V fundraise conversations'])}::jsonb,
+      4, 'Table 1',
+      ${JSON.stringify([
+        { name: 'Marcus Sterling', title: 'Managing Partner' },
+        { name: 'Elena Rodriguez', title: 'Partner, Healthcare' },
+      ])}::jsonb,
+      0
+    )
+    ON CONFLICT DO NOTHING
+  `;
+
+  await sql`
+    INSERT INTO event_sponsors (
+      event_id, workspace_id, name, tier, description,
+      contact_person, contact_email, goals, promised_seats,
+      key_attendees, sort_order
+    ) VALUES (
+      ${eventId}, ${workspaceId},
+      'Apex Growth Advisors', 'GOLD',
+      'Strategic consulting firm specializing in PE portfolio company growth acceleration.',
+      'Rachel Kim', 'rkim@apexgrowth.com',
+      ${JSON.stringify(['Meet 2-3 Meridian portfolio CEOs', 'Explore co-investment opportunities'])}::jsonb,
+      2,
+      ${JSON.stringify([
+        { name: 'Rachel Kim', title: 'Managing Director' },
+        { name: 'Tom Bradley', title: 'Senior Advisor' },
+      ])}::jsonb,
+      1
+    )
+    ON CONFLICT DO NOTHING
+  `;
+
+  console.log('   Created 2 event sponsors');
+
   // Step 3: Create 100 contacts
   console.log('3/12 — Creating 100 contacts...');
 
   const contactIds: string[] = [];
 
-  for (const c of CONTACTS) {
+  // Diversified sources: 40% RSVP, 25% LinkedIn/Event Import, 15% CRM, 10% CSV, 5% Manual, 5% Referral
+  const SOURCE_DISTRIBUTION = [
+    ...Array(40).fill('RSVP_SUBMISSION'),
+    ...Array(15).fill('EVENT_IMPORT'),
+    ...Array(10).fill('CSV_IMPORT'),
+    ...Array(15).fill('CSV_IMPORT'),
+    ...Array(10).fill('MANUAL'),
+    ...Array(10).fill('EVENT_IMPORT'),
+  ];
+
+  for (let ci = 0; ci < CONTACTS.length; ci++) {
+    const c = CONTACTS[ci];
     const contactId = uuid();
     contactIds.push(contactId);
     const email = `${c.first.toLowerCase()}.${c.last.toLowerCase().replace(/[^a-z]/g, '')}@${c.company.toLowerCase().replace(/[^a-z]/g, '')}.com`;
+    const contactSource = SOURCE_DISTRIBUTION[ci % SOURCE_DISTRIBUTION.length];
 
     await sql`
       INSERT INTO people_contacts (
@@ -367,7 +492,7 @@ async function main() {
         ${c.company}, ${c.title}, ${c.seniority}, ${c.industry},
         ${'https://linkedin.com/in/' + c.first.toLowerCase() + c.last.toLowerCase().replace(/[^a-z]/g, '')},
         ${c.tags},
-        'MANUAL',
+        ${contactSource},
         'SEED_PE_DINNER',
         ${pick(['COMPLETED', 'COMPLETED', 'COMPLETED', 'PENDING'])}::enrichment_status,
         ${`${c.first} ${c.last} is ${c.title} at ${c.company}, operating in the ${c.industry} sector. Known for ${pick(['strategic leadership', 'deal origination expertise', 'deep sector knowledge', 'strong LP relationships', 'operational value creation', 'cross-border deal experience'])} and a ${pick(['collaborative', 'decisive', 'analytical', 'visionary', 'pragmatic'])} approach to partnerships.`}
@@ -387,13 +512,17 @@ async function main() {
     objectiveIds.push(objId);
     await sql`
       INSERT INTO event_objectives (
-        id, event_id, workspace_id, objective_text, weight, criteria_config, sort_order
+        id, event_id, workspace_id, objective_text, weight, criteria_config, sort_order,
+        ai_interpretation, qualifying_count, ai_questions
       ) VALUES (
         ${objId}, ${eventId}, ${workspaceId},
         ${OBJECTIVE_TEMPLATES[i].text},
         ${OBJECTIVE_TEMPLATES[i].weight},
         '{}'::jsonb,
-        ${i}
+        ${i},
+        ${OBJECTIVE_TEMPLATES[i].ai_interpretation},
+        ${OBJECTIVE_TEMPLATES[i].qualifying_count},
+        ${JSON.stringify(OBJECTIVE_TEMPLATES[i].ai_questions || [])}::jsonb
       )
     `;
   }
@@ -552,12 +681,17 @@ async function main() {
     const invId = uuid();
     invitationIds.push(invId);
 
+    // Stagger timestamps so activity feed shows varied times
+    const hoursAgo = randomInt(2, 96); // 2 hours to 4 days ago
+    const staggeredTime = new Date(Date.now() - hoursAgo * 60 * 60 * 1000).toISOString();
+
     await sql`
       INSERT INTO campaign_invitations (
         id, campaign_id, event_id, contact_id,
         full_name, email,
         status, tier, priority,
-        internal_notes, expected_plus_ones
+        internal_notes, expected_plus_ones,
+        created_at, updated_at
       ) VALUES (
         ${invId}, ${campaignId}, ${eventId}, ${contactId},
         ${c.first + ' ' + c.last}, ${email},
@@ -565,7 +699,9 @@ async function main() {
         ${tier}::invitation_tier,
         ${priority}::invitation_priority,
         ${pick(['Key relationship — handle personally', 'New contact via conference', 'Referred by board member', 'Met at Davos', null, null])},
-        ${pick([0, 0, 0, 1])}
+        ${pick([0, 0, 0, 1])},
+        ${staggeredTime}::timestamptz,
+        ${staggeredTime}::timestamptz
       )
     `;
   }
@@ -626,7 +762,66 @@ async function main() {
     `;
   }
 
-  console.log(`   Created ${checkedInCount} invitation check-ins + 2 walk-ins`);
+  // Update campaign_invitations.checked_in flag for checked-in guests
+  for (let i = 0; i < checkedInCount; i++) {
+    const minutesOffset = randomInt(0, 90);
+    const checkinTime = new Date('2026-04-17T23:00:00Z');
+    checkinTime.setMinutes(checkinTime.getMinutes() + minutesOffset);
+    await sql`
+      UPDATE campaign_invitations
+      SET checked_in = true, checked_in_at = ${checkinTime.toISOString()}::timestamptz
+      WHERE id = ${acceptedInvitations[i]}
+    `;
+  }
+
+  // Assign confirmed guests to tables (table 1: seats 1-10, table 2: seats 1-10)
+  // Strategic seating: spread PE partners and LPs across tables
+  for (let i = 0; i < Math.min(17, topContacts.length); i++) {
+    const tableNum = i < 9 ? 1 : 2;
+    const seatNum = i < 9 ? i + 1 : i - 8;
+    await sql`
+      UPDATE campaign_invitations
+      SET table_assignment = ${tableNum}, seat_assignment = ${seatNum}
+      WHERE id = ${invitationIds[i]}
+    `;
+  }
+
+  console.log(`   Created ${checkedInCount} invitation check-ins + 2 walk-ins (flags updated)`);
+  console.log(`   Assigned 17 confirmed guests to 2 tables`);
+
+  // Step 8b: Create introduction pairings
+  console.log('   Creating introduction pairings...');
+
+  const pairingBatchId = uuid();
+  // Use CONTACTS array indices directly so reason text matches the actual people
+  const pairingsData = [
+    { a: 0, b: 5, reason: 'Harrington (Blackstone) and Chen-Ramirez (Advent) are both exploring healthcare co-investments in the mid-market space. Complementary portfolio expertise and fund mandates.', mutual_interest: 'Healthcare PE co-investment', priority: 1 },
+    { a: 1, b: 3, reason: 'Aldrich (KKR Infrastructure) and Waverly (Apollo Credit) bring complementary perspectives — infrastructure and credit strategies that increasingly overlap in energy transition deals.', mutual_interest: 'Infrastructure-credit convergence', priority: 1 },
+    { a: 2, b: 8, reason: 'Thornton (Carlyle) and Fitzgerald (Bain Capital) both focus on healthcare PE and could explore co-investment on mid-market healthcare services platforms.', mutual_interest: 'Healthcare PE co-investment', priority: 2 },
+    { a: 4, b: 6, reason: 'Pemberton (Warburg Pincus) and Ashford (TPG) share deep technology sector expertise. Potential collaboration on growth equity deals in enterprise software.', mutual_interest: 'Technology growth equity', priority: 2 },
+    { a: 9, b: 10, reason: 'Mehta-Shah (General Atlantic) and Sterling (Thoma Bravo) are both active in SaaS and fintech growth equity. Different deal size preferences create co-investment potential.', mutual_interest: 'SaaS and fintech investing', priority: 1 },
+    { a: 7, b: 11, reason: 'Okonkwo (Vista Equity) and Calloway (Silver Lake) both specialize in technology-focused PE with different but complementary approaches to value creation.', mutual_interest: 'Enterprise software PE', priority: 2 },
+    { a: 12, b: 17, reason: 'Nakamura (Hillhouse Capital) and Osei (African Capital Alliance) bring cross-border emerging market perspectives — Asia-Pacific and Africa — with potential for deal flow sharing.', mutual_interest: 'Emerging market PE strategies', priority: 3 },
+    { a: 14, b: 18, reason: 'Montgomery (Ares Management) and Whitfield (Hellman & Friedman) can exchange perspectives on credit vs. equity strategies in financial services sector investments.', mutual_interest: 'Financial services sector PE', priority: 3 },
+  ];
+
+  for (const p of pairingsData) {
+    if (p.a < contactIds.length && p.b < contactIds.length) {
+      await sql`
+        INSERT INTO introduction_pairings (
+          id, event_id, workspace_id, contact_a_id, contact_b_id,
+          reason, mutual_interest, priority, batch_id, model_version
+        ) VALUES (
+          ${uuid()}, ${eventId}, ${workspaceId},
+          ${contactIds[p.a]}, ${contactIds[p.b]},
+          ${p.reason}, ${p.mutual_interest}, ${p.priority},
+          ${pairingBatchId}, 'claude-sonnet-4-5-20250514'
+        )
+      `;
+    }
+  }
+
+  console.log(`   Created ${pairingsData.length} introduction pairings`);
 
   // Step 9: Create follow-up sequences
   console.log('9/12 — Creating follow-up sequences...');
@@ -732,7 +927,68 @@ async function main() {
     )
   `;
 
-  console.log(`   Created 1 pre-event briefing packet with ${topScoredForBriefing.length} key guests`);
+  // MORNING briefing
+  await sql`
+    INSERT INTO briefing_packets (
+      id, event_id, workspace_id, generated_for,
+      briefing_type, status, title, content,
+      guest_count, model_version, generated_at, created_at, updated_at
+    ) VALUES (
+      ${uuid()}, ${eventId}, ${workspaceId}, ${userId},
+      'MORNING'::briefing_type, 'READY'::briefing_status,
+      'Morning-of Briefing — Meridian Q2 Executive Dinner',
+      ${JSON.stringify({
+        event_summary: 'Good morning. Tonight\'s Q2 Executive Dinner at The NoMad is on track. 17 of 20 invitees have confirmed. Last-minute changes: Sofia Chen-Ramirez (Advent) will arrive 30 minutes late due to a flight delay. Gregory Mansfield (Mansfield Advisory) has reached out asking to attend as a walk-in — he was referred by James Harrington.',
+        key_guests: topScoredForBriefing.slice(0, 5),
+        strategic_notes: 'VIP arrival protocol: James Harrington (Blackstone) and Marcus Aldrich (KKR) should be greeted personally by Marcus Sterling. Harrison Whitmore (Whitmore Family Office) is bringing his daughter Eleanor — she is being considered for the next generation LP program. Seating cards have been placed per the approved arrangement. Reminder: do NOT seat Thornton and Waverly at the same table.',
+        agenda_highlights: [
+          '4:00 PM — Final venue walkthrough with NoMad events team',
+          '5:30 PM — Team briefing at venue (all Meridian staff)',
+          '6:00 PM — AV check for welcome presentation',
+          '6:30 PM — Cocktail reception opens — focus on greeting VIP arrivals first',
+          '7:15 PM — Transition to seated dinner, host welcome remarks',
+          '9:30 PM — Event concludes — team debrief at 10 PM sharp',
+        ],
+      })}::jsonb,
+      5,
+      'claude-sonnet-4-5-20250514',
+      ${new Date('2026-04-17T12:00:00Z').toISOString()},
+      ${new Date('2026-04-17T12:00:00Z').toISOString()},
+      ${new Date('2026-04-17T12:00:00Z').toISOString()}
+    )
+  `;
+
+  // END_OF_DAY briefing
+  await sql`
+    INSERT INTO briefing_packets (
+      id, event_id, workspace_id, generated_for,
+      briefing_type, status, title, content,
+      guest_count, model_version, generated_at, created_at, updated_at
+    ) VALUES (
+      ${uuid()}, ${eventId}, ${workspaceId}, ${userId},
+      'END_OF_DAY'::briefing_type, 'READY'::briefing_status,
+      'End-of-Day Briefing — Meridian Q2 Executive Dinner',
+      ${JSON.stringify({
+        event_summary: 'Tonight\'s dinner was a strong success. 16 of 17 confirmed guests checked in (94% attendance). 2 walk-ins were accommodated. Key outcomes: 3 follow-up meetings were verbally confirmed during the event. The co-investment discussion between Harrington and Chen-Ramirez was particularly productive — both expressed interest in the healthcare platform deal.',
+        key_guests: topScoredForBriefing.slice(0, 6),
+        strategic_notes: 'Immediate follow-up priorities: (1) James Harrington wants a call Tuesday re: healthcare co-investment — schedule ASAP. (2) Claudia Barretti (Stanford Endowment) mentioned increasing PE allocation by $200M — send the fund overview deck tomorrow. (3) Harrison Whitmore was impressed by the event format and asked about hosting a similar dinner in Q3 for his network. Missed connections: Franklin Rhodes (NY State CRF) left early and didn\'t get to speak with Marcus — send a personal note.',
+        agenda_highlights: [
+          'Attendance: 16 confirmed + 2 walk-ins = 18 total (90% of capacity)',
+          'Key conversion: Sofia Chen-Ramirez moved from "Considering" to verbally committed for co-invest',
+          'Follow-up emails to be sent by 2 PM tomorrow — AI drafts are ready for review',
+          '3 meeting requests logged during event — all scheduled for next week',
+          'Team debrief notes captured — see action items in Follow-Up tab',
+        ],
+      })}::jsonb,
+      6,
+      'claude-sonnet-4-5-20250514',
+      ${new Date('2026-04-18T02:30:00Z').toISOString()},
+      ${new Date('2026-04-18T02:30:00Z').toISOString()},
+      ${new Date('2026-04-18T02:30:00Z').toISOString()}
+    )
+  `;
+
+  console.log(`   Created 3 briefing packets (pre-event, morning, end-of-day) with key guests`);
 
   // Step 11: Create broadcast message
   console.log('11/12 — Creating broadcast message...');
@@ -757,8 +1013,167 @@ async function main() {
 
   console.log(`   Created 1 broadcast message (16 delivered, 12 opened)`);
 
-  // Step 12: Create a session for demo login
-  console.log('12/12 — Creating demo login session...');
+  // Step 12: Create agent activity log entries
+  console.log('12/13 — Creating agent activity log entries...');
+
+  const agentActivities = [
+    {
+      type: 'scoring',
+      headline: 'Scored 72 contacts against 3 event objectives',
+      detail: '38 qualify with a score of 60+. Top match: James Harrington (97). 5 contacts scored conservatively due to limited profile data.',
+      metadata: { total_scored: 72, qualified: 38, top_score: 97 },
+      daysAgo: 5,
+    },
+    {
+      type: 'enrichment',
+      headline: 'Enriched 45 contact profiles',
+      detail: 'Updated titles, companies, industries, and generated AI summaries for 45 contacts. 3 contacts could not be enriched — they may need manual review.',
+      metadata: { completed: 45, failed: 3, total: 48 },
+      daysAgo: 5,
+    },
+    {
+      type: 'scoring',
+      headline: 'Re-scored 30 contacts after enrichment updates',
+      detail: '8 contacts moved above the 60+ threshold after enrichment revealed additional relevant background. Average score change: +12 points.',
+      metadata: { total_scored: 30, newly_qualified: 8, avg_change: 12 },
+      daysAgo: 4,
+    },
+    {
+      type: 'observation',
+      headline: '4 high-scoring contacts (80+) haven\'t been invited yet',
+      detail: 'James Harrington (97), Sofia Chen-Ramirez (94), Marcus Aldrich (91), and Claudia Barretti (89) all score above 80 but aren\'t in any invitation wave. Consider adding them to your next campaign.',
+      metadata: { contact_count: 4 },
+      daysAgo: 4,
+    },
+    {
+      type: 'scoring',
+      headline: 'Processed 30 inbound RSVP submissions',
+      detail: '18 are strong matches (70+). 7 are moderate fits. 5 scored below 40 — they may not align with your event objectives.',
+      metadata: { total: 30, strong: 18, moderate: 7, weak: 5 },
+      daysAgo: 3,
+    },
+    {
+      type: 'seating',
+      headline: 'Proposed seating for 17 guests across 2 tables',
+      detail: 'Used "mixed interests" strategy. Separated competing firms (Carlyle/Apollo) and balanced seniority across tables. Each placement includes confidence scores.',
+      metadata: { assignment_count: 17, table_count: 2, strategy: 'MIXED_INTERESTS' },
+      daysAgo: 2,
+    },
+    {
+      type: 'introduction',
+      headline: 'Identified 5 high-priority introduction pairings',
+      detail: 'Based on shared PE focus, complementary investment theses, and overlapping LP relationships. 2 are must-meets, 3 are high priority.',
+      metadata: { pairing_count: 5, must_meet: 2 },
+      daysAgo: 2,
+    },
+    {
+      type: 'briefing',
+      headline: 'Generated pre-event briefing with 8 guest profiles',
+      detail: 'Prepared talking points and conversation starters for each guest. Key guests include James Harrington, Sofia Chen-Ramirez, and Marcus Aldrich.',
+      metadata: { briefing_type: 'PRE_EVENT', guest_count: 8 },
+      daysAgo: 1,
+    },
+    {
+      type: 'briefing',
+      headline: 'Generated morning-of briefing with 5 key updates',
+      detail: 'Sofia Chen-Ramirez arriving 30 minutes late. Gregory Mansfield requesting walk-in spot. Updated VIP greeting protocol included.',
+      metadata: { briefing_type: 'MORNING', guest_count: 5 },
+      daysAgo: 1,
+    },
+    {
+      type: 'observation',
+      headline: '3 confirmed guests are connected to your platinum sponsor contacts',
+      detail: 'Harrington, Aldrich, and Waverly all have LP relationships with institutions in your sponsor network. Consider seating them for maximum cross-pollination.',
+      metadata: { contact_count: 3 },
+      daysAgo: 1,
+    },
+    {
+      type: 'follow_up',
+      headline: 'Drafted personalized follow-ups for 14 attendees',
+      detail: 'Each follow-up references specific talking points from their profiles and the event context. Ready for your review in the Follow-Up tab.',
+      metadata: { created: 14, skipped: 0, auto_generated: true },
+      hoursAgo: 12,
+    },
+    {
+      type: 'briefing',
+      headline: 'Generated end-of-day briefing with event outcomes',
+      detail: '94% attendance rate. 3 follow-up meetings verbally confirmed. Key conversion: Chen-Ramirez moved from considering to committed for co-invest.',
+      metadata: { briefing_type: 'END_OF_DAY', guest_count: 6 },
+      hoursAgo: 8,
+    },
+    {
+      type: 'observation',
+      headline: 'Follow-up window alert: 2 high-value attendees haven\'t been contacted',
+      detail: 'Franklin Rhodes (NY State CRF) left early and needs a personal note. Harrison Whitmore expressed interest in a Q3 event — time-sensitive opportunity.',
+      metadata: { contact_count: 2 },
+      hoursAgo: 4,
+    },
+  ];
+
+  for (const activity of agentActivities) {
+    const createdAt = activity.hoursAgo
+      ? new Date(Date.now() - activity.hoursAgo * 60 * 60 * 1000).toISOString()
+      : new Date(Date.now() - (activity.daysAgo || 1) * 24 * 60 * 60 * 1000).toISOString();
+
+    await sql`
+      INSERT INTO agent_activity_log (
+        id, event_id, workspace_id, activity_type, headline, detail, metadata, created_at
+      ) VALUES (
+        ${uuid()}, ${eventId}, ${workspaceId},
+        ${activity.type}, ${activity.headline}, ${activity.detail},
+        ${JSON.stringify(activity.metadata)}::jsonb,
+        ${createdAt}::timestamptz
+      )
+    `;
+  }
+
+  console.log(`   Created ${agentActivities.length} agent activity log entries`);
+
+  // Step 12b: Seed agent preferences (learned from past user overrides)
+  console.log('12b/14 — Seeding agent preferences...');
+
+  const agentPreferences = [
+    {
+      category: 'seating',
+      preference_key: 'executive_clustering',
+      preference_text: 'Team prefers grouping C-suite executives together for strategic conversations',
+      confidence: 0.7,
+      observation_count: 3,
+    },
+    {
+      category: 'seating',
+      preference_key: 'competitor_separation',
+      preference_text: 'Avoid placing guests from competing firms at the same table',
+      confidence: 0.8,
+      observation_count: 4,
+    },
+    {
+      category: 'seating',
+      preference_key: 'sponsor_prominence',
+      preference_text: 'Sponsor key attendees should be seated at tables with the highest-scoring guests',
+      confidence: 0.6,
+      observation_count: 2,
+    },
+  ];
+
+  for (const pref of agentPreferences) {
+    await sql`
+      INSERT INTO agent_preferences (
+        id, workspace_id, category, preference_key, preference_text,
+        confidence, observation_count, last_observed
+      ) VALUES (
+        ${uuid()}, ${workspaceId}, ${pref.category}, ${pref.preference_key},
+        ${pref.preference_text}, ${pref.confidence}, ${pref.observation_count},
+        ${new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString()}::timestamptz
+      )
+      ON CONFLICT (workspace_id, preference_key) DO NOTHING
+    `;
+  }
+
+  console.log(`   Created ${agentPreferences.length} agent preferences`);
+
+  // Step 13: Create a session for demo login
+  console.log('14/14 — Creating demo login session...');
 
   const sessionExpiry = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(); // 30 days
   const sessionResult = await sql`
@@ -785,6 +1200,7 @@ async function main() {
   console.log(`   Follow-ups:    14 sequences (3 meetings, 3 replied, 3 opened, 4 sent, 1 pending)`);
   console.log(`   Briefing:      1 pre-event packet`);
   console.log(`   Broadcast:     1 post-event thank you`);
+  console.log(`   Preferences:   ${agentPreferences.length} learned agent preferences`);
   console.log(`   Session:       ${sessionId}`);
   console.log(`\n   🔑 To log in, run this in your browser console:`);
   console.log(`   document.cookie = "moots_session=${sessionId}; path=/; max-age=2592000"`);

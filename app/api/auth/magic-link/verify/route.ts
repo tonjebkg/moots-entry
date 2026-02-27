@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { withErrorHandling } from '@/lib/with-error-handling';
-import { createSession, setSessionCookie } from '@/lib/auth';
+import { createSession } from '@/lib/auth';
 import { logAction } from '@/lib/audit-log';
 import { getDb } from '@/lib/db';
 import { getClientIdentifier } from '@/lib/rate-limit';
 
 export const runtime = 'nodejs';
+
+const SESSION_COOKIE_NAME = 'moots_session';
 
 export const GET = withErrorHandling(async (request: NextRequest) => {
   const token = request.nextUrl.searchParams.get('token');
@@ -69,7 +71,6 @@ export const GET = withErrorHandling(async (request: NextRequest) => {
 
   // Create session
   const session = await createSession(tokenRow.user_id, memberResult[0].workspace_id, request);
-  await setSessionCookie(session.id, session.expires_at);
 
   const ip = getClientIdentifier(request);
   logAction({
@@ -82,5 +83,14 @@ export const GET = withErrorHandling(async (request: NextRequest) => {
     ipAddress: ip,
   });
 
-  return NextResponse.redirect(`${appUrl}/dashboard`);
+  const response = NextResponse.redirect(`${appUrl}/dashboard`);
+  response.cookies.set(SESSION_COOKIE_NAME, session.id, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    path: '/',
+    expires: new Date(session.expires_at),
+  });
+
+  return response;
 });

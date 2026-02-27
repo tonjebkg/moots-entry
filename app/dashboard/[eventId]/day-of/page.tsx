@@ -8,6 +8,8 @@ import { SeatingChart } from '@/app/components/SeatingChart'
 import { SeatingAssignPanel } from '@/app/components/SeatingAssignPanel'
 import { IntroductionPairings } from '@/app/components/IntroductionPairings'
 import { DossierPanel } from '@/app/components/DossierPanel'
+import { AgentThinking, THINKING_STEPS } from '@/app/components/ui/AgentThinking'
+import { MoveAnalysisToast } from '@/app/components/ui/MoveAnalysisToast'
 
 type SubTab = 'checkin' | 'seating' | 'introductions'
 type SeatingFormat = 'STANDING' | 'SEATED' | 'MIXED'
@@ -79,6 +81,9 @@ export default function DayOfPage() {
 
   // Seating rationale map
   const [rationaleMap, setRationaleMap] = useState<Record<string, string>>({})
+
+  // Move analysis toast
+  const [moveAnalysis, setMoveAnalysis] = useState<{ text: string; suggestion: string | null } | null>(null)
 
   const fetchSeatingData = useCallback(async () => {
     try {
@@ -182,8 +187,26 @@ export default function DayOfPage() {
     }
   }
 
-  function handleMoveGuest(contactId: string, newTable: number) {
-    handleAssign(contactId, newTable)
+  async function handleMoveGuest(contactId: string, newTable: number) {
+    // Track the current table before the move
+    const currentAssignment = assignments.find(a => a.contact_id === contactId)
+    const fromTable = currentAssignment?.table_assignment ?? 0
+
+    await handleAssign(contactId, newTable)
+
+    // Fire-and-forget: request move analysis from agent
+    fetch(`/api/events/${eventId}/seating/analyze-move`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ contact_id: contactId, from_table: fromTable, to_table: newTable }),
+    })
+      .then(res => res.ok ? res.json() : null)
+      .then(data => {
+        if (data?.analysis) {
+          setMoveAnalysis({ text: data.analysis, suggestion: data.suggestion || null })
+        }
+      })
+      .catch(() => { /* non-critical */ })
   }
 
   async function handleGenerateSuggestions() {
@@ -360,22 +383,28 @@ export default function DayOfPage() {
               disabled={generating}
               className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-brand-terracotta rounded-lg hover:bg-brand-terracotta/90 transition-colors disabled:opacity-50"
             >
-              {generating ? <RotateCw size={14} className="animate-spin" /> : <Sparkles size={14} />}
-              {generating ? 'Generating...' : 'AI Suggest'}
+              {generating ? null : <><Sparkles size={14} /> AI Suggest</>}
             </button>
+            {generating && (
+              <AgentThinking steps={THINKING_STEPS.seating} intervalMs={3000} />
+            )}
           </div>
         )}
 
         {/* Introduction actions */}
         {activeTab === 'introductions' && (
-          <button
-            onClick={handleGenerateIntroductions}
-            disabled={generatingIntros}
-            className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-brand-terracotta rounded-lg hover:bg-brand-terracotta/90 transition-colors disabled:opacity-50"
-          >
-            <Sparkles size={14} />
-            {generatingIntros ? 'Generating...' : 'Generate Pairings'}
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={handleGenerateIntroductions}
+              disabled={generatingIntros}
+              className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-brand-terracotta rounded-lg hover:bg-brand-terracotta/90 transition-colors disabled:opacity-50"
+            >
+              {generatingIntros ? null : <><Sparkles size={14} /> Generate Pairings</>}
+            </button>
+            {generatingIntros && (
+              <AgentThinking steps={THINKING_STEPS.introductions} intervalMs={3000} />
+            )}
+          </div>
         )}
       </div>
 
@@ -392,6 +421,15 @@ export default function DayOfPage() {
               {error}
               <button onClick={() => setError(null)} className="ml-3 text-red-500 hover:text-red-800 font-medium">×</button>
             </div>
+          )}
+
+          {/* Move Analysis Toast */}
+          {moveAnalysis && (
+            <MoveAnalysisToast
+              analysis={moveAnalysis.text}
+              suggestion={moveAnalysis.suggestion}
+              onDismiss={() => setMoveAnalysis(null)}
+            />
           )}
 
           {/* Table Management Panel */}
@@ -541,6 +579,24 @@ export default function DayOfPage() {
             <IntroductionPairings
               pairings={pairings}
               generating={generatingIntros}
+              onGuestClick={setDossierContactId}
+              availableGuests={assignments.map(a => ({
+                contact_id: a.contact_id,
+                full_name: a.full_name,
+                company: a.company,
+              }))}
+              onCreateManual={async (contactAId, contactBId, reason) => {
+                const res = await fetch(`/api/events/${eventId}/seating/introductions`, {
+                  method: 'PUT',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ contact_a_id: contactAId, contact_b_id: contactBId, reason }),
+                })
+                if (!res.ok) {
+                  const data = await res.json()
+                  throw new Error(data.error || 'Failed to create pairing')
+                }
+                await fetchSeatingData()
+              }}
             />
           )}
         </>

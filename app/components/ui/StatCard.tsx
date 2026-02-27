@@ -9,9 +9,10 @@ interface StatCardProps {
   iconColor?: string
   iconBg?: string
   href?: string
+  onClick?: () => void
 }
 
-export function StatCard({ label, value, subtitle, icon: Icon, iconColor = 'text-brand-terracotta', iconBg = 'bg-brand-terracotta/10', href }: StatCardProps) {
+export function StatCard({ label, value, subtitle, icon: Icon, iconColor = 'text-brand-terracotta', iconBg = 'bg-brand-terracotta/10', href, onClick }: StatCardProps) {
   const content = (
     <>
       <div className="flex items-center gap-3 mb-3">
@@ -31,9 +32,17 @@ export function StatCard({ label, value, subtitle, icon: Icon, iconColor = 'text
 
   if (href) {
     return (
-      <Link href={href} className="block bg-white rounded-card shadow-card p-5 hover:shadow-md hover:border-brand-terracotta/20 border border-transparent transition-all">
+      <Link href={href} className="block bg-white rounded-card shadow-card p-5 hover:shadow-md hover:border-brand-terracotta/20 border border-transparent transition-all cursor-pointer">
         {content}
       </Link>
+    )
+  }
+
+  if (onClick) {
+    return (
+      <button onClick={onClick} className="block w-full text-left bg-white rounded-card shadow-card p-5 hover:shadow-md hover:border-brand-terracotta/20 border border-transparent transition-all cursor-pointer">
+        {content}
+      </button>
     )
   }
 

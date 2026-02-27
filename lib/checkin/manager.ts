@@ -143,11 +143,15 @@ export async function getCheckinMetrics(
     WHERE event_id = ${eventId} AND workspace_id = ${workspaceId}
   `;
 
-  // Recent check-ins with enriched data
+  // Recent check-ins with enriched data including AI insights
   const recentCheckins = await db`
     SELECT ec.*,
       pc.tags,
+      pc.ai_summary,
       gs.relevance_score,
+      gs.score_rationale,
+      gs.talking_points,
+      gs.matched_objectives,
       ci_inv.table_assignment
     FROM event_checkins ec
     LEFT JOIN people_contacts pc ON pc.id = ec.contact_id

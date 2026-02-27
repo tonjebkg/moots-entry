@@ -29,7 +29,7 @@ export const createContactSchema = z.object({
   board_affiliations: z.array(z.string()).optional().default([]),
   tags: z.array(z.string().max(50)).optional().default([]),
   internal_notes: z.string().max(5000).optional().nullable(),
-  source: z.enum(['MANUAL', 'CSV_IMPORT', 'EVENT_IMPORT', 'API', 'ENRICHMENT']).optional().default('MANUAL'),
+  source: z.enum(['MANUAL', 'CSV_IMPORT', 'EVENT_IMPORT', 'API', 'ENRICHMENT', 'AIRTABLE_IMPORT', 'NOTION_IMPORT', 'RSVP_SUBMISSION', 'JOIN_REQUEST']).optional().default('MANUAL'),
   source_detail: z.string().max(500).optional().nullable(),
 });
 
@@ -56,7 +56,7 @@ export const contactSearchSchema = z.object({
   q: z.string().optional().default(''),
   tags: z.string().optional(), // comma-separated
   enrichment_status: z.enum(['PENDING', 'IN_PROGRESS', 'COMPLETED', 'FAILED', 'STALE']).optional(),
-  source: z.enum(['MANUAL', 'CSV_IMPORT', 'EVENT_IMPORT', 'API', 'ENRICHMENT']).optional(),
+  source: z.enum(['MANUAL', 'CSV_IMPORT', 'EVENT_IMPORT', 'API', 'ENRICHMENT', 'AIRTABLE_IMPORT', 'NOTION_IMPORT', 'RSVP_SUBMISSION', 'JOIN_REQUEST']).optional(),
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(100).default(50),
   sort: z.enum(['full_name', 'company', 'created_at', 'updated_at']).optional().default('created_at'),

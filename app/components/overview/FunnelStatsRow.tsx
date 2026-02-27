@@ -29,7 +29,7 @@ export function FunnelStatsRow({ funnel, totalCapacity, eventId }: FunnelStatsRo
     {
       label: 'Guest Pool',
       value: funnel.pool,
-      subtitle: '',
+      subtitle: funnel.scored > 0 ? `${funnel.scored} scored` : 'contacts in pool',
       icon: Users,
       iconColor: 'text-brand-charcoal',
       iconBg: 'bg-brand-cream',

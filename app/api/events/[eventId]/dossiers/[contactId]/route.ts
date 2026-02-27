@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { withErrorHandling } from '@/lib/with-error-handling';
-import { requireAuth } from '@/lib/auth';
+import { tryAuthOrEventFallback } from '@/lib/auth';
 import { getDb } from '@/lib/db';
 import { NotFoundError } from '@/lib/errors';
 
@@ -10,9 +10,9 @@ export const runtime = 'nodejs';
  * GET /api/events/[eventId]/dossiers/[contactId] — Get full dossier for a contact
  */
 export const GET = withErrorHandling(async (request: NextRequest, context: any) => {
-  const auth = await requireAuth();
   const { eventId, contactId } = await context.params;
   const eventIdNum = parseInt(eventId, 10);
+  const { workspaceId } = await tryAuthOrEventFallback(eventIdNum);
   const db = getDb();
 
   // Contact info with invitation data
@@ -21,12 +21,13 @@ export const GET = withErrorHandling(async (request: NextRequest, context: any) 
       c.id AS contact_id, c.full_name, c.company, c.title, c.photo_url, c.linkedin_url,
       c.emails, c.ai_summary, c.tags, c.enrichment_data, c.enriched_at,
       c.source, c.enrichment_status,
+      ci.id AS invitation_id,
       ci.status AS invitation_status,
       ic.name AS campaign_name
     FROM people_contacts c
     LEFT JOIN campaign_invitations ci ON ci.contact_id = c.id AND ci.event_id = ${eventIdNum}
     LEFT JOIN invitation_campaigns ic ON ic.id = ci.campaign_id
-    WHERE c.id = ${contactId} AND c.workspace_id = ${auth.workspace.id}
+    WHERE c.id = ${contactId} AND c.workspace_id = ${workspaceId}
   `;
 
   if (contacts.length === 0) {
@@ -65,7 +66,7 @@ export const GET = withErrorHandling(async (request: NextRequest, context: any) 
     JOIN users u ON u.id = gta.assigned_to
     WHERE gta.contact_id = ${contactId}
       AND gta.event_id = ${eventIdNum}
-      AND gta.workspace_id = ${auth.workspace.id}
+      AND gta.workspace_id = ${workspaceId}
   `;
 
   const dossier = {
@@ -84,6 +85,7 @@ export const GET = withErrorHandling(async (request: NextRequest, context: any) 
     score_rationale: score.score_rationale || null,
     talking_points: score.talking_points || [],
     matched_objectives: score.matched_objectives || [],
+    invitation_id: contact.invitation_id || null,
     invitation_status: contact.invitation_status || null,
     campaign_name: contact.campaign_name || null,
     team_assignments: assignments,

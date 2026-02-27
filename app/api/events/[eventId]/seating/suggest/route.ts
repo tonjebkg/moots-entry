@@ -3,6 +3,7 @@ import { withErrorHandling } from '@/lib/with-error-handling';
 import { requireAuth, requireRole } from '@/lib/auth';
 import { validateRequest } from '@/lib/validate-request';
 import { logAction } from '@/lib/audit-log';
+import { logAgentActivity } from '@/lib/agent/activity';
 import { generateSeatingPlan } from '@/lib/seating/optimizer';
 import { generateSeatingSchema } from '@/lib/schemas/seating';
 
@@ -37,6 +38,16 @@ export const POST = withErrorHandling(async (request: NextRequest, context: any)
     entityType: 'seating_suggestion',
     entityId: result.batchId,
     newValue: { event_id: eventIdNum, strategy, assignment_count: result.assignments.length },
+  });
+
+  const tableCount = new Set(result.assignments.map(a => a.table_number)).size;
+  await logAgentActivity({
+    eventId: eventIdNum,
+    workspaceId: auth.workspace.id,
+    type: 'seating',
+    headline: `Proposed seating for ${result.assignments.length} guests across ${tableCount} tables`,
+    detail: `Used "${strategy.replace(/_/g, ' ').toLowerCase()}" strategy. Each placement includes a confidence score and rationale.`,
+    metadata: { batch_id: result.batchId, assignment_count: result.assignments.length, strategy, table_count: tableCount },
   });
 
   return NextResponse.json({

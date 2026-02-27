@@ -3,6 +3,16 @@
 import { Send, Eye, MessageSquare, CalendarCheck, Mail } from 'lucide-react'
 import type { FollowUpSequence } from '@/types/phase3'
 import { FOLLOW_UP_STATUS_META } from '@/types/phase3'
+import { ScoreBar } from './ui/ScoreBar'
+import { TagBadge } from './ui/TagBadge'
+
+function getTagVariant(tag: string): 'terracotta' | 'gold' | 'forest' | 'default' {
+  const t = tag.toLowerCase()
+  if (t.includes('vip') || t.includes('sponsor')) return 'terracotta'
+  if (t.includes('speaker') || t.includes('host')) return 'gold'
+  if (t.includes('portfolio') || t.includes('partner')) return 'forest'
+  return 'default'
+}
 
 interface FollowUpStatusTableProps {
   followUps: FollowUpSequence[]
@@ -17,7 +27,7 @@ export function FollowUpStatusTable({ followUps, onSend, onUpdateStatus }: Follo
         <Mail className="w-10 h-10 text-ui-tertiary opacity-50 mx-auto mb-3" />
         <h4 className="text-sm font-semibold text-brand-charcoal mb-1">No Follow-Ups Yet</h4>
         <p className="text-sm text-ui-tertiary max-w-md mx-auto">
-          Follow-up drafts will appear here once generated. Use the form above to create AI-personalized emails for your scored contacts.
+          I&apos;ll draft personalized follow-ups for each scored contact, referencing their profile and your event objectives. Use the form above to get started.
         </p>
       </div>
     )
@@ -29,6 +39,8 @@ export function FollowUpStatusTable({ followUps, onSend, onUpdateStatus }: Follo
         <thead className="bg-brand-cream border-b border-ui-border">
           <tr>
             <th className="px-4 py-3 text-left font-semibold text-brand-charcoal">Contact</th>
+            <th className="px-4 py-3 text-center font-semibold text-brand-charcoal w-20">Score</th>
+            <th className="px-4 py-3 text-left font-semibold text-brand-charcoal">Tags</th>
             <th className="px-4 py-3 text-left font-semibold text-brand-charcoal">Subject</th>
             <th className="px-4 py-3 text-left font-semibold text-brand-charcoal">Status</th>
             <th className="px-4 py-3 text-right font-semibold text-brand-charcoal">Actions</th>
@@ -42,8 +54,31 @@ export function FollowUpStatusTable({ followUps, onSend, onUpdateStatus }: Follo
                 <td className="px-4 py-3">
                   <div className="font-medium text-brand-charcoal">{fu.contact_name}</div>
                   <div className="text-xs text-ui-tertiary">
-                    {fu.contact_company}
+                    {fu.contact_title && fu.contact_company
+                      ? `${fu.contact_title} · ${fu.contact_company}`
+                      : fu.contact_company || fu.contact_title || ''}
                   </div>
+                </td>
+                <td className="px-4 py-3 text-center">
+                  {fu.relevance_score != null ? (
+                    <ScoreBar score={fu.relevance_score} width={60} />
+                  ) : (
+                    <span className="text-xs text-ui-tertiary">--</span>
+                  )}
+                </td>
+                <td className="px-4 py-3">
+                  {fu.tags && fu.tags.length > 0 ? (
+                    <div className="flex items-center gap-1">
+                      <TagBadge label={fu.tags[0]} variant={getTagVariant(fu.tags[0])} />
+                      {fu.tags.length > 1 && (
+                        <span className="text-[10px] font-semibold text-ui-tertiary bg-gray-100 px-1.5 py-0.5 rounded" title={fu.tags.slice(1).join(', ')}>
+                          +{fu.tags.length - 1}
+                        </span>
+                      )}
+                    </div>
+                  ) : (
+                    <span className="text-xs text-ui-tertiary">—</span>
+                  )}
                 </td>
                 <td className="px-4 py-3 text-ui-secondary max-w-[200px] truncate">
                   {fu.subject}

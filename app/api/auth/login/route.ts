@@ -2,11 +2,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import { withErrorHandling } from '@/lib/with-error-handling';
 import { validateRequest } from '@/lib/validate-request';
 import { loginSchema } from '@/lib/schemas/auth';
-import { verifyPassword, createSession, setSessionCookie } from '@/lib/auth';
+import { verifyPassword, createSession } from '@/lib/auth';
 import { logAction } from '@/lib/audit-log';
 import { getDb } from '@/lib/db';
 import { UnauthorizedError, RateLimitError, AppError } from '@/lib/errors';
 import { getClientIdentifier, checkAuthRateLimit } from '@/lib/rate-limit';
+
+const SESSION_COOKIE_NAME = 'moots_session';
 
 export const runtime = 'nodejs';
 
@@ -109,7 +111,6 @@ export const POST = withErrorHandling(async (request: NextRequest) => {
 
   // Create session
   const session = await createSession(user.id, membership.workspace_id, request);
-  await setSessionCookie(session.id, session.expires_at);
 
   // Update last active
   await db`
@@ -128,7 +129,8 @@ export const POST = withErrorHandling(async (request: NextRequest) => {
     ipAddress: ip,
   });
 
-  return NextResponse.json({
+  // Build response and set session cookie directly on it
+  const response = NextResponse.json({
     user: {
       id: user.id,
       email: user.email,
@@ -144,4 +146,14 @@ export const POST = withErrorHandling(async (request: NextRequest) => {
     },
     role: membership.role,
   });
+
+  response.cookies.set(SESSION_COOKIE_NAME, session.id, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    path: '/',
+    expires: new Date(session.expires_at),
+  });
+
+  return response;
 });

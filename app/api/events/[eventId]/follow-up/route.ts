@@ -3,6 +3,7 @@ import { withErrorHandling } from '@/lib/with-error-handling';
 import { requireAuth, requireRole, tryAuthOrEventFallback } from '@/lib/auth';
 import { validateRequest } from '@/lib/validate-request';
 import { logAction } from '@/lib/audit-log';
+import { logAgentActivity } from '@/lib/agent/activity';
 import { getDb } from '@/lib/db';
 import { configureFollowUpSchema } from '@/lib/schemas/follow-up';
 import { triggerFollowUps } from '@/lib/follow-up/generator';
@@ -22,11 +23,15 @@ export const GET = withErrorHandling(async (request: NextRequest, context: any) 
     SELECT fu.*,
       pc.full_name AS contact_name,
       pc.emails AS contact_emails,
-      pc.company AS contact_company
+      pc.company AS contact_company,
+      pc.title AS contact_title,
+      pc.tags,
+      gs.relevance_score
     FROM follow_up_sequences fu
     JOIN people_contacts pc ON pc.id = fu.contact_id
+    LEFT JOIN guest_scores gs ON gs.contact_id = fu.contact_id AND gs.event_id = fu.event_id
     WHERE fu.event_id = ${eventIdNum} AND fu.workspace_id = ${workspaceId}
-    ORDER BY fu.created_at DESC
+    ORDER BY gs.relevance_score DESC NULLS LAST, fu.created_at DESC
   `;
 
   // Compute summary stats
@@ -73,6 +78,19 @@ export const POST = withErrorHandling(async (request: NextRequest, context: any)
     entityType: 'follow_up_sequence',
     metadata: { event_id: eventIdNum, ...result },
   });
+
+  if (result.created > 0) {
+    await logAgentActivity({
+      eventId: eventIdNum,
+      workspaceId: auth.workspace.id,
+      type: 'follow_up',
+      headline: `Drafted personalized follow-ups for ${result.created} guests`,
+      detail: result.skipped > 0
+        ? `${result.skipped} guests already had follow-ups and were skipped. Each new follow-up includes personalized content based on guest profiles and event context.`
+        : `Each follow-up includes personalized content referencing specific talking points and shared interests.`,
+      metadata: { created: result.created, skipped: result.skipped, auto_generated: d.auto_generate },
+    });
+  }
 
   return NextResponse.json(result, { status: 201 });
 });

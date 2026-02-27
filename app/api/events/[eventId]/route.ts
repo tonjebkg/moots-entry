@@ -43,6 +43,11 @@ export async function GET(_req: Request, { params }: RouteParams) {
         total_capacity,
         seating_format,
         tables_config::text as tables_config_raw,
+        success_criteria,
+        key_stakeholders::text as key_stakeholders_raw,
+        event_theme,
+        budget_range,
+        additional_context,
         created_at,
         updated_at
       FROM events
@@ -64,6 +69,7 @@ export async function GET(_req: Request, { params }: RouteParams) {
     const hosts = event.hosts_raw ? JSON.parse(event.hosts_raw) : [];
     const sponsors = event.sponsors_raw ? JSON.parse(event.sponsors_raw) : [];
     const tablesConfig = event.tables_config_raw ? JSON.parse(event.tables_config_raw) : null;
+    const keyStakeholders = event.key_stakeholders_raw ? JSON.parse(event.key_stakeholders_raw) : [];
 
     // DEBUG: Log what was read from DB
     console.log('[GET EVENT] Event ID:', event.id);
@@ -92,6 +98,11 @@ export async function GET(_req: Request, { params }: RouteParams) {
       total_capacity: event.total_capacity,
       seating_format: event.seating_format,
       tables_config: tablesConfig,
+      success_criteria: event.success_criteria || null,
+      key_stakeholders: keyStakeholders,
+      event_theme: event.event_theme || null,
+      budget_range: event.budget_range || null,
+      additional_context: event.additional_context || null,
       created_at: event.created_at,
       updated_at: event.updated_at,
       // Legacy fields for backward compatibility

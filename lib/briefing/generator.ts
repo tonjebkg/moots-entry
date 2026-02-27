@@ -1,6 +1,7 @@
 import { getAnthropicClient } from '@/lib/anthropic';
 import { getDb } from '@/lib/db';
 import { logger } from '@/lib/logger';
+import { getFullEventContext, formatContextForPrompt } from '@/lib/agent/event-context';
 import type { BriefingContent, BriefingGuest } from '@/types/phase3';
 
 const MODEL_VERSION = 'claude-sonnet-4-20250514';
@@ -17,11 +18,20 @@ export async function generateBriefingForUser(
 ): Promise<BriefingContent> {
   const db = getDb();
 
-  // Get event details
-  const events = await db`
-    SELECT title, description, start_time, end_time, location FROM events WHERE id = ${eventId}
-  `;
-  const event = events[0];
+  // Get rich event context (Phase 2)
+  let contextBlock = '';
+  let eventTitle = 'Event';
+  try {
+    const fullContext = await getFullEventContext(eventId, workspaceId);
+    contextBlock = formatContextForPrompt(fullContext);
+    eventTitle = fullContext.event.title;
+  } catch {
+    // Fall back to basic query
+    const events = await db`
+      SELECT title FROM events WHERE id = ${eventId}
+    `;
+    eventTitle = events[0]?.title || 'Event';
+  }
 
   // Get team member's assigned guests with scores
   const assignedGuests = await db`
@@ -67,10 +77,8 @@ export async function generateBriefingForUser(
 
   const prompt = `Generate a personalized event briefing for a team member. Return ONLY raw JSON (no markdown).
 
-## Event
-Title: ${event?.title || 'Event'}
-Description: ${event?.description || 'N/A'}
-Date: ${event?.start_time || 'TBD'}
+${contextBlock || `## Event\nTitle: ${eventTitle}`}
+
 Briefing Type: ${briefingType}
 
 ## Guests to Brief On (${guestsForBriefing.length} guests)

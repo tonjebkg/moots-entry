@@ -1,5 +1,6 @@
 import { getDb } from '@/lib/db';
 import { logger } from '@/lib/logger';
+import { logAgentActivity } from '@/lib/agent/activity';
 import type { EnrichmentProvider, EnrichmentInput } from './types';
 
 /**
@@ -108,4 +109,15 @@ export async function runEnrichmentPipeline(
       completed_at = NOW()
     WHERE id = ${jobId}
   `;
+
+  // Log agent activity
+  if (completedCount > 0) {
+    await logAgentActivity({
+      workspaceId,
+      type: 'enrichment',
+      headline: `Enriched ${completedCount} contact profiles${failedCount > 0 ? ` (${failedCount} failed)` : ''}`,
+      detail: `Updated titles, companies, industries, and generated AI summaries for ${completedCount} contacts.${failedCount > 0 ? ` ${failedCount} contacts could not be enriched — they may need manual review.` : ''}`,
+      metadata: { job_id: jobId, completed: completedCount, failed: failedCount, total: contactIds.length },
+    });
+  }
 }

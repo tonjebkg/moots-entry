@@ -1,5 +1,6 @@
 import { getDb } from '@/lib/db';
 import { logger } from '@/lib/logger';
+import { logAgentActivity } from '@/lib/agent/activity';
 
 const BATCH_SIZE = 10;
 
@@ -191,6 +192,23 @@ export async function processJobs(): Promise<{
             status = 'COMPLETED'::job_status, completed_at = NOW()
           WHERE id = ${job.id}
         `;
+
+        // Log agent activity on scoring job completion
+        const scores = await db`
+          SELECT relevance_score FROM guest_scores
+          WHERE event_id = ${job.event_id} AND workspace_id = ${job.workspace_id}
+        `;
+        const qualified = scores.filter((s: any) => s.relevance_score >= 60).length;
+        const topScore = Math.max(...scores.map((s: any) => s.relevance_score || 0), 0);
+
+        await logAgentActivity({
+          eventId: job.event_id,
+          workspaceId: job.workspace_id,
+          type: 'scoring',
+          headline: `Scored ${contactIds.length} contacts against your event objectives`,
+          detail: `${qualified} qualify with a score of 60+. Top score: ${topScore}. ${contactIds.length - qualified} contacts scored below the threshold.`,
+          metadata: { job_id: job.id, total_scored: contactIds.length, qualified, top_score: topScore },
+        });
       }
     } catch (error) {
       logger.error('Scoring job processing failed', error as Error, { jobId: job.id });

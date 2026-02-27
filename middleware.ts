@@ -64,6 +64,7 @@ export function middleware(request: NextRequest) {
     /^\/api\/events\/\d+\/checkin/.test(pathname) ||
     /^\/api\/events\/\d+\/seating/.test(pathname) ||
     /^\/api\/contacts$/.test(pathname) ||
+    /^\/api\/events$/.test(pathname) || // Events list (for People page import modal)
     /^\/api\/rsvp\//.test(pathname) ||
     /^\/api\/join\//.test(pathname) ||
     /^\/api\/auth\//.test(pathname) || // Auth endpoints are public
@@ -133,6 +134,12 @@ export function middleware(request: NextRequest) {
 
     // Contacts API — read-only
     if (method === 'GET' && /^\/api\/contacts$/.test(pathname)) {
+      const response = NextResponse.next();
+      return addSecurityHeaders(response);
+    }
+
+    // Events list API — read-only
+    if (method === 'GET' && /^\/api\/events$/.test(pathname)) {
       const response = NextResponse.next();
       return addSecurityHeaders(response);
     }

@@ -6,7 +6,10 @@ import { AlertCircle } from 'lucide-react'
 import { FunnelStatsRow } from '@/app/components/overview/FunnelStatsRow'
 import { NeedsAttentionSection } from '@/app/components/overview/NeedsAttentionSection'
 import { ActivityFeed } from '@/app/components/overview/ActivityFeed'
+import { AgentActivityFeed } from '@/app/components/overview/AgentActivityFeed'
+import { WhileYouWereAway } from '@/app/components/WhileYouWereAway'
 import { DossierPanel } from '@/app/components/DossierPanel'
+import type { AgentActivityEntry } from '@/lib/agent/activity'
 
 interface FunnelData {
   pool: number
@@ -37,11 +40,15 @@ interface OverviewMeta {
   is_event_day: boolean
 }
 
+const LAST_VISIT_KEY = 'moots_last_visit_'
+
 export default function OverviewPage() {
   const { eventId } = useParams<{ eventId: string }>()
   const [funnel, setFunnel] = useState<FunnelData>({ pool: 0, scored: 0, qualified: 0, selected: 0, confirmed: 0 })
   const [needsAttention, setNeedsAttention] = useState<AttentionItem[]>([])
   const [activity, setActivity] = useState<ActivityItem[]>([])
+  const [agentActivity, setAgentActivity] = useState<AgentActivityEntry[]>([])
+  const [recentAgentActivity, setRecentAgentActivity] = useState<AgentActivityEntry[]>([])
   const [meta, setMeta] = useState<OverviewMeta>({ total_capacity: 0, has_objectives: false, has_scored_contacts: false, is_event_day: false })
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -58,7 +65,22 @@ export default function OverviewPage() {
           setFunnel(data.funnel)
           setNeedsAttention(data.needs_attention)
           setActivity(data.activity)
+          setAgentActivity(data.agent_activity || [])
           setMeta(data.meta)
+
+          // Compute "While You Were Away" from agent activity
+          const lastVisitKey = `${LAST_VISIT_KEY}${eventId}`
+          const lastVisit = localStorage.getItem(lastVisitKey)
+          if (lastVisit && data.agent_activity?.length > 0) {
+            const lastVisitDate = new Date(lastVisit)
+            const recent = (data.agent_activity as AgentActivityEntry[]).filter(
+              a => new Date(a.created_at) > lastVisitDate
+            )
+            setRecentAgentActivity(recent)
+          }
+
+          // Update last visit
+          localStorage.setItem(lastVisitKey, new Date().toISOString())
         } else {
           setError('Failed to load overview data')
         }
@@ -103,17 +125,27 @@ export default function OverviewPage() {
         <p className="text-sm text-ui-secondary">Intelligence-first snapshot of your event pipeline</p>
       </div>
 
+      {/* 0. While You Were Away — shows agent work since last visit */}
+      <WhileYouWereAway activities={recentAgentActivity} />
+
       {/* 1. Funnel Stats — "How is my guest list shaping up?" */}
       <FunnelStatsRow funnel={funnel} totalCapacity={meta.total_capacity} eventId={eventId} />
 
       {/* 2. Needs Attention */}
       <NeedsAttentionSection items={needsAttention} eventId={eventId} />
 
-      {/* 3. Activity Feed */}
-      <ActivityFeed
-        activities={activity}
-        onContactClick={(contactId) => setDossierContactId(contactId)}
-      />
+      {/* 3. Activity Feeds — side by side */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="max-h-[600px] overflow-y-auto">
+          <AgentActivityFeed activities={agentActivity} />
+        </div>
+        <div className="max-h-[600px] overflow-y-auto">
+          <ActivityFeed
+            activities={activity}
+            onContactClick={(contactId) => setDossierContactId(contactId)}
+          />
+        </div>
+      </div>
 
       {/* Dossier Panel */}
       {dossierContactId && (

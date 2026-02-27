@@ -38,6 +38,8 @@ export const GET = withErrorHandling(async (request: NextRequest, { params }: Ro
     filter === 'selected' ? db`AND ci.id IS NOT NULL` :
     filter === 'confirmed' ? db`AND ci.status = 'ACCEPTED'` :
     filter === 'pending' ? db`AND c.source IN ('RSVP_SUBMISSION','JOIN_REQUEST') AND ci.id IS NULL` :
+    filter === 'high_uninvited' ? db`AND gs.relevance_score >= 70 AND ci.id IS NULL` :
+    filter === 'unscored' ? db`AND gs.id IS NULL` :
     db``;
 
   const scoredContacts = await db`

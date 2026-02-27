@@ -5,6 +5,8 @@ import { EventTabNavigation } from '@/app/components/EventTabNavigation'
 import { EventHeaderActions } from '@/app/components/EventHeaderActions'
 import { CollaboratorAvatarStack } from '@/app/components/CollaboratorAvatarStack'
 import { DashboardHeader } from '@/app/components/DashboardHeader'
+import { AgentContextProvider } from '@/app/components/agent/AgentContextProvider'
+import { ChatPanel } from '@/app/components/agent/ChatPanel'
 import { getDb } from '@/lib/db'
 import { formatUSDate, formatUSTime } from '@/lib/datetime'
 
@@ -302,9 +304,12 @@ export default async function EventLayout({ children, params }: LayoutProps) {
         </div>
 
         {/* Tab Content - Full Width */}
-        <div className="px-8 py-8">
-          {children}
-        </div>
+        <AgentContextProvider>
+          <div className="px-8 py-8 pb-28">
+            {children}
+          </div>
+          <ChatPanel eventId={eventId} />
+        </AgentContextProvider>
       </div>
     </div>
   )

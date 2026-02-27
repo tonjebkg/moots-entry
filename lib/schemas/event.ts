@@ -118,6 +118,41 @@ export const createEventSchema = z.object({
     )
     .optional()
     .nullable(),
+
+  // Phase 2: Event context fields
+  success_criteria: z
+    .string()
+    .max(5000, "Success criteria too long")
+    .optional()
+    .nullable(),
+
+  key_stakeholders: z
+    .array(
+      z.object({
+        name: z.string().max(200),
+        role: z.string().max(200).optional(),
+      })
+    )
+    .optional()
+    .nullable(),
+
+  event_theme: z
+    .string()
+    .max(1000, "Event theme too long")
+    .optional()
+    .nullable(),
+
+  budget_range: z
+    .string()
+    .max(200, "Budget range too long")
+    .optional()
+    .nullable(),
+
+  additional_context: z
+    .string()
+    .max(5000, "Additional context too long")
+    .optional()
+    .nullable(),
 });
 
 export type CreateEventInput = z.infer<typeof createEventSchema>;

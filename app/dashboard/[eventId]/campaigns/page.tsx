@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useParams, useSearchParams, useRouter } from 'next/navigation'
-import { Plus, Clipboard, ChevronRight } from 'lucide-react'
+import { Plus, Clipboard, ChevronRight, Sparkles } from 'lucide-react'
 import { CampaignForm } from '@/app/components/CampaignForm'
 import { CampaignDetailPanel } from '@/app/components/CampaignDetailPanel'
 
@@ -125,12 +125,12 @@ export default function CampaignsTabPage() {
 
         <div className="space-y-2">
           {campaigns.length === 0 ? (
-            <div className="bg-white rounded-card shadow-card p-6 text-center">
-              <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-brand-cream flex items-center justify-center">
-                <Clipboard className="text-ui-tertiary" size={20} />
+            <div className="bg-white rounded-card shadow-card p-8 text-center">
+              <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-brand-terracotta/10 flex items-center justify-center">
+                <Sparkles className="text-brand-terracotta" size={20} />
               </div>
-              <p className="text-sm text-ui-secondary leading-relaxed">
-                No campaigns yet. Create one to start managing invitations.
+              <p className="text-sm text-ui-secondary leading-relaxed max-w-md mx-auto">
+                I&apos;m ready to build your first invitation campaign. Once you have scored contacts, I can suggest a campaign starting with your top-rated matches.
               </p>
             </div>
           ) : (

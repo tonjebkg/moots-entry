@@ -50,6 +50,22 @@ export function DossierPanel({ eventId, contactId, onClose }: DossierPanelProps)
     fetchDossier()
   }, [eventId, contactId])
 
+  async function handleChangeStatus(newStatus: string) {
+    if (!dossier?.invitation_id) return
+    try {
+      const res = await fetch(`/api/invitations/${dossier.invitation_id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus }),
+      })
+      if (res.ok) {
+        setDossier(prev => prev ? { ...prev, invitation_status: newStatus } : prev)
+      }
+    } catch (err) {
+      console.error('Failed to update status:', err)
+    }
+  }
+
   function getScoreColor(score: number) {
     if (score >= 80) return 'text-green-700 bg-green-50 border-green-200'
     if (score >= 60) return 'text-blue-700 bg-blue-50 border-blue-200'
@@ -63,7 +79,7 @@ export function DossierPanel({ eventId, contactId, onClose }: DossierPanelProps)
       <div className="relative w-full max-w-[700px] bg-white shadow-2xl overflow-y-auto">
         {/* Header */}
         <div className="sticky top-0 bg-white border-b border-ui-border px-6 py-4 flex items-center justify-between z-10">
-          <h3 className="text-lg font-semibold text-brand-charcoal">Guest Dossier</h3>
+          <h3 className="text-lg font-semibold text-brand-charcoal">Guest Profile</h3>
           <button onClick={onClose} className="p-1 hover:bg-brand-cream rounded-lg">
             <X className="w-5 h-5 text-ui-tertiary" />
           </button>
@@ -71,11 +87,11 @@ export function DossierPanel({ eventId, contactId, onClose }: DossierPanelProps)
 
         {loading ? (
           <div className="flex items-center justify-center py-32">
-            <div className="text-ui-tertiary text-sm">Loading dossier...</div>
+            <div className="text-ui-tertiary text-sm">Loading profile...</div>
           </div>
         ) : !dossier ? (
           <div className="flex items-center justify-center py-32">
-            <div className="text-ui-tertiary text-sm">Dossier not found</div>
+            <div className="text-ui-tertiary text-sm">Guest profile not found</div>
           </div>
         ) : (
           <div className="p-6 space-y-6">
@@ -173,7 +189,24 @@ export function DossierPanel({ eventId, contactId, onClose }: DossierPanelProps)
                 <div>
                   <span className="text-[11px] font-semibold text-ui-tertiary uppercase tracking-wider">Invitation</span>
                   <div className="mt-1">
-                    {dossier.invitation_status ? (
+                    {dossier.invitation_id ? (
+                      <div className="flex items-center gap-1.5">
+                        <select
+                          value={dossier.invitation_status || ''}
+                          onChange={(e) => handleChangeStatus(e.target.value)}
+                          className="px-2 py-1 border border-ui-border rounded-lg text-xs font-medium text-ui-secondary bg-white focus:outline-none focus:border-brand-terracotta"
+                        >
+                          <option value="CONSIDERING">Selected</option>
+                          <option value="INVITED">Invited</option>
+                          <option value="ACCEPTED">Confirmed</option>
+                          <option value="DECLINED">Declined</option>
+                          <option value="WAITLIST">Waitlist</option>
+                        </select>
+                        {dossier.campaign_name && (
+                          <span className="text-[11px] text-ui-tertiary">{dossier.campaign_name}</span>
+                        )}
+                      </div>
+                    ) : dossier.invitation_status ? (
                       <div className="flex items-center gap-1.5">
                         <span className={`inline-flex px-2 py-0.5 text-xs font-medium rounded border ${INVITATION_STATUS_LABELS[dossier.invitation_status]?.color || 'bg-gray-100 text-gray-700 border-gray-200'}`}>
                           {INVITATION_STATUS_LABELS[dossier.invitation_status]?.label || dossier.invitation_status}

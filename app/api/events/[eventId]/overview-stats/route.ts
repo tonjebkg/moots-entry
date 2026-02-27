@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { withErrorHandling } from '@/lib/with-error-handling'
 import { getDb } from '@/lib/db'
+import { getAgentActivity } from '@/lib/agent/activity'
 
 type RouteParams = { params: Promise<{ eventId: string }> }
 
@@ -180,7 +181,7 @@ export const GET = withErrorHandling(async (_request: NextRequest, { params }: R
     needsAttention.push({
       type: 'pending_review',
       count: pendingReview,
-      label: 'inbound RSVPs need your review — the AI has scored them for you',
+      label: `I've scored ${pendingReview} new RSVP submissions. Review them to approve or decline.`,
       action: 'Review in Guest Intelligence',
     })
   }
@@ -190,7 +191,7 @@ export const GET = withErrorHandling(async (_request: NextRequest, { params }: R
     needsAttention.push({
       type: 'high_score_not_invited',
       count: highScoreNotInvited,
-      label: 'contacts scoring 70+ haven\'t been invited — consider adding them to your next wave',
+      label: `${highScoreNotInvited} contacts score 70+ but haven't been invited. They're strong matches for your objectives.`,
       action: 'Review in Guest Intelligence',
     })
   }
@@ -199,7 +200,7 @@ export const GET = withErrorHandling(async (_request: NextRequest, { params }: R
     needsAttention.push({
       type: 'no_objectives',
       count: 1,
-      label: 'event objectives not set',
+      label: 'I need event objectives to start scoring guests. Define what matters for this event.',
       action: 'Set Objectives',
     })
   }
@@ -209,7 +210,7 @@ export const GET = withErrorHandling(async (_request: NextRequest, { params }: R
     needsAttention.push({
       type: 'unscored_contacts',
       count: unscoredCount,
-      label: 'contacts haven\'t been scored yet — run AI scoring to identify your best candidates',
+      label: `${unscoredCount} contacts are waiting to be scored. I'll match them against your objectives.`,
       action: 'Run AI Scoring',
     })
   }
@@ -222,10 +223,21 @@ export const GET = withErrorHandling(async (_request: NextRequest, { params }: R
     contact_id: r.contact_id || null,
   }))
 
+  // Agent activity (non-blocking — fail gracefully if table doesn't exist yet)
+  let agentActivity: any[] = []
+  try {
+    if (wsId) {
+      agentActivity = await getAgentActivity(eventIdNum, wsId, 20)
+    }
+  } catch {
+    // Table may not exist yet — that's fine
+  }
+
   return NextResponse.json({
     funnel,
     needs_attention: needsAttention,
     activity,
+    agent_activity: agentActivity,
     meta: {
       total_capacity: totalCapacity,
       has_objectives: Number(objectives.count) > 0,

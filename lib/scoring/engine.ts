@@ -33,15 +33,17 @@ interface ScoringResult {
 
 /**
  * Score a single contact against event objectives using Claude.
+ * Optional contextBlock provides rich event/company context from Phase 2.
  */
 export async function scoreContactForEvent(
   contact: ContactForScoring,
   objectives: ObjectiveForScoring[],
-  eventTitle: string
+  eventTitle: string,
+  contextBlock?: string
 ): Promise<ScoringResult> {
   const client = getAnthropicClient();
 
-  const prompt = buildScoringPrompt(contact, objectives, eventTitle);
+  const prompt = buildScoringPrompt(contact, objectives, eventTitle, contextBlock);
 
   const response = await client.messages.create({
     model: 'claude-sonnet-4-20250514',
@@ -60,14 +62,22 @@ export async function scoreContactForEvent(
 function buildScoringPrompt(
   contact: ContactForScoring,
   objectives: ObjectiveForScoring[],
-  eventTitle: string
+  eventTitle: string,
+  contextBlock?: string
 ): string {
   const lines = [
     `Score this contact's relevance to the event "${eventTitle}".`,
     '',
-    '## Contact Profile',
-    `Name: ${contact.full_name}`,
   ];
+
+  // Inject rich context if available
+  if (contextBlock) {
+    lines.push(contextBlock);
+    lines.push('');
+  }
+
+  lines.push('## Contact Profile');
+  lines.push(`Name: ${contact.full_name}`);
 
   if (contact.company) lines.push(`Company: ${contact.company}`);
   if (contact.title) lines.push(`Title: ${contact.title}`);

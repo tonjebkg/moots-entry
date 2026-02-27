@@ -13,8 +13,8 @@ export function TeamPerformanceTable({ team }: TeamPerformanceTableProps) {
       <div className="bg-white border border-ui-border rounded-lg p-6 shadow-sm">
         <h3 className="font-semibold text-brand-charcoal mb-4">Team Performance</h3>
         <div className="text-center py-8">
-          <Users size={28} className="mx-auto mb-3 text-ui-tertiary opacity-50" />
-          <p className="text-sm text-ui-tertiary">No team assignments yet</p>
+          <Users size={28} className="mx-auto mb-3 text-brand-terracotta opacity-60" />
+          <p className="text-sm text-ui-secondary">Assign team members to guests and I&apos;ll track engagement and follow-through here.</p>
         </div>
       </div>
     );

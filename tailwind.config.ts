@@ -37,6 +37,15 @@ export default {
         cta: '0 8px 20px rgba(184,117,94,0.25)',
         panel: '0 4px 40px rgba(0,0,0,0.12)',
       },
+      keyframes: {
+        'fade-in': {
+          '0%': { opacity: '0', transform: 'translateY(2px)' },
+          '100%': { opacity: '1', transform: 'translateY(0)' },
+        },
+      },
+      animation: {
+        'fade-in': 'fade-in 0.3s ease-out',
+      },
     },
   },
   plugins: []

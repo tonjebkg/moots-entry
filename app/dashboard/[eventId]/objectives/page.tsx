@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
-import { Target } from 'lucide-react'
+import { Target, CheckCircle2, Sparkles } from 'lucide-react'
 import { ObjectivesEditor } from '@/app/components/ObjectivesEditor'
 
 interface Objective {
@@ -12,6 +12,7 @@ interface Objective {
   criteria_config: Record<string, unknown>
   sort_order: number
   ai_interpretation?: string | null
+  ai_questions?: string[] | null
   qualifying_count?: number
 }
 
@@ -41,6 +42,10 @@ export default function ObjectivesPage() {
     }
   }
 
+  const [savedCallout, setSavedCallout] = useState(false)
+
+  const [scoringTriggered, setScoringTriggered] = useState(false)
+
   async function handleSave(updatedObjectives: Objective[]) {
     const res = await fetch(`/api/events/${eventId}/objectives`, {
       method: 'PUT',
@@ -50,6 +55,23 @@ export default function ObjectivesPage() {
     if (res.ok) {
       const data = await res.json()
       setObjectives(data.objectives)
+      setSavedCallout(true)
+      setTimeout(() => setSavedCallout(false), 8000)
+
+      // Auto-trigger scoring when objectives change
+      try {
+        const scoreRes = await fetch(`/api/events/${eventId}/scoring`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({}),
+        })
+        if (scoreRes.ok) {
+          setScoringTriggered(true)
+          setTimeout(() => setScoringTriggered(false), 6000)
+        }
+      } catch {
+        // Scoring trigger is best-effort — don't block the save
+      }
     } else {
       throw new Error('Failed to save')
     }
@@ -68,6 +90,29 @@ export default function ObjectivesPage() {
           </p>
         </div>
       </div>
+
+      {savedCallout && (
+        <div className="flex items-start gap-3 p-4 bg-emerald-50 border border-emerald-200 rounded-lg mb-4 animate-fade-in">
+          <CheckCircle2 size={18} className="text-emerald-600 shrink-0 mt-0.5" />
+          <div>
+            <p className="text-sm font-medium text-emerald-800">Objectives saved</p>
+            <p className="text-sm text-emerald-700 mt-0.5">
+              {scoringTriggered
+                ? 'AI scoring has been triggered automatically — contacts are being re-scored against your updated objectives.'
+                : 'These will power AI scoring for all contacts in your pool.'}
+            </p>
+          </div>
+        </div>
+      )}
+
+      {scoringTriggered && !savedCallout && (
+        <div className="flex items-center gap-3 p-4 bg-brand-cream border border-brand-terracotta/20 rounded-lg mb-4 animate-fade-in">
+          <Sparkles size={16} className="text-brand-terracotta shrink-0 animate-pulse" />
+          <p className="text-sm font-medium text-brand-charcoal">
+            Scoring contacts against your updated objectives...
+          </p>
+        </div>
+      )}
 
       {loading ? (
         <div className="text-center py-8 text-ui-tertiary">Loading objectives...</div>

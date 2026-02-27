@@ -1,7 +1,8 @@
 'use client'
 
 import { AvatarInitials } from '@/app/components/ui/AvatarInitials'
-import { Clock } from 'lucide-react'
+import { AgentAvatar } from '@/app/components/ui/AgentAvatar'
+import { Clock, Sparkles } from 'lucide-react'
 import { formatUSDateShort } from '@/lib/datetime'
 
 interface ActivityItem {
@@ -35,8 +36,8 @@ export function ActivityFeed({ activities, onContactClick }: ActivityFeedProps) 
   if (activities.length === 0) {
     return (
       <div className="bg-white rounded-card shadow-card p-8 text-center">
-        <Clock size={28} className="mx-auto mb-2 text-ui-tertiary opacity-50" />
-        <p className="text-sm text-ui-tertiary">No recent activity yet</p>
+        <Sparkles size={28} className="mx-auto mb-2 text-brand-terracotta opacity-60" />
+        <p className="text-sm text-ui-secondary">I&apos;m ready to start working on your event. Set objectives and I&apos;ll begin analyzing your guest pool.</p>
       </div>
     )
   }
@@ -47,12 +48,18 @@ export function ActivityFeed({ activities, onContactClick }: ActivityFeedProps) 
         <h3 className="text-sm font-semibold text-brand-charcoal">Recent Activity</h3>
       </div>
       <div className="divide-y divide-ui-border">
-        {activities.map((activity, idx) => (
+        {activities.map((activity, idx) => {
+          const isAgent = activity.actor === 'Moots' || activity.actor === 'System' || activity.actor === 'system'
+          return (
           <div key={idx} className="flex items-center gap-3 px-5 py-3">
-            <AvatarInitials
-              name={activity.actor || 'System'}
-              size={28}
-            />
+            {isAgent ? (
+              <AgentAvatar size="sm" />
+            ) : (
+              <AvatarInitials
+                name={activity.actor || 'System'}
+                size={28}
+              />
+            )}
             <div className="flex-1 min-w-0">
               <p className="text-sm text-brand-charcoal">
                 {activity.contact_id && onContactClick ? (
@@ -72,7 +79,8 @@ export function ActivityFeed({ activities, onContactClick }: ActivityFeedProps) 
               {timeAgo(activity.timestamp)}
             </span>
           </div>
-        ))}
+          )
+        })}
       </div>
     </div>
   )

@@ -2,12 +2,13 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Building2, ScrollText, ChevronLeft, Plug } from 'lucide-react';
+import { Building2, ScrollText, ChevronLeft, Plug, Building } from 'lucide-react';
 import { DashboardHeader } from '@/app/components/DashboardHeader';
 
 const settingsNav = [
   { href: '/dashboard/settings/workspace', label: 'Workspace', icon: Building2 },
   { href: '/dashboard/settings/integrations', label: 'Integrations', icon: Plug },
+  { href: '/dashboard/settings/company-profile', label: 'Company Profile', icon: Building },
   { href: '/dashboard/settings/audit-log', label: 'Audit Log', icon: ScrollText },
 ];
 
