@@ -53,7 +53,7 @@ export function EventTabNavigation({ eventId }: EventTabNavigationProps) {
                 <div className="h-5 w-px bg-ui-border mx-3 shrink-0" />
               )}
               {showPhaseLabel && (
-                <span className="text-[11px] font-semibold text-ui-tertiary uppercase tracking-wider mr-2 shrink-0 hidden lg:inline">
+                <span className="text-[12px] font-semibold text-ui-tertiary uppercase tracking-wider mr-2 shrink-0 hidden lg:inline">
                   {tab.phase}
                 </span>
               )}

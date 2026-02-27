@@ -45,7 +45,7 @@ export function ActivityFeed({ activities, onContactClick }: ActivityFeedProps) 
   return (
     <div className="bg-white rounded-card shadow-card overflow-hidden">
       <div className="px-5 py-4 border-b border-ui-border">
-        <h3 className="text-sm font-semibold text-brand-charcoal">Recent Activity</h3>
+        <h3 className="text-lg font-semibold text-brand-charcoal">Guest Activity</h3>
       </div>
       <div className="divide-y divide-ui-border">
         {activities.map((activity, idx) => {
@@ -75,7 +75,7 @@ export function ActivityFeed({ activities, onContactClick }: ActivityFeedProps) 
                 <span className="text-ui-secondary">{activity.action}</span>
               </p>
             </div>
-            <span className="text-xs text-ui-tertiary shrink-0">
+            <span className="text-[12px] text-ui-tertiary shrink-0">
               {timeAgo(activity.timestamp)}
             </span>
           </div>

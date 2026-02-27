@@ -95,8 +95,8 @@ export function FunnelStatsRow({ funnel, totalCapacity, eventId }: FunnelStatsRo
               />
             </div>
             {idx < steps.length - 1 && (
-              <div className="flex items-center px-1 text-ui-tertiary">
-                <ChevronRight size={16} />
+              <div className="flex items-center px-1.5 text-brand-charcoal/25">
+                <ChevronRight size={20} strokeWidth={2.5} />
               </div>
             )}
           </div>
@@ -107,10 +107,10 @@ export function FunnelStatsRow({ funnel, totalCapacity, eventId }: FunnelStatsRo
       {totalCapacity != null && totalCapacity > 0 && (
         <div className="bg-white rounded-card shadow-card px-5 py-3">
           <div className="flex items-center justify-between mb-1.5">
-            <span className="text-xs font-semibold text-ui-tertiary uppercase tracking-wider">
+            <span className="text-sm font-semibold text-ui-tertiary uppercase tracking-wider">
               Event Capacity
             </span>
-            <span className={`text-xs font-semibold ${isOverCapacity ? 'text-red-600' : 'text-brand-charcoal'}`}>
+            <span className={`text-sm font-semibold ${isOverCapacity ? 'text-red-600' : 'text-brand-charcoal'}`}>
               {funnel.confirmed} / {totalCapacity} seats
               {isOverCapacity && ` (${funnel.confirmed - totalCapacity} over)`}
             </span>

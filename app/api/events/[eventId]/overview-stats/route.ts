@@ -117,10 +117,10 @@ export const GET = withErrorHandling(async (_request: NextRequest, { params }: R
             WHEN 'INVITED' THEN 'was sent RSVP email'
             ELSE ci.status::text
           END AS action,
-          COALESCE(ci.updated_at, ci.created_at) AS timestamp
+          ci.created_at AS timestamp
         FROM campaign_invitations ci
         WHERE ci.event_id = ${eventIdNum}
-        ORDER BY COALESCE(ci.updated_at, ci.created_at) DESC
+        ORDER BY ci.created_at DESC
         LIMIT 8
       )
       UNION ALL
@@ -210,8 +210,8 @@ export const GET = withErrorHandling(async (_request: NextRequest, { params }: R
     needsAttention.push({
       type: 'unscored_contacts',
       count: unscoredCount,
-      label: `${unscoredCount} contacts are waiting to be scored. I'll match them against your objectives.`,
-      action: 'Run AI Scoring',
+      label: `contacts are waiting to be scored. I'll match them against your objectives — takes about 2 minutes.`,
+      action: 'Score them now',
     })
   }
 

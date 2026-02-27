@@ -44,7 +44,7 @@ const ITEM_CONFIG: Record<string, { icon: React.ElementType; href: (eventId: str
   unscored_contacts: {
     icon: Brain,
     href: (id) => `/dashboard/${id}/guest-intelligence?action=score`,
-    defaultAction: 'Run AI Scoring',
+    defaultAction: 'Score them now',
   },
   no_objectives: {
     icon: Target,
@@ -60,8 +60,8 @@ export function NeedsAttentionSection({ items, eventId }: NeedsAttentionSectionP
     <div className="bg-white rounded-card shadow-card border-l-4 border-l-brand-terracotta overflow-hidden">
       <div className="px-5 py-4 border-b border-ui-border">
         <div className="flex items-center gap-2">
-          <AlertCircle size={16} className="text-brand-terracotta" />
-          <h3 className="text-sm font-semibold text-brand-charcoal">Needs Attention</h3>
+          <AlertCircle size={18} className="text-brand-terracotta" />
+          <h3 className="text-lg font-semibold text-brand-charcoal">Needs Attention</h3>
         </div>
       </div>
       <div className="divide-y divide-ui-border">
@@ -74,13 +74,13 @@ export function NeedsAttentionSection({ items, eventId }: NeedsAttentionSectionP
                 <div className="w-8 h-8 rounded-lg bg-brand-terracotta/10 flex items-center justify-center">
                   <Icon size={15} className="text-brand-terracotta" />
                 </div>
-                <span className="text-sm text-brand-charcoal">
-                  <strong>{item.count}</strong> {item.label}
+                <span className="text-sm text-brand-charcoal leading-snug">
+                  <strong className="text-base font-bold text-brand-terracotta">{item.count}</strong> {item.label}
                 </span>
               </div>
               <Link
                 href={config.href(eventId)}
-                className="px-3 py-1.5 text-xs font-semibold text-brand-terracotta hover:bg-brand-terracotta/5 rounded-md transition-colors"
+                className="px-3 py-1.5 text-sm font-semibold text-brand-terracotta hover:bg-brand-terracotta/5 rounded-md transition-colors"
               >
                 {item.action || config.defaultAction} →
               </Link>

@@ -21,11 +21,11 @@ export function StatCard({ label, value, subtitle, icon: Icon, iconColor = 'text
             <Icon size={16} className={iconColor} />
           </div>
         )}
-        <span className="text-[11px] font-semibold text-ui-tertiary uppercase tracking-wider">{label}</span>
+        <span className="text-[13px] font-semibold text-ui-tertiary uppercase tracking-wider">{label}</span>
       </div>
       <div className="font-display text-2xl font-bold text-brand-charcoal">{value}</div>
       {subtitle && (
-        <div className="text-[11px] text-ui-tertiary mt-1">{subtitle}</div>
+        <div className="text-[13px] text-ui-tertiary mt-1">{subtitle}</div>
       )}
     </>
   )

@@ -205,7 +205,7 @@ export function ChatPanel({ eventId }: ChatPanelProps) {
         )}
 
         {/* Persistent input bar — always visible */}
-        <div className={`mx-4 mb-4 bg-white border border-ui-border ${hasMessages ? 'rounded-b-xl' : 'rounded-xl'} shadow-panel px-3 py-2.5`}>
+        <div className={`mx-4 mb-4 bg-[#FFFEFA] border-[1.5px] border-[#C8B8A8] ${hasMessages ? 'rounded-b-xl' : 'rounded-xl'} px-4 py-3`} style={{ boxShadow: '0 2px 12px rgba(0,0,0,0.08), 0 0 0 1px rgba(184,117,94,0.08)' }}>
           {/* Suggested questions when no messages */}
           {!hasMessages && (
             <div className="flex items-center gap-2 mb-2 overflow-x-auto pb-1">
@@ -213,7 +213,7 @@ export function ChatPanel({ eventId }: ChatPanelProps) {
                 <button
                   key={q}
                   onClick={() => handleSend(q)}
-                  className="shrink-0 text-xs px-2.5 py-1 rounded-full bg-brand-cream text-ui-secondary hover:text-brand-terracotta hover:bg-brand-terracotta/5 transition-colors border border-transparent hover:border-brand-terracotta/20"
+                  className="shrink-0 text-[13px] px-3 py-1.5 rounded-full bg-brand-cream text-brand-charcoal/70 hover:text-brand-terracotta hover:bg-brand-terracotta/5 transition-colors border border-[#D5CEC6] hover:border-brand-terracotta/30"
                 >
                   {q}
                 </button>
@@ -230,15 +230,15 @@ export function ChatPanel({ eventId }: ChatPanelProps) {
               onFocus={() => { if (hasMessages && !chatOpen) setChatOpen(true); }}
               placeholder="Ask Moots about your event..."
               rows={1}
-              className="flex-1 resize-none rounded-lg border border-ui-border px-3 py-2 text-sm text-brand-charcoal placeholder:text-ui-tertiary focus:outline-none focus:ring-2 focus:ring-brand-terracotta/30 focus:border-brand-terracotta max-h-24"
+              className="flex-1 resize-none rounded-lg border border-ui-border px-3 py-2 text-[15px] text-brand-charcoal placeholder:text-ui-tertiary focus:outline-none focus:ring-2 focus:ring-brand-terracotta/30 focus:border-brand-terracotta max-h-24"
               style={{ minHeight: '36px' }}
             />
             <button
               onClick={() => handleSend()}
               disabled={!input.trim() || streaming}
-              className="shrink-0 p-2 rounded-lg bg-brand-terracotta text-white hover:bg-brand-terracotta/90 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              className="shrink-0 p-2.5 rounded-lg bg-brand-terracotta text-white hover:bg-brand-terracotta/90 transition-colors disabled:opacity-40 disabled:cursor-not-allowed shadow-sm"
             >
-              <Send size={14} />
+              <Send size={16} />
             </button>
           </div>
         </div>

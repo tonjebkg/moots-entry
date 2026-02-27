@@ -73,7 +73,7 @@ export function AgentActivityFeed({ activities }: AgentActivityFeedProps) {
     <div className="bg-white rounded-card shadow-card overflow-hidden">
       <div className="px-5 py-4 border-b border-ui-border flex items-center gap-2">
         <AgentAvatar size="sm" />
-        <h3 className="text-sm font-semibold text-brand-charcoal">Agent Activity</h3>
+        <h3 className="text-lg font-semibold text-brand-charcoal">AI Activity</h3>
       </div>
       <div className="divide-y divide-ui-border">
         {activities.map(activity => {
@@ -92,10 +92,10 @@ export function AgentActivityFeed({ activities }: AgentActivityFeedProps) {
                 <AgentAvatar size="sm" />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-0.5">
-                    <span className={`inline-flex px-1.5 py-0.5 text-[10px] font-semibold rounded border ${colorClass}`}>
+                    <span className={`inline-flex px-1.5 py-0.5 text-[11px] font-semibold rounded border ${colorClass}`}>
                       {isSuggestion ? 'Suggestion' : (TYPE_LABELS[activity.activity_type] || activity.activity_type)}
                     </span>
-                    <span className="text-xs text-ui-tertiary">
+                    <span className="text-[12px] text-ui-tertiary">
                       {timeAgo(activity.created_at)}
                     </span>
                   </div>
