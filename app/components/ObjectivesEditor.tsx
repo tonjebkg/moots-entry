@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useRef, useCallback, useEffect } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
-import { Plus, Trash2, Target, Sparkles, CheckCircle, Loader2, Check } from 'lucide-react'
+import { Plus, Trash2, Target, Sparkles, CheckCircle, Loader2, Check, Save, ArrowRight } from 'lucide-react'
 
 interface Objective {
   id?: string
@@ -41,28 +41,37 @@ export function ObjectivesEditor({ eventId, objectives: initial, onSave, hasScor
   const cleanTexts = useRef<Map<number, string>>(
     new Map(initial.map((o, i) => [i, o.objective_text]))
   )
-  const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
-  // Ref to always access latest objectives in debounced callback
+  // Ref to always access latest objectives
   const objectivesRef = useRef(objectives)
   useEffect(() => { objectivesRef.current = objectives }, [objectives])
 
-  /** Transform an AI question into a directive statement */
+  /** Transform an AI question into a directive statement (safety net for legacy data) */
   function questionToDirective(q: string): string {
     let text = q.trim()
     // Remove leading "?" prefix
     if (text.startsWith('?')) text = text.slice(1).trim()
-    // Strip "Should I/we ..." patterns
-    text = text.replace(/^should\s+(?:I|we)\s+/i, '')
-    // Strip "Do you want me to..." patterns
-    text = text.replace(/^do\s+you\s+want\s+(?:me\s+)?to\s+/i, '')
     // Remove trailing "?"
     text = text.replace(/\?$/, '').trim()
-    // Capitalize first letter and add period
+    // Strip question patterns → directives
+    text = text.replace(/^should\s+(?:I|we)\s+/i, '')
+    text = text.replace(/^do\s+you\s+want\s+(?:me\s+)?to\s+/i, '')
+    // "Are there specific X..." → "Focus on X..."
+    text = text.replace(/^are\s+there\s+(?:specific\s+)?/i, 'Focus on ')
+    // "Is there a minimum X..." → "Set minimum X..."
+    text = text.replace(/^is\s+there\s+a\s+minimum\s+/i, 'Set minimum ')
+    // "When you say X, should I..." → strip prefix
+    text = text.replace(/^when\s+you\s+say\s+[^,]+,\s*/i, '')
+    text = text.replace(/^should\s+(?:I|we)\s+/i, '')
+    // Capitalize first letter
     if (text.length > 0) {
       text = text.charAt(0).toUpperCase() + text.slice(1)
-      if (!text.endsWith('.')) text += '.'
     }
     return text
+  }
+
+  /** Format directive for chip display (no trailing period) */
+  function directiveForDisplay(q: string): string {
+    return questionToDirective(q).replace(/\.$/, '')
   }
 
   async function applySuggestion(objIndex: number, questionIndex: number, questionText: string) {
@@ -116,7 +125,14 @@ export function ObjectivesEditor({ eventId, objectives: initial, onSave, hasScor
     ])
   }
 
-  const doAutoSave = useCallback(async () => {
+  function updateObjective(index: number, updates: Partial<Objective>) {
+    const next = [...objectives]
+    next[index] = { ...next[index], ...updates }
+    setObjectives(next)
+    setSavedIndex(null)
+  }
+
+  async function handleManualSave(index: number) {
     const current = objectivesRef.current
     const valid = current.filter(o => o.objective_text.trim())
     if (valid.length === 0) return
@@ -125,27 +141,12 @@ export function ObjectivesEditor({ eventId, objectives: initial, onSave, hasScor
       const equalWeight = 1.0
       await onSave(valid.map((o, i) => ({ ...o, weight: equalWeight, sort_order: i })))
       current.forEach((o, i) => cleanTexts.current.set(i, o.objective_text))
-      setSavedIndex(-1) // -1 = global save indicator
+      setSavedIndex(index)
       setTimeout(() => setSavedIndex(null), 3000)
     } catch (err) {
-      console.error('Auto-save failed:', err)
+      console.error('Save failed:', err)
     } finally {
       setAutoSaving(false)
-    }
-  }, [onSave])
-
-  function updateObjective(index: number, updates: Partial<Objective>) {
-    const next = [...objectives]
-    next[index] = { ...next[index], ...updates }
-    setObjectives(next)
-    setSavedIndex(null)
-
-    // Debounced auto-save (1.5s after last keystroke)
-    if (debounceTimer.current) clearTimeout(debounceTimer.current)
-    if (next[index].objective_text.trim()) {
-      debounceTimer.current = setTimeout(() => {
-        doAutoSave()
-      }, 1500)
     }
   }
 
@@ -207,12 +208,6 @@ export function ObjectivesEditor({ eventId, objectives: initial, onSave, hasScor
                   <textarea
                     value={obj.objective_text}
                     onChange={(e) => updateObjective(originalIndex, { objective_text: e.target.value })}
-                    onBlur={() => {
-                      if (isDirty(originalIndex) && obj.objective_text.trim()) {
-                        if (debounceTimer.current) clearTimeout(debounceTimer.current)
-                        doAutoSave()
-                      }
-                    }}
                     placeholder={PLACEHOLDER_EXAMPLES[originalIndex % PLACEHOLDER_EXAMPLES.length]}
                     rows={2}
                     className="w-full px-3 py-2.5 text-base border border-ui-border rounded-lg focus:outline-none focus:border-brand-terracotta focus:ring-1 focus:ring-brand-terracotta resize-none placeholder:text-ui-tertiary/60"
@@ -275,8 +270,8 @@ export function ObjectivesEditor({ eventId, objectives: initial, onSave, hasScor
                                   disabled={rescoringIndex === originalIndex}
                                   className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm text-brand-charcoal bg-white border border-ui-border rounded-full hover:border-brand-terracotta hover:text-brand-terracotta hover:bg-brand-terracotta/5 transition-colors cursor-pointer disabled:opacity-50"
                                 >
-                                  <Plus size={13} className="shrink-0" />
-                                  <span>{q.replace(/^\?\s*/, '')}</span>
+                                  <span>{directiveForDisplay(q)}</span>
+                                  <ArrowRight size={13} className="shrink-0 text-brand-terracotta" />
                                 </button>
                               )
                             })}
@@ -293,13 +288,22 @@ export function ObjectivesEditor({ eventId, objectives: initial, onSave, hasScor
                   )}
                 </div>
                 <div className="flex items-center gap-1.5 shrink-0">
-                  {autoSaving && dirty && (
+                  {dirty && obj.objective_text.trim() && !autoSaving && (
+                    <button
+                      onClick={() => handleManualSave(originalIndex)}
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-brand-forest text-white text-sm font-semibold rounded-md hover:bg-brand-forest/90 transition-colors"
+                    >
+                      <Save size={14} />
+                      Save
+                    </button>
+                  )}
+                  {autoSaving && (
                     <span className="flex items-center gap-1 text-xs text-ui-tertiary font-medium">
                       <Loader2 size={12} className="animate-spin" />
                       Saving...
                     </span>
                   )}
-                  {(justSaved || savedIndex === -1) && !dirty && !autoSaving && (
+                  {justSaved && !dirty && !autoSaving && (
                     <span className="flex items-center gap-1 text-xs text-emerald-600 font-medium animate-fade-in">
                       <CheckCircle size={12} />
                       Saved

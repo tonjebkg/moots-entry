@@ -6,7 +6,8 @@ import Link from 'next/link'
 import Image from 'next/image'
 import {
   Sparkles, Settings, Search, Users, Target, CheckCircle, Send, X, Clock,
-  Plus, Filter, ChevronDown, ChevronRight, XCircle, Linkedin, Globe, Database, UserPlus
+  Plus, Filter, ChevronDown, ChevronRight, XCircle, Linkedin, Globe, Database, UserPlus,
+  Upload, Calendar, Tag
 } from 'lucide-react'
 import { StatCard } from '@/app/components/ui/StatCard'
 import { ScoringJobProgress } from '@/app/components/ScoringJobProgress'
@@ -383,8 +384,25 @@ export default function GuestIntelligencePage() {
   // Add to wave modal
   const [waveModalContactIds, setWaveModalContactIds] = useState<string[] | null>(null)
 
-  // Add guest modal
+  // Add guest modal + import menus
   const [showAddGuest, setShowAddGuest] = useState(false)
+  const [showAddMenu, setShowAddMenu] = useState(false)
+  const [showImportCsv, setShowImportCsv] = useState(false)
+  const [showImportPeople, setShowImportPeople] = useState(false)
+  const [showImportEvent, setShowImportEvent] = useState(false)
+
+  // Status dropdown per contact
+  const [statusDropdownId, setStatusDropdownId] = useState<string | null>(null)
+
+  // Bulk actions
+  const [bulkStatusOpen, setBulkStatusOpen] = useState(false)
+
+  // Tag management
+  const [tagManagerId, setTagManagerId] = useState<string | null>(null)
+  const [tagInput, setTagInput] = useState('')
+
+  // Pending review min score
+  const [pendingMinScore, setPendingMinScore] = useState(0)
 
   // Scoring feedback
   const [scoringComplete, setScoringComplete] = useState(false)
@@ -500,6 +518,49 @@ export default function GuestIntelligencePage() {
     }
   }
 
+  async function bulkChangeStatus(newStatus: string) {
+    const contactsToUpdate = contacts.filter(c => selectedIds.has(c.contact_id) && c.invitation_id)
+    for (const c of contactsToUpdate) {
+      await handleChangeStatus(c.invitation_id!, newStatus)
+    }
+    setBulkStatusOpen(false)
+    setSelectedIds(new Set())
+  }
+
+  async function bulkDecline() {
+    if (!confirm(`Decline ${selectedIds.size} contact${selectedIds.size > 1 ? 's' : ''}?`)) return
+    for (const id of selectedIds) {
+      await declineContact(id)
+    }
+    setSelectedIds(new Set())
+  }
+
+  async function addTagToContact(contactId: string, tag: string) {
+    try {
+      await fetch(`/api/contacts/${contactId}/tags`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tag }),
+      })
+      fetchData()
+    } catch (err) {
+      console.error('Failed to add tag:', err)
+    }
+  }
+
+  async function removeTagFromContact(contactId: string, tag: string) {
+    try {
+      await fetch(`/api/contacts/${contactId}/tags`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tag }),
+      })
+      fetchData()
+    } catch (err) {
+      console.error('Failed to remove tag:', err)
+    }
+  }
+
   function toggleSelect(contactId: string) {
     setSelectedIds(prev => {
       const next = new Set(prev)
@@ -570,6 +631,17 @@ export default function GuestIntelligencePage() {
   const allFiltered = applyFilters(contacts)
   const rankedFiltered = applyActiveFilter(allFiltered)
 
+  // Derive objective filter text from contact data
+  const objectiveFilterText = urlObjective
+    ? (() => {
+        for (const c of contacts) {
+          const mo = c.matched_objectives?.find((m: any) => m.objective_id === urlObjective)
+          if (mo?.objective_text) return mo.objective_text as string
+        }
+        return 'Selected Objective'
+      })()
+    : ''
+
   const viewContacts = viewMode === 'pending'
     ? applyFilters(pendingContacts)
     : rankedFiltered
@@ -627,13 +699,51 @@ export default function GuestIntelligencePage() {
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <button
-            onClick={() => setShowAddGuest(true)}
-            className="flex items-center gap-1.5 px-3 py-2 border border-ui-border rounded-lg text-sm font-medium text-ui-secondary hover:bg-brand-cream transition-colors"
-          >
-            <UserPlus size={14} />
-            Add Guest
-          </button>
+          <div className="relative">
+            <button
+              onClick={() => setShowAddMenu(!showAddMenu)}
+              className="flex items-center gap-1.5 px-3 py-2 border border-ui-border rounded-lg text-sm font-medium text-ui-secondary hover:bg-brand-cream transition-colors"
+            >
+              <UserPlus size={14} />
+              Add Guests
+              <ChevronDown size={12} />
+            </button>
+            {showAddMenu && (
+              <>
+                <div className="fixed inset-0 z-10" onClick={() => setShowAddMenu(false)} />
+                <div className="absolute right-0 top-full mt-1 w-56 bg-white border border-ui-border rounded-lg shadow-lg z-20 py-1">
+                  <button
+                    onClick={() => { setShowAddMenu(false); setShowAddGuest(true) }}
+                    className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-brand-charcoal hover:bg-brand-cream transition-colors"
+                  >
+                    <UserPlus size={14} className="text-ui-tertiary" />
+                    Add Single Guest
+                  </button>
+                  <button
+                    onClick={() => { setShowAddMenu(false); setShowImportCsv(true) }}
+                    className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-brand-charcoal hover:bg-brand-cream transition-colors"
+                  >
+                    <Upload size={14} className="text-ui-tertiary" />
+                    Import from CSV
+                  </button>
+                  <button
+                    onClick={() => { setShowAddMenu(false); setShowImportPeople(true) }}
+                    className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-brand-charcoal hover:bg-brand-cream transition-colors"
+                  >
+                    <Users size={14} className="text-ui-tertiary" />
+                    Import from People
+                  </button>
+                  <button
+                    onClick={() => { setShowAddMenu(false); setShowImportEvent(true) }}
+                    className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-brand-charcoal hover:bg-brand-cream transition-colors"
+                  >
+                    <Calendar size={14} className="text-ui-tertiary" />
+                    Import from Previous Event
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
           <Link
             href={`/dashboard/${eventId}/objectives`}
             className="flex items-center gap-1.5 px-3 py-2 border border-ui-border rounded-lg text-sm font-medium text-ui-secondary hover:bg-brand-cream transition-colors"
@@ -751,6 +861,7 @@ export default function GuestIntelligencePage() {
           {/* Composite filter readout (D2) */}
           {(() => {
             const parts: string[] = []
+            if (urlObjective) parts.push(`Objective filter`)
             if (activeFilter) parts.push(FILTER_LABELS[activeFilter] || activeFilter)
             if (searchQuery.trim()) parts.push(`"${searchQuery.trim()}"`)
             if (sourceFilter !== 'all') parts.push(SOURCE_LABELS[sourceFilter]?.label || sourceFilter)
@@ -784,7 +895,7 @@ export default function GuestIntelligencePage() {
           <div className="flex items-center justify-between gap-4">
             <div className="flex gap-1 bg-brand-cream rounded-lg p-1">
               {([
-                { key: 'all' as ViewMode, label: `All Contacts (${rankedFiltered.length})` },
+                { key: 'all' as ViewMode, label: urlObjective ? `Filtered (${rankedFiltered.length})` : `All Contacts (${rankedFiltered.length})` },
                 { key: 'pending' as ViewMode, label: `Pending Review (${pendingContacts.length})` },
               ]).map(tab => (
                 <button
@@ -852,22 +963,78 @@ export default function GuestIntelligencePage() {
 
           {/* Bulk Action Bar */}
           {selectedIds.size > 0 && (
-            <div className="flex items-center gap-4 bg-brand-terracotta/5 border border-brand-terracotta/20 rounded-lg px-4 py-3">
+            <div className="flex items-center gap-3 bg-brand-terracotta/5 border border-brand-terracotta/20 rounded-lg px-4 py-3">
               <span className="text-sm font-medium text-brand-charcoal">
                 {selectedIds.size} contact{selectedIds.size > 1 ? 's' : ''} selected
               </span>
               <button
                 onClick={() => setWaveModalContactIds(Array.from(selectedIds))}
-                className="flex items-center gap-1.5 px-4 py-2 bg-brand-terracotta hover:bg-brand-terracotta/90 text-white text-sm font-semibold rounded-pill transition-colors shadow-cta"
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-brand-terracotta hover:bg-brand-terracotta/90 text-white text-xs font-semibold rounded-pill transition-colors"
               >
-                <Plus size={14} />
-                Add Selected to Wave
+                <Plus size={12} />
+                Add to Wave
+              </button>
+              <div className="relative">
+                <button
+                  onClick={() => setBulkStatusOpen(!bulkStatusOpen)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 border border-ui-border bg-white text-xs font-semibold text-brand-charcoal rounded-pill hover:bg-brand-cream transition-colors"
+                >
+                  Change Status
+                  <ChevronDown size={10} />
+                </button>
+                {bulkStatusOpen && (
+                  <>
+                    <div className="fixed inset-0 z-10" onClick={() => setBulkStatusOpen(false)} />
+                    <div className="absolute left-0 top-full mt-1 w-36 bg-white border border-ui-border rounded-lg shadow-lg z-20 py-1">
+                      {[
+                        { value: 'CONSIDERING', label: 'Selected' },
+                        { value: 'INVITED', label: 'Invited' },
+                        { value: 'ACCEPTED', label: 'Confirmed' },
+                        { value: 'DECLINED', label: 'Declined' },
+                        { value: 'WAITLIST', label: 'Waitlist' },
+                      ].map(opt => (
+                        <button
+                          key={opt.value}
+                          onClick={() => bulkChangeStatus(opt.value)}
+                          className="w-full text-left px-3 py-1.5 text-xs font-medium text-brand-charcoal hover:bg-brand-cream transition-colors"
+                        >
+                          {opt.label}
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
+              <button
+                onClick={bulkDecline}
+                className="flex items-center gap-1.5 px-3 py-1.5 border border-red-200 text-red-600 text-xs font-semibold rounded-pill hover:bg-red-50 transition-colors"
+              >
+                <XCircle size={12} />
+                Decline Selected
               </button>
               <button
                 onClick={() => setSelectedIds(new Set())}
-                className="text-sm text-ui-tertiary hover:text-brand-charcoal"
+                className="text-xs text-ui-tertiary hover:text-brand-charcoal ml-auto"
               >
                 Clear
+              </button>
+            </div>
+          )}
+
+          {/* Objective filter banner */}
+          {urlObjective && (
+            <div className="flex items-center gap-3 p-3 bg-brand-terracotta/5 border border-brand-terracotta/20 rounded-lg">
+              <Target size={16} className="text-brand-terracotta shrink-0" />
+              <p className="text-sm text-brand-charcoal flex-1">
+                <span className="font-semibold">Filtered by objective:</span>{' '}
+                <span className="text-ui-secondary">{objectiveFilterText}</span>{' '}
+                · <span className="font-semibold">{rankedFiltered.length} contact{rankedFiltered.length !== 1 ? 's' : ''}</span> qualify
+              </p>
+              <button
+                onClick={() => router.replace(`/dashboard/${eventId}/guest-intelligence`)}
+                className="text-sm font-semibold text-brand-terracotta hover:underline whitespace-nowrap"
+              >
+                Clear filter
               </button>
             </div>
           )}
@@ -971,15 +1138,17 @@ export default function GuestIntelligencePage() {
                             <td className="px-4 py-3 text-ui-secondary">{c.company || '—'}</td>
                             <td className="px-4 py-3 text-ui-secondary">{c.title || '—'}</td>
                             <td className="px-4 py-3">
-                              {firstTag ? (
-                                <div className="flex items-center gap-1">
-                                  <TagBadge label={firstTag} variant={getTagVariant(firstTag)} />
-                                  {(c.tags?.length || 0) > 1 && (
+                              {(c.tags || []).length > 0 ? (
+                                <div className="flex items-center gap-1 flex-wrap">
+                                  {(c.tags || []).slice(0, 2).map((t, ti) => (
+                                    <TagBadge key={ti} label={t} variant={getTagVariant(t)} />
+                                  ))}
+                                  {(c.tags?.length || 0) > 2 && (
                                     <span
                                       className="text-[10px] font-semibold text-ui-tertiary bg-gray-100 px-1.5 py-0.5 rounded cursor-default"
-                                      title={(c.tags || []).slice(1).join(', ')}
+                                      title={(c.tags || []).slice(2).join(', ')}
                                     >
-                                      +{(c.tags?.length || 0) - 1}
+                                      +{(c.tags?.length || 0) - 2}
                                     </span>
                                   )}
                                 </div>
@@ -996,10 +1165,43 @@ export default function GuestIntelligencePage() {
                                 <span className="text-xs text-ui-tertiary">—</span>
                               )}
                             </td>
-                            <td className="px-4 py-3">
-                              <span className={`inline-flex px-2 py-0.5 text-[10px] font-semibold rounded border whitespace-nowrap ${statusInfo.color}`}>
-                                {statusInfo.label}
-                              </span>
+                            <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                              <div className="relative">
+                                <button
+                                  onClick={() => setStatusDropdownId(statusDropdownId === c.contact_id ? null : c.contact_id)}
+                                  className={`inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-semibold rounded border whitespace-nowrap ${statusInfo.color} hover:ring-1 hover:ring-brand-terracotta/30 transition-all cursor-pointer`}
+                                >
+                                  {statusInfo.label}
+                                  <ChevronDown size={8} />
+                                </button>
+                                {statusDropdownId === c.contact_id && (
+                                  <>
+                                    <div className="fixed inset-0 z-10" onClick={() => setStatusDropdownId(null)} />
+                                    <div className="absolute left-0 top-full mt-1 w-36 bg-white border border-ui-border rounded-lg shadow-lg z-20 py-1">
+                                      {[
+                                        { value: 'CONSIDERING', label: 'Selected', color: 'text-blue-700' },
+                                        { value: 'INVITED', label: 'Invited', color: 'text-amber-700' },
+                                        { value: 'ACCEPTED', label: 'Confirmed', color: 'text-emerald-700' },
+                                        { value: 'DECLINED', label: 'Declined', color: 'text-red-600' },
+                                        { value: 'WAITLIST', label: 'Waitlist', color: 'text-gray-600' },
+                                      ].map(opt => (
+                                        <button
+                                          key={opt.value}
+                                          onClick={() => {
+                                            if (c.invitation_id) {
+                                              handleChangeStatus(c.invitation_id, opt.value)
+                                            }
+                                            setStatusDropdownId(null)
+                                          }}
+                                          className={`w-full text-left px-3 py-1.5 text-xs font-medium ${opt.color} hover:bg-brand-cream transition-colors`}
+                                        >
+                                          {opt.label}
+                                        </button>
+                                      ))}
+                                    </div>
+                                  </>
+                                )}
+                              </div>
                             </td>
                             <td className="px-4 py-3 text-center">
                               <ChevronDown
@@ -1013,7 +1215,7 @@ export default function GuestIntelligencePage() {
                             <tr>
                               <td colSpan={9} className="px-0 py-0">
                                 <div className="border-t border-ui-border bg-brand-cream px-6 py-4 space-y-4">
-                                  {/* Source badges row */}
+                                  {/* Source badges + Tags row */}
                                   <div className="flex items-center gap-2 flex-wrap">
                                     {c.linkedin_url && (
                                       <a href={c.linkedin_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 px-2 py-1 bg-[#0077b5]/10 text-[#0077b5] text-[11px] font-semibold rounded-md hover:bg-[#0077b5]/20 transition-colors">
@@ -1029,6 +1231,62 @@ export default function GuestIntelligencePage() {
                                       <span className="inline-flex items-center gap-1 px-2 py-1 bg-brand-terracotta/10 text-brand-terracotta text-[11px] font-semibold rounded-md">
                                         <Target size={12} /> AI Scored
                                       </span>
+                                    )}
+                                  </div>
+
+                                  {/* Full Tags + Manage */}
+                                  <div>
+                                    <div className="flex items-center gap-2 mb-2">
+                                      <h4 className="text-xs font-semibold text-ui-tertiary uppercase tracking-wider">Tags</h4>
+                                      <button
+                                        onClick={(e) => { e.stopPropagation(); setTagManagerId(tagManagerId === c.contact_id ? null : c.contact_id); setTagInput('') }}
+                                        className="text-[11px] font-semibold text-brand-terracotta hover:underline"
+                                      >
+                                        Manage Tags
+                                      </button>
+                                    </div>
+                                    <div className="flex items-center gap-1.5 flex-wrap">
+                                      {(c.tags || []).length > 0 ? (
+                                        (c.tags || []).map((t, ti) => (
+                                          <span key={ti} className="inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-medium rounded-full border bg-white text-brand-charcoal border-ui-border">
+                                            {t}
+                                            {tagManagerId === c.contact_id && (
+                                              <button onClick={(e) => { e.stopPropagation(); removeTagFromContact(c.contact_id, t) }} className="text-ui-tertiary hover:text-red-500">
+                                                <X size={10} />
+                                              </button>
+                                            )}
+                                          </span>
+                                        ))
+                                      ) : (
+                                        <span className="text-xs text-ui-tertiary">No tags</span>
+                                      )}
+                                    </div>
+                                    {tagManagerId === c.contact_id && (
+                                      <div className="flex items-center gap-2 mt-2" onClick={(e) => e.stopPropagation()}>
+                                        <input
+                                          value={tagInput}
+                                          onChange={(e) => setTagInput(e.target.value)}
+                                          onKeyDown={(e) => {
+                                            if (e.key === 'Enter' && tagInput.trim()) {
+                                              addTagToContact(c.contact_id, tagInput.trim())
+                                              setTagInput('')
+                                            }
+                                          }}
+                                          placeholder="Add tag and press Enter..."
+                                          className="px-2.5 py-1.5 text-xs border border-ui-border rounded-md bg-white focus:outline-none focus:border-brand-terracotta w-48"
+                                        />
+                                        <div className="flex gap-1">
+                                          {['VIP', 'Speaker', 'Priority'].filter(s => !(c.tags || []).includes(s)).slice(0, 3).map(s => (
+                                            <button
+                                              key={s}
+                                              onClick={() => addTagToContact(c.contact_id, s)}
+                                              className="px-2 py-1 text-[10px] font-medium text-brand-terracotta border border-brand-terracotta/30 rounded-full hover:bg-brand-terracotta/5"
+                                            >
+                                              + {s}
+                                            </button>
+                                          ))}
+                                        </div>
+                                      </div>
                                     )}
                                   </div>
 
@@ -1169,21 +1427,42 @@ export default function GuestIntelligencePage() {
             )
           )}
 
-          {/* Pending Review View — same table format as All Contacts */}
+          {/* Pending Review View — with checkboxes, bulk actions, min score filter */}
           {viewMode === 'pending' && (
             <div className="space-y-4">
               {viewContacts.length > 0 ? (
                 <>
-                  <div className="bg-amber-50 border border-amber-200 rounded-card p-4">
-                    <p className="text-sm text-amber-800">
-                      <strong>{pendingContacts.length}</strong> inbound contact{pendingContacts.length > 1 ? 's' : ''} from RSVPs and join requests awaiting your review.
-                      Review their AI intelligence below and decide: add to an invitation wave (approve) or decline.
-                    </p>
+                  <div className="flex items-center justify-between">
+                    <div className="bg-amber-50 border border-amber-200 rounded-card p-4 flex-1">
+                      <p className="text-sm text-amber-800">
+                        <strong>{pendingContacts.length}</strong> inbound contact{pendingContacts.length > 1 ? 's' : ''} from RSVPs and join requests awaiting your review.
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2 ml-4 shrink-0">
+                      <label className="text-xs font-medium text-ui-tertiary">Min Score:</label>
+                      <input
+                        type="range"
+                        min={0}
+                        max={100}
+                        value={pendingMinScore}
+                        onChange={(e) => setPendingMinScore(parseInt(e.target.value))}
+                        className="w-24"
+                      />
+                      <span className="text-xs font-mono text-ui-secondary w-6 text-right">{pendingMinScore}</span>
+                    </div>
                   </div>
                   <div className="bg-white border border-ui-border rounded-card shadow-card overflow-hidden">
                     <table className="w-full text-sm">
                       <thead className="bg-brand-cream border-b border-ui-border">
                         <tr>
+                          <th className="px-3 py-3 w-10">
+                            <input
+                              type="checkbox"
+                              checked={viewContacts.length > 0 && viewContacts.every(c => selectedIds.has(c.contact_id))}
+                              onChange={() => toggleSelectAll(viewContacts.map(c => c.contact_id))}
+                              className="rounded border-gray-300"
+                            />
+                          </th>
                           <th className="px-4 py-3 text-center font-semibold text-brand-charcoal w-20">Score</th>
                           <th className="px-4 py-3 text-left font-semibold text-brand-charcoal">Name</th>
                           <th className="px-4 py-3 text-left font-semibold text-brand-charcoal">Company</th>
@@ -1195,7 +1474,7 @@ export default function GuestIntelligencePage() {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-ui-border">
-                        {viewContacts.map(c => {
+                        {viewContacts.filter(c => pendingMinScore === 0 || (c.relevance_score ?? 0) >= pendingMinScore).map(c => {
                           const srcInfo = c.source ? SOURCE_LABELS[c.source] : null
                           const cHasScore = c.score_id !== null && c.relevance_score !== null
                           const isExpanded = expandedId === c.contact_id
@@ -1207,6 +1486,14 @@ export default function GuestIntelligencePage() {
                                 className={`hover:bg-brand-cream/50 transition-colors cursor-pointer ${isExpanded ? 'bg-brand-cream/30' : ''}`}
                                 onClick={() => setExpandedId(isExpanded ? null : c.contact_id)}
                               >
+                                <td className="px-3 py-3" onClick={(e) => e.stopPropagation()}>
+                                  <input
+                                    type="checkbox"
+                                    checked={selectedIds.has(c.contact_id)}
+                                    onChange={() => toggleSelect(c.contact_id)}
+                                    className="rounded border-gray-300"
+                                  />
+                                </td>
                                 <td className="px-4 py-3 text-center">
                                   {c.relevance_score != null ? (
                                     <ScoreBar score={c.relevance_score} width={60} />
@@ -1223,8 +1510,17 @@ export default function GuestIntelligencePage() {
                                 <td className="px-4 py-3 text-ui-secondary">{c.company || '—'}</td>
                                 <td className="px-4 py-3 text-ui-secondary">{c.title || '—'}</td>
                                 <td className="px-4 py-3">
-                                  {firstTag ? (
-                                    <TagBadge label={firstTag} variant={getTagVariant(firstTag)} />
+                                  {(c.tags || []).length > 0 ? (
+                                    <div className="flex items-center gap-1">
+                                      {(c.tags || []).slice(0, 2).map((t, i) => (
+                                        <TagBadge key={i} label={t} variant={getTagVariant(t)} />
+                                      ))}
+                                      {(c.tags?.length || 0) > 2 && (
+                                        <span className="text-[10px] font-semibold text-ui-tertiary bg-gray-100 px-1.5 py-0.5 rounded cursor-default" title={(c.tags || []).slice(2).join(', ')}>
+                                          +{(c.tags?.length || 0) - 2}
+                                        </span>
+                                      )}
+                                    </div>
                                   ) : (
                                     <span className="text-xs text-ui-tertiary">—</span>
                                   )}
@@ -1253,7 +1549,7 @@ export default function GuestIntelligencePage() {
                               {/* Expandable detail row */}
                               {isExpanded && (
                                 <tr>
-                                  <td colSpan={8} className="px-0 py-0">
+                                  <td colSpan={9} className="px-0 py-0">
                                     <div className="border-t border-ui-border bg-brand-cream px-6 py-4 space-y-4">
                                       {/* Source badges row */}
                                       <div className="flex items-center gap-2 flex-wrap">
@@ -1415,6 +1711,81 @@ export default function GuestIntelligencePage() {
             fetchData()
           }}
         />
+      )}
+
+      {/* Import from CSV Modal (stub) */}
+      {showImportCsv && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/30" onClick={() => setShowImportCsv(false)} />
+          <div className="relative bg-white rounded-card shadow-2xl w-full max-w-lg mx-4 p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold font-display text-brand-charcoal">Import from CSV</h3>
+              <button onClick={() => setShowImportCsv(false)} className="p-1 hover:bg-brand-cream rounded-lg"><X size={18} className="text-ui-tertiary" /></button>
+            </div>
+            <div className="border-2 border-dashed border-ui-border rounded-lg p-8 text-center">
+              <Upload size={32} className="mx-auto mb-3 text-ui-tertiary" />
+              <p className="text-sm font-medium text-brand-charcoal mb-1">Drag & drop your CSV file here</p>
+              <p className="text-xs text-ui-tertiary mb-4">or click to browse — supports .csv and .xlsx</p>
+              <input type="file" accept=".csv,.xlsx" className="hidden" id="csv-upload" onChange={() => alert('CSV import coming soon — contact support for bulk imports.')} />
+              <label htmlFor="csv-upload" className="inline-flex px-4 py-2 bg-brand-terracotta text-white text-sm font-semibold rounded-pill cursor-pointer hover:bg-brand-terracotta/90 transition-colors">
+                Choose File
+              </label>
+            </div>
+            <p className="text-xs text-ui-tertiary mt-3">After upload, you&apos;ll map columns to contact fields before importing.</p>
+          </div>
+        </div>
+      )}
+
+      {/* Import from People Modal (stub) */}
+      {showImportPeople && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/30" onClick={() => setShowImportPeople(false)} />
+          <div className="relative bg-white rounded-card shadow-2xl w-full max-w-lg mx-4 p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold font-display text-brand-charcoal">Import from People Database</h3>
+              <button onClick={() => setShowImportPeople(false)} className="p-1 hover:bg-brand-cream rounded-lg"><X size={18} className="text-ui-tertiary" /></button>
+            </div>
+            <div className="space-y-3">
+              <div className="relative">
+                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-ui-tertiary" />
+                <input placeholder="Search people by name, company, or title..." className="w-full pl-9 pr-3 py-2.5 border border-ui-border rounded-lg text-sm focus:outline-none focus:border-brand-terracotta" />
+              </div>
+              <div className="border border-ui-border rounded-lg p-8 text-center">
+                <Users size={28} className="mx-auto mb-2 text-ui-tertiary" />
+                <p className="text-sm text-ui-tertiary">Search your People Database to add contacts to this event&apos;s guest pool.</p>
+              </div>
+            </div>
+            <div className="flex justify-end mt-4">
+              <button onClick={() => setShowImportPeople(false)} className="px-4 py-2 border border-ui-border rounded-lg text-sm font-medium text-ui-secondary hover:bg-brand-cream">Close</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Import from Previous Event Modal (stub) */}
+      {showImportEvent && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/30" onClick={() => setShowImportEvent(false)} />
+          <div className="relative bg-white rounded-card shadow-2xl w-full max-w-lg mx-4 p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold font-display text-brand-charcoal">Import from Previous Event</h3>
+              <button onClick={() => setShowImportEvent(false)} className="p-1 hover:bg-brand-cream rounded-lg"><X size={18} className="text-ui-tertiary" /></button>
+            </div>
+            <div className="space-y-3">
+              <select className="w-full px-3 py-2.5 border border-ui-border rounded-lg text-sm bg-white focus:outline-none focus:border-brand-terracotta">
+                <option value="">Select an event...</option>
+                <option disabled>Previous events will appear here</option>
+              </select>
+              <div className="border border-ui-border rounded-lg p-8 text-center">
+                <Calendar size={28} className="mx-auto mb-2 text-ui-tertiary" />
+                <p className="text-sm text-ui-tertiary">Select a past event to import its guest list into this event&apos;s pool.</p>
+              </div>
+            </div>
+            <div className="flex justify-end mt-4">
+              <button onClick={() => setShowImportEvent(false)} className="px-4 py-2 border border-ui-border rounded-lg text-sm font-medium text-ui-secondary hover:bg-brand-cream">Close</button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )

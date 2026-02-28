@@ -170,8 +170,8 @@ const OBJECTIVE_TEMPLATES = [
     weight: 2.0,
     ai_interpretation: "Based on this objective, I'll prioritize senior PE and VC decision-makers at funds with $1B+ AUM, weighting for active deal flow, board seats at portfolio companies, and prior attendance at executive-tier events. Contacts with GP or MD titles at growth equity or buyout funds will score highest.",
     ai_questions: [
-      "Should I weight co-investment track record more heavily than current AUM?",
-      "Are there specific sectors (healthcare, tech, industrials) where PE focus matters more for this dinner?"
+      "Weight co-investment track record more heavily than current AUM",
+      "Prioritize PE focus in healthcare, tech, and industrials sectors"
     ],
     qualifying_count: 43,
   },
@@ -180,8 +180,8 @@ const OBJECTIVE_TEMPLATES = [
     weight: 1.5,
     ai_interpretation: "I'll focus on CEOs, CFOs, and CTOs at technology companies in the $500M-$5B enterprise value range — particularly those in sectors complementary to Meridian's portfolio. Companies showing 30%+ revenue growth or recent strategic acquisitions will receive higher scores.",
     ai_questions: [
-      "When you say 'high-growth,' should I use 30% YoY revenue growth as the threshold, or is 20% sufficient?",
-      "Should I include pre-IPO companies, or only those already generating $50M+ ARR?"
+      "Filter for companies with 30%+ YoY revenue growth as the high-growth threshold",
+      "Include only companies already generating $50M+ ARR — exclude pre-IPO stage"
     ],
     qualifying_count: 28,
   },
@@ -190,8 +190,8 @@ const OBJECTIVE_TEMPLATES = [
     weight: 1.8,
     ai_interpretation: "I'll prioritize institutional allocators — endowments, pension funds, family offices, and sovereign wealth representatives — who are actively increasing private equity allocations. Decision-makers with direct allocation authority and existing relationships with mid-market PE funds score highest.",
     ai_questions: [
-      "Should I include LPs who are currently reducing PE exposure but might be re-entering, or only active allocators?",
-      "Is there a minimum commitment size that matters — e.g., $25M+ allocations?"
+      "Include only active allocators — exclude LPs currently reducing PE exposure",
+      "Prioritize LPs with $25M+ commitment sizes"
     ],
     qualifying_count: 15,
   },
