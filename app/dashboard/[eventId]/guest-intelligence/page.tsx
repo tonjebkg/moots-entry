@@ -357,6 +357,7 @@ export default function GuestIntelligencePage() {
   // Read filter and action from URL
   const urlFilter = (searchParams.get('filter') || '') as FilterMode
   const urlAction = searchParams.get('action') || ''
+  const urlObjective = searchParams.get('objective') || ''
 
   // Scoring state
   const [contacts, setContacts] = useState<ScoredContact[]>([])
@@ -545,6 +546,14 @@ export default function GuestIntelligencePage() {
 
   // Apply active filter for ranked view
   function applyActiveFilter(list: ScoredContact[]) {
+    // Objective-specific filter from URL (e.g., ?objective=<uuid>)
+    if (urlObjective) {
+      return list.filter(c =>
+        c.matched_objectives?.some(
+          (mo: any) => mo.objective_id === urlObjective && (mo.match_score ?? 0) >= 50
+        )
+      )
+    }
     if (!activeFilter) return list
     switch (activeFilter) {
       case 'scored': return list.filter(c => c.score_id !== null)

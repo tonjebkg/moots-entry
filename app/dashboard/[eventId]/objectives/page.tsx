@@ -85,7 +85,7 @@ export default function ObjectivesPage() {
         </div>
         <div>
           <h1 className="font-display text-xl font-bold text-brand-charcoal">Event Objectives</h1>
-          <p className="text-sm text-ui-tertiary">
+          <p className="text-[15px] text-ui-tertiary">
             Define what makes a guest ideal for this event. The AI scoring engine uses these objectives.
           </p>
         </div>
@@ -95,8 +95,8 @@ export default function ObjectivesPage() {
         <div className="flex items-start gap-3 p-4 bg-emerald-50 border border-emerald-200 rounded-lg mb-4 animate-fade-in">
           <CheckCircle2 size={18} className="text-emerald-600 shrink-0 mt-0.5" />
           <div>
-            <p className="text-sm font-medium text-emerald-800">Objectives saved</p>
-            <p className="text-sm text-emerald-700 mt-0.5">
+            <p className="text-base font-medium text-emerald-800">Objectives saved</p>
+            <p className="text-base text-emerald-700 mt-0.5">
               {scoringTriggered
                 ? 'AI scoring has been triggered automatically — contacts are being re-scored against your updated objectives.'
                 : 'These will power AI scoring for all contacts in your pool.'}
@@ -108,7 +108,7 @@ export default function ObjectivesPage() {
       {scoringTriggered && !savedCallout && (
         <div className="flex items-center gap-3 p-4 bg-brand-cream border border-brand-terracotta/20 rounded-lg mb-4 animate-fade-in">
           <Sparkles size={16} className="text-brand-terracotta shrink-0 animate-pulse" />
-          <p className="text-sm font-medium text-brand-charcoal">
+          <p className="text-base font-medium text-brand-charcoal">
             Scoring contacts against your updated objectives...
           </p>
         </div>
