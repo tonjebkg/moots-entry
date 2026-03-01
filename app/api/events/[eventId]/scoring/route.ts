@@ -50,7 +50,7 @@ export const GET = withErrorHandling(async (request: NextRequest, { params }: Ro
       gs.id AS score_id, gs.relevance_score, gs.matched_objectives,
       gs.score_rationale, gs.talking_points, gs.scored_at, gs.model_version,
       ci.id AS invitation_id, ci.status AS invitation_status,
-      ci.tier AS invitation_tier, ci.campaign_id,
+      ci.tier AS invitation_tier, ci.campaign_id, ci.referred_by_name,
       rs.id AS rsvp_submission_id
     FROM people_contacts c
     LEFT JOIN guest_scores gs ON gs.contact_id = c.id AND gs.event_id = ${eventIdNum}

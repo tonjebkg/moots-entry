@@ -7,7 +7,7 @@ import Image from 'next/image'
 import {
   Sparkles, Settings, Search, Users, Target, CheckCircle, Send, X, Clock,
   Plus, Filter, ChevronDown, ChevronRight, XCircle, Linkedin, Globe, Database, UserPlus,
-  Upload, Calendar, Tag
+  Upload, Calendar, Tag, Check, Star, UsersRound, Link2, Zap
 } from 'lucide-react'
 import { StatCard } from '@/app/components/ui/StatCard'
 import { ScoringJobProgress } from '@/app/components/ScoringJobProgress'
@@ -18,6 +18,7 @@ import { formatUSDate } from '@/lib/datetime'
 import { ScoreBar } from '@/app/components/ui/ScoreBar'
 import { TagBadge } from '@/app/components/ui/TagBadge'
 import { AvatarInitials } from '@/app/components/ui/AvatarInitials'
+import { GuestBadges } from '@/app/components/ui/GuestBadges'
 
 type ViewMode = 'all' | 'pending'
 type FilterMode = '' | 'scored' | 'qualified' | 'selected' | 'confirmed' | 'pending' | 'high_uninvited' | 'unscored'
@@ -46,6 +47,7 @@ interface ScoredContact {
   invitation_status: string | null
   invitation_tier: string | null
   campaign_id: string | null
+  referred_by_name: string | null
   rsvp_submission_id: string | null
 }
 
@@ -71,6 +73,8 @@ const SOURCE_LABELS: Record<string, { label: string; color: string }> = {
 }
 
 const EVENT_STATUS_LABELS: Record<string, { label: string; color: string }> = {
+  IN_POOL: { label: 'In Pool', color: 'bg-gray-50 text-gray-500 border-gray-200' },
+  QUALIFIED: { label: 'Qualified', color: 'bg-violet-50 text-violet-700 border-violet-200' },
   CONSIDERING: { label: 'Selected', color: 'bg-blue-50 text-blue-700 border-blue-200' },
   INVITED: { label: 'Invited', color: 'bg-amber-50 text-amber-700 border-amber-200' },
   ACCEPTED: { label: 'Confirmed', color: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
@@ -78,6 +82,17 @@ const EVENT_STATUS_LABELS: Record<string, { label: string; color: string }> = {
   WAITLIST: { label: 'Waitlist', color: 'bg-gray-100 text-gray-600 border-gray-200' },
   BOUNCED: { label: 'Bounced', color: 'bg-red-50 text-red-700 border-red-200' },
 }
+
+// Full status list for dropdowns (ordered by pipeline progression)
+const ALL_STATUS_OPTIONS = [
+  { value: 'IN_POOL', label: 'In Pool', color: 'text-gray-500' },
+  { value: 'QUALIFIED', label: 'Qualified', color: 'text-violet-700' },
+  { value: 'CONSIDERING', label: 'Selected', color: 'text-blue-700' },
+  { value: 'INVITED', label: 'Invited', color: 'text-amber-700' },
+  { value: 'ACCEPTED', label: 'Confirmed', color: 'text-emerald-700' },
+  { value: 'DECLINED', label: 'Declined', color: 'text-red-600' },
+  { value: 'WAITLIST', label: 'Waitlist', color: 'text-gray-600' },
+]
 
 const FILTER_LABELS: Record<string, string> = {
   scored: 'Scored',
@@ -313,11 +328,9 @@ function ContactRow({
                 onClick={(e) => e.stopPropagation()}
                 className="px-2 py-1.5 border border-ui-border rounded-lg text-xs font-medium text-ui-secondary bg-white focus:outline-none focus:border-brand-terracotta"
               >
-                <option value="CONSIDERING">Selected</option>
-                <option value="INVITED">Invited</option>
-                <option value="ACCEPTED">Confirmed</option>
-                <option value="DECLINED">Declined</option>
-                <option value="WAITLIST">Waitlist</option>
+                {ALL_STATUS_OPTIONS.map(opt => (
+                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                ))}
               </select>
             )}
             {!contact.invitation_id && (
@@ -404,8 +417,17 @@ export default function GuestIntelligencePage() {
   // Pending review min score
   const [pendingMinScore, setPendingMinScore] = useState(0)
 
+  // Team assignments
+  const [teamAssignments, setTeamAssignments] = useState<Record<string, { id: string; assigned_to: string; assigned_to_name: string; assigned_to_email: string; role: string }[]>>({})
+  const [workspaceMembers, setWorkspaceMembers] = useState<{ user_id: string; user_full_name: string; user_email: string; role: string }[]>([])
+  const [assignDropdownId, setAssignDropdownId] = useState<string | null>(null)
+
   // Scoring feedback
   const [scoringComplete, setScoringComplete] = useState(false)
+
+  // Toast for status changes
+  const [toast, setToast] = useState<{ message: string; contactId: string } | null>(null)
+  const toastTimer = useRef<NodeJS.Timeout | null>(null)
 
   // Auto-trigger scoring guard
   const autoScoreTriggered = useRef(false)
@@ -435,6 +457,44 @@ export default function GuestIntelligencePage() {
   useEffect(() => {
     fetchData()
   }, [fetchData])
+
+  // Fetch team assignments and workspace members
+  const fetchTeamData = useCallback(async () => {
+    try {
+      // Get workspace ID from session
+      const sessionRes = await fetch('/api/auth/session')
+      let workspaceId = ''
+      if (sessionRes.ok) {
+        const sess = await sessionRes.json()
+        workspaceId = sess.workspace?.id || ''
+      }
+
+      const [assignRes, membersRes] = await Promise.all([
+        fetch(`/api/events/${eventId}/team-assignments`),
+        workspaceId ? fetch(`/api/workspaces/${workspaceId}/members`) : Promise.resolve(null),
+      ])
+      if (assignRes.ok) {
+        const data = await assignRes.json()
+        const grouped: typeof teamAssignments = {}
+        for (const a of data.assignments || []) {
+          if (!grouped[a.contact_id]) grouped[a.contact_id] = []
+          grouped[a.contact_id].push(a)
+        }
+        setTeamAssignments(grouped)
+      }
+      if (membersRes && membersRes.ok) {
+        const data = await membersRes.json()
+        setWorkspaceMembers(data.members || [])
+      }
+    } catch (err) {
+      console.error('Failed to fetch team data:', err)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [eventId])
+
+  useEffect(() => {
+    fetchTeamData()
+  }, [fetchTeamData])
 
   // Sync URL filter on mount
   useEffect(() => {
@@ -535,6 +595,77 @@ export default function GuestIntelligencePage() {
     setSelectedIds(new Set())
   }
 
+  function showToast(message: string, contactId: string) {
+    if (toastTimer.current) clearTimeout(toastTimer.current)
+    setToast({ message, contactId })
+    toastTimer.current = setTimeout(() => setToast(null), 4000)
+  }
+
+  async function approveContact(contactId: string, name: string) {
+    try {
+      // Create an invitation with QUALIFIED status if none exists
+      const res = await fetch(`/api/events/${eventId}/scoring`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ contact_id: contactId, action: 'approve' }),
+      })
+      if (res.ok) {
+        showToast(`${name} moved to Qualified`, contactId)
+        fetchData()
+      }
+    } catch (err) {
+      console.error('Failed to approve contact:', err)
+    }
+  }
+
+  async function assignMember(contactId: string, userId: string) {
+    try {
+      await fetch(`/api/events/${eventId}/team-assignments`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ contact_id: contactId, assigned_to: userId, role: 'PRIMARY_CONTACT' }),
+      })
+      fetchTeamData()
+      setAssignDropdownId(null)
+    } catch (err) {
+      console.error('Failed to assign member:', err)
+    }
+  }
+
+  async function unassignMember(contactId: string, assignmentId: string) {
+    try {
+      await fetch(`/api/events/${eventId}/team-assignments/${assignmentId}`, {
+        method: 'DELETE',
+      })
+      fetchTeamData()
+    } catch (err) {
+      console.error('Failed to unassign member:', err)
+    }
+  }
+
+  // Per-contact scoring
+  const [scoringContactId, setScoringContactId] = useState<string | null>(null)
+
+  async function scoreContact(contactId: string) {
+    setScoringContactId(contactId)
+    try {
+      const res = await fetch(`/api/events/${eventId}/scoring`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ contact_ids: [contactId] }),
+      })
+      if (res.ok) {
+        const data = await res.json()
+        if (data.job_id) setActiveJobId(data.job_id)
+        else fetchData()
+      }
+    } catch (err) {
+      console.error('Failed to score contact:', err)
+    } finally {
+      setScoringContactId(null)
+    }
+  }
+
   async function addTagToContact(contactId: string, tag: string) {
     try {
       await fetch(`/api/contacts/${contactId}/tags`, {
@@ -594,11 +725,11 @@ export default function GuestIntelligencePage() {
     return list.filter(c => {
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase()
-        if (
-          !c.full_name?.toLowerCase().includes(q) &&
-          !c.company?.toLowerCase().includes(q) &&
-          !c.title?.toLowerCase().includes(q)
-        ) return false
+        const matchesName = c.full_name?.toLowerCase().includes(q)
+        const matchesCompany = c.company?.toLowerCase().includes(q)
+        const matchesTitle = c.title?.toLowerCase().includes(q)
+        const matchesTags = (c.tags || []).some(t => t.toLowerCase().includes(q))
+        if (!matchesName && !matchesCompany && !matchesTitle && !matchesTags) return false
       }
       if (sourceFilter !== 'all' && c.source !== sourceFilter) return false
       return true
@@ -711,7 +842,7 @@ export default function GuestIntelligencePage() {
             {showAddMenu && (
               <>
                 <div className="fixed inset-0 z-10" onClick={() => setShowAddMenu(false)} />
-                <div className="absolute right-0 top-full mt-1 w-56 bg-white border border-ui-border rounded-lg shadow-lg z-20 py-1">
+                <div className="absolute right-0 top-full mt-1 w-64 bg-white border border-ui-border rounded-lg shadow-lg z-20 py-1">
                   <button
                     onClick={() => { setShowAddMenu(false); setShowAddGuest(true) }}
                     className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-brand-charcoal hover:bg-brand-cream transition-colors"
@@ -963,7 +1094,7 @@ export default function GuestIntelligencePage() {
 
           {/* Bulk Action Bar */}
           {selectedIds.size > 0 && (
-            <div className="flex items-center gap-3 bg-brand-terracotta/5 border border-brand-terracotta/20 rounded-lg px-4 py-3">
+            <div className="flex items-center gap-3 bg-brand-terracotta/5 border border-brand-terracotta/20 rounded-lg px-4 py-3 sticky top-0 z-10">
               <span className="text-sm font-medium text-brand-charcoal">
                 {selectedIds.size} contact{selectedIds.size > 1 ? 's' : ''} selected
               </span>
@@ -986,17 +1117,11 @@ export default function GuestIntelligencePage() {
                   <>
                     <div className="fixed inset-0 z-10" onClick={() => setBulkStatusOpen(false)} />
                     <div className="absolute left-0 top-full mt-1 w-36 bg-white border border-ui-border rounded-lg shadow-lg z-20 py-1">
-                      {[
-                        { value: 'CONSIDERING', label: 'Selected' },
-                        { value: 'INVITED', label: 'Invited' },
-                        { value: 'ACCEPTED', label: 'Confirmed' },
-                        { value: 'DECLINED', label: 'Declined' },
-                        { value: 'WAITLIST', label: 'Waitlist' },
-                      ].map(opt => (
+                      {ALL_STATUS_OPTIONS.map(opt => (
                         <button
                           key={opt.value}
                           onClick={() => bulkChangeStatus(opt.value)}
-                          className="w-full text-left px-3 py-1.5 text-xs font-medium text-brand-charcoal hover:bg-brand-cream transition-colors"
+                          className={`w-full text-left px-3 py-1.5 text-xs font-medium ${opt.color} hover:bg-brand-cream transition-colors`}
                         >
                           {opt.label}
                         </button>
@@ -1132,7 +1257,13 @@ export default function GuestIntelligencePage() {
                             <td className="px-4 py-3">
                               <div className="flex items-center gap-2.5">
                                 <AvatarInitials name={c.full_name || '?'} size={28} />
+                                <GuestBadges tags={c.tags} tier={c.invitation_tier} compact />
                                 <span className="font-medium text-brand-charcoal">{c.full_name}</span>
+                                {c.referred_by_name && (
+                                  <span className="text-ui-tertiary" title={`Referred by ${c.referred_by_name}`}>
+                                    <Link2 size={12} />
+                                  </span>
+                                )}
                               </div>
                             </td>
                             <td className="px-4 py-3 text-ui-secondary">{c.company || '—'}</td>
@@ -1178,13 +1309,7 @@ export default function GuestIntelligencePage() {
                                   <>
                                     <div className="fixed inset-0 z-10" onClick={() => setStatusDropdownId(null)} />
                                     <div className="absolute left-0 top-full mt-1 w-36 bg-white border border-ui-border rounded-lg shadow-lg z-20 py-1">
-                                      {[
-                                        { value: 'CONSIDERING', label: 'Selected', color: 'text-blue-700' },
-                                        { value: 'INVITED', label: 'Invited', color: 'text-amber-700' },
-                                        { value: 'ACCEPTED', label: 'Confirmed', color: 'text-emerald-700' },
-                                        { value: 'DECLINED', label: 'Declined', color: 'text-red-600' },
-                                        { value: 'WAITLIST', label: 'Waitlist', color: 'text-gray-600' },
-                                      ].map(opt => (
+                                      {ALL_STATUS_OPTIONS.map(opt => (
                                         <button
                                           key={opt.value}
                                           onClick={() => {
@@ -1215,7 +1340,41 @@ export default function GuestIntelligencePage() {
                             <tr>
                               <td colSpan={9} className="px-0 py-0">
                                 <div className="border-t border-ui-border bg-brand-cream px-6 py-4 space-y-4">
-                                  {/* Source badges + Tags row */}
+                                  {/* Guest name + badges header */}
+                                  <div className="flex items-center gap-3">
+                                    <AvatarInitials name={c.full_name || '?'} size={36} />
+                                    <div>
+                                      <div className="flex items-center gap-2">
+                                        <span className="font-display text-lg font-semibold text-brand-charcoal">{c.full_name}</span>
+                                        <GuestBadges tags={c.tags} tier={c.invitation_tier} />
+                                      </div>
+                                      {(c.title || c.company) && (
+                                        <div className="text-sm text-ui-secondary">
+                                          {c.title}{c.title && c.company && ' · '}{c.company}
+                                        </div>
+                                      )}
+                                      {c.referred_by_name && (
+                                        <div className="flex items-center gap-1.5 mt-0.5">
+                                          <Link2 size={11} className="text-ui-tertiary" />
+                                          <span className="text-xs text-ui-secondary">
+                                            Referred by <span className="font-medium text-brand-charcoal">{c.referred_by_name}</span>
+                                          </span>
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+
+                                  {/* Priority flag: low score + referred by someone important */}
+                                  {c.referred_by_name && c.relevance_score != null && c.relevance_score < 60 && (
+                                    <div className="flex items-center gap-2 px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg">
+                                      <span className="text-amber-600 text-sm">⚑</span>
+                                      <span className="text-xs text-amber-800 font-medium">
+                                        Low score ({c.relevance_score}), but referred by {c.referred_by_name} — consider the relationship
+                                      </span>
+                                    </div>
+                                  )}
+
+                                  {/* Source badges row */}
                                   <div className="flex items-center gap-2 flex-wrap">
                                     {c.linkedin_url && (
                                       <a href={c.linkedin_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 px-2 py-1 bg-[#0077b5]/10 text-[#0077b5] text-[11px] font-semibold rounded-md hover:bg-[#0077b5]/20 transition-colors">
@@ -1290,6 +1449,60 @@ export default function GuestIntelligencePage() {
                                     )}
                                   </div>
 
+                                  {/* Assigned Team */}
+                                  <div>
+                                    <div className="flex items-center gap-2 mb-2">
+                                      <h4 className="text-xs font-semibold text-ui-tertiary uppercase tracking-wider">Assigned Team</h4>
+                                    </div>
+                                    <div className="flex items-center gap-2 flex-wrap">
+                                      {(teamAssignments[c.contact_id] || []).map(a => (
+                                        <span key={a.id} className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-blue-50 text-blue-700 text-[11px] font-semibold rounded-full border border-blue-200">
+                                          <AvatarInitials name={a.assigned_to_name || '?'} size={18} />
+                                          {a.assigned_to_name}
+                                          <button
+                                            onClick={(e) => { e.stopPropagation(); unassignMember(c.contact_id, a.id) }}
+                                            className="text-blue-400 hover:text-red-500 ml-0.5"
+                                          >
+                                            <X size={10} />
+                                          </button>
+                                        </span>
+                                      ))}
+                                      <div className="relative" onClick={(e) => e.stopPropagation()}>
+                                        <button
+                                          onClick={() => setAssignDropdownId(assignDropdownId === c.contact_id ? null : c.contact_id)}
+                                          className="inline-flex items-center gap-1 px-2 py-1 text-[11px] font-medium text-brand-terracotta border border-brand-terracotta/30 rounded-full hover:bg-brand-terracotta/5 transition-colors"
+                                        >
+                                          <Plus size={10} /> Assign Member
+                                        </button>
+                                        {assignDropdownId === c.contact_id && (
+                                          <>
+                                            <div className="fixed inset-0 z-10" onClick={() => setAssignDropdownId(null)} />
+                                            <div className="absolute left-0 top-full mt-1 w-56 bg-white border border-ui-border rounded-lg shadow-lg z-20 py-1 max-h-48 overflow-y-auto">
+                                              {workspaceMembers
+                                                .filter(m => !(teamAssignments[c.contact_id] || []).some(a => a.assigned_to === m.user_id))
+                                                .map(m => (
+                                                  <button
+                                                    key={m.user_id}
+                                                    onClick={() => assignMember(c.contact_id, m.user_id)}
+                                                    className="w-full flex items-center gap-2 px-3 py-2 text-xs text-brand-charcoal hover:bg-brand-cream transition-colors"
+                                                  >
+                                                    <AvatarInitials name={m.user_full_name || '?'} size={20} />
+                                                    <div className="text-left">
+                                                      <div className="font-medium">{m.user_full_name}</div>
+                                                      <div className="text-ui-tertiary text-[10px]">{m.role}</div>
+                                                    </div>
+                                                  </button>
+                                                ))}
+                                              {workspaceMembers.filter(m => !(teamAssignments[c.contact_id] || []).some(a => a.assigned_to === m.user_id)).length === 0 && (
+                                                <div className="px-3 py-2 text-xs text-ui-tertiary">All members assigned</div>
+                                              )}
+                                            </div>
+                                          </>
+                                        )}
+                                      </div>
+                                    </div>
+                                  </div>
+
                                   {/* AI Insights */}
                                   {c.ai_summary && (
                                     <div>
@@ -1361,11 +1574,9 @@ export default function GuestIntelligencePage() {
                                         onClick={(e) => e.stopPropagation()}
                                         className="px-2 py-1.5 border border-ui-border rounded-lg text-xs font-medium text-ui-secondary bg-white focus:outline-none focus:border-brand-terracotta"
                                       >
-                                        <option value="CONSIDERING">Selected</option>
-                                        <option value="INVITED">Invited</option>
-                                        <option value="ACCEPTED">Confirmed</option>
-                                        <option value="DECLINED">Declined</option>
-                                        <option value="WAITLIST">Waitlist</option>
+                                        {ALL_STATUS_OPTIONS.map(opt => (
+                                          <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                        ))}
                                       </select>
                                     )}
                                     {!c.invitation_id && (
@@ -1384,6 +1595,25 @@ export default function GuestIntelligencePage() {
                                       >
                                         <XCircle size={12} />
                                         Decline
+                                      </button>
+                                    )}
+                                    {!cHasScore ? (
+                                      <button
+                                        onClick={(e) => { e.stopPropagation(); scoreContact(c.contact_id) }}
+                                        disabled={scoringContactId === c.contact_id}
+                                        className="flex items-center gap-1.5 px-3 py-1.5 border border-brand-terracotta/30 text-brand-terracotta text-xs font-semibold rounded-md hover:bg-brand-terracotta/5 transition-colors disabled:opacity-50"
+                                      >
+                                        <Sparkles size={12} />
+                                        {scoringContactId === c.contact_id ? 'Scoring...' : 'Score Now'}
+                                      </button>
+                                    ) : (
+                                      <button
+                                        onClick={(e) => { e.stopPropagation(); scoreContact(c.contact_id) }}
+                                        disabled={scoringContactId === c.contact_id}
+                                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-ui-tertiary hover:text-brand-charcoal transition-colors disabled:opacity-50"
+                                      >
+                                        <Sparkles size={12} />
+                                        {scoringContactId === c.contact_id ? 'Scoring...' : 'Re-score'}
                                       </button>
                                     )}
                                     {c.scored_at && (
@@ -1483,7 +1713,7 @@ export default function GuestIntelligencePage() {
                           return (
                             <React.Fragment key={c.contact_id}>
                               <tr
-                                className={`hover:bg-brand-cream/50 transition-colors cursor-pointer ${isExpanded ? 'bg-brand-cream/30' : ''}`}
+                                className={`group hover:bg-brand-cream/50 transition-colors cursor-pointer ${isExpanded ? 'bg-brand-cream/30' : ''}`}
                                 onClick={() => setExpandedId(isExpanded ? null : c.contact_id)}
                               >
                                 <td className="px-3 py-3" onClick={(e) => e.stopPropagation()}>
@@ -1504,6 +1734,7 @@ export default function GuestIntelligencePage() {
                                 <td className="px-4 py-3">
                                   <div className="flex items-center gap-2.5">
                                     <AvatarInitials name={c.full_name || '?'} size={28} />
+                                    <GuestBadges tags={c.tags} tier={c.invitation_tier} compact />
                                     <span className="font-medium text-brand-charcoal">{c.full_name}</span>
                                   </div>
                                 </td>
@@ -1534,16 +1765,59 @@ export default function GuestIntelligencePage() {
                                     <span className="text-xs text-ui-tertiary">—</span>
                                   )}
                                 </td>
-                                <td className="px-4 py-3">
-                                  <span className="inline-flex px-2 py-0.5 text-[10px] font-semibold rounded border whitespace-nowrap bg-amber-50 text-amber-700 border-amber-200">
-                                    Pending Review
-                                  </span>
+                                <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                                  <div className="relative">
+                                    <button
+                                      onClick={() => setStatusDropdownId(statusDropdownId === c.contact_id ? null : c.contact_id)}
+                                      className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-semibold rounded border whitespace-nowrap bg-amber-50 text-amber-700 border-amber-200 hover:ring-1 hover:ring-brand-terracotta/30 transition-all cursor-pointer"
+                                    >
+                                      Pending Review
+                                      <ChevronDown size={8} />
+                                    </button>
+                                    {statusDropdownId === c.contact_id && (
+                                      <>
+                                        <div className="fixed inset-0 z-10" onClick={() => setStatusDropdownId(null)} />
+                                        <div className="absolute left-0 top-full mt-1 w-36 bg-white border border-ui-border rounded-lg shadow-lg z-20 py-1">
+                                          {ALL_STATUS_OPTIONS.map(opt => (
+                                            <button
+                                              key={opt.value}
+                                              onClick={() => {
+                                                if (c.invitation_id) {
+                                                  handleChangeStatus(c.invitation_id, opt.value)
+                                                }
+                                                setStatusDropdownId(null)
+                                              }}
+                                              className={`w-full text-left px-3 py-1.5 text-xs font-medium ${opt.color} hover:bg-brand-cream transition-colors`}
+                                            >
+                                              {opt.label}
+                                            </button>
+                                          ))}
+                                        </div>
+                                      </>
+                                    )}
+                                  </div>
                                 </td>
-                                <td className="px-4 py-3 text-center">
-                                  <ChevronDown
-                                    size={14}
-                                    className={`text-ui-tertiary transition-transform ${isExpanded ? 'rotate-180' : ''}`}
-                                  />
+                                <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                                  <div className="flex items-center gap-1 justify-end">
+                                    <button
+                                      onClick={() => approveContact(c.contact_id, c.full_name)}
+                                      title="Approve"
+                                      className="p-1 rounded hover:bg-emerald-50 text-emerald-600 opacity-0 group-hover:opacity-100 transition-opacity"
+                                    >
+                                      <Check size={14} />
+                                    </button>
+                                    <button
+                                      onClick={() => declineContact(c.contact_id)}
+                                      title="Decline"
+                                      className="p-1 rounded hover:bg-red-50 text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                                    >
+                                      <X size={14} />
+                                    </button>
+                                    <ChevronDown
+                                      size={14}
+                                      className={`text-ui-tertiary transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+                                    />
+                                  </div>
                                 </td>
                               </tr>
                               {/* Expandable detail row */}
@@ -1551,6 +1825,40 @@ export default function GuestIntelligencePage() {
                                 <tr>
                                   <td colSpan={9} className="px-0 py-0">
                                     <div className="border-t border-ui-border bg-brand-cream px-6 py-4 space-y-4">
+                                      {/* Guest name + badges header */}
+                                      <div className="flex items-center gap-3">
+                                        <AvatarInitials name={c.full_name || '?'} size={36} />
+                                        <div>
+                                          <div className="flex items-center gap-2">
+                                            <span className="font-display text-lg font-semibold text-brand-charcoal">{c.full_name}</span>
+                                            <GuestBadges tags={c.tags} tier={c.invitation_tier} />
+                                          </div>
+                                          {(c.title || c.company) && (
+                                            <div className="text-sm text-ui-secondary">
+                                              {c.title}{c.title && c.company && ' · '}{c.company}
+                                            </div>
+                                          )}
+                                          {c.referred_by_name && (
+                                            <div className="flex items-center gap-1.5 mt-0.5">
+                                              <Link2 size={11} className="text-ui-tertiary" />
+                                              <span className="text-xs text-ui-secondary">
+                                                Referred by <span className="font-medium text-brand-charcoal">{c.referred_by_name}</span>
+                                              </span>
+                                            </div>
+                                          )}
+                                        </div>
+                                      </div>
+
+                                      {/* Priority flag: low score + referred by someone important */}
+                                      {c.referred_by_name && c.relevance_score != null && c.relevance_score < 60 && (
+                                        <div className="flex items-center gap-2 px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg">
+                                          <span className="text-amber-600 text-sm">⚑</span>
+                                          <span className="text-xs text-amber-800 font-medium">
+                                            Low score ({c.relevance_score}), but referred by {c.referred_by_name} — consider the relationship
+                                          </span>
+                                        </div>
+                                      )}
+
                                       {/* Source badges row */}
                                       <div className="flex items-center gap-2 flex-wrap">
                                         {c.linkedin_url && (
@@ -1568,6 +1876,116 @@ export default function GuestIntelligencePage() {
                                             <Target size={12} /> AI Scored
                                           </span>
                                         )}
+                                      </div>
+
+                                      {/* Full Tags + Manage */}
+                                      <div>
+                                        <div className="flex items-center gap-2 mb-2">
+                                          <h4 className="text-xs font-semibold text-ui-tertiary uppercase tracking-wider">Tags</h4>
+                                          <button
+                                            onClick={(e) => { e.stopPropagation(); setTagManagerId(tagManagerId === c.contact_id ? null : c.contact_id); setTagInput('') }}
+                                            className="text-[11px] font-semibold text-brand-terracotta hover:underline"
+                                          >
+                                            Manage Tags
+                                          </button>
+                                        </div>
+                                        <div className="flex items-center gap-1.5 flex-wrap">
+                                          {(c.tags || []).length > 0 ? (
+                                            (c.tags || []).map((t, ti) => (
+                                              <span key={ti} className="inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-medium rounded-full border bg-white text-brand-charcoal border-ui-border">
+                                                {t}
+                                                {tagManagerId === c.contact_id && (
+                                                  <button onClick={(e) => { e.stopPropagation(); removeTagFromContact(c.contact_id, t) }} className="text-ui-tertiary hover:text-red-500">
+                                                    <X size={10} />
+                                                  </button>
+                                                )}
+                                              </span>
+                                            ))
+                                          ) : (
+                                            <span className="text-xs text-ui-tertiary">No tags</span>
+                                          )}
+                                        </div>
+                                        {tagManagerId === c.contact_id && (
+                                          <div className="flex items-center gap-2 mt-2" onClick={(e) => e.stopPropagation()}>
+                                            <input
+                                              value={tagInput}
+                                              onChange={(e) => setTagInput(e.target.value)}
+                                              onKeyDown={(e) => {
+                                                if (e.key === 'Enter' && tagInput.trim()) {
+                                                  addTagToContact(c.contact_id, tagInput.trim())
+                                                  setTagInput('')
+                                                }
+                                              }}
+                                              placeholder="Add tag and press Enter..."
+                                              className="px-2.5 py-1.5 text-xs border border-ui-border rounded-md bg-white focus:outline-none focus:border-brand-terracotta w-48"
+                                            />
+                                            <div className="flex gap-1">
+                                              {['VIP', 'Speaker', 'Priority'].filter(s => !(c.tags || []).includes(s)).slice(0, 3).map(s => (
+                                                <button
+                                                  key={s}
+                                                  onClick={() => addTagToContact(c.contact_id, s)}
+                                                  className="px-2 py-1 text-[10px] font-medium text-brand-terracotta border border-brand-terracotta/30 rounded-full hover:bg-brand-terracotta/5"
+                                                >
+                                                  + {s}
+                                                </button>
+                                              ))}
+                                            </div>
+                                          </div>
+                                        )}
+                                      </div>
+
+                                      {/* Assigned Team */}
+                                      <div>
+                                        <div className="flex items-center gap-2 mb-2">
+                                          <h4 className="text-xs font-semibold text-ui-tertiary uppercase tracking-wider">Assigned Team</h4>
+                                        </div>
+                                        <div className="flex items-center gap-2 flex-wrap">
+                                          {(teamAssignments[c.contact_id] || []).map(a => (
+                                            <span key={a.id} className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-blue-50 text-blue-700 text-[11px] font-semibold rounded-full border border-blue-200">
+                                              <AvatarInitials name={a.assigned_to_name || '?'} size={18} />
+                                              {a.assigned_to_name}
+                                              <button
+                                                onClick={(e) => { e.stopPropagation(); unassignMember(c.contact_id, a.id) }}
+                                                className="text-blue-400 hover:text-red-500 ml-0.5"
+                                              >
+                                                <X size={10} />
+                                              </button>
+                                            </span>
+                                          ))}
+                                          <div className="relative" onClick={(e) => e.stopPropagation()}>
+                                            <button
+                                              onClick={() => setAssignDropdownId(assignDropdownId === c.contact_id ? null : c.contact_id)}
+                                              className="inline-flex items-center gap-1 px-2 py-1 text-[11px] font-medium text-brand-terracotta border border-brand-terracotta/30 rounded-full hover:bg-brand-terracotta/5 transition-colors"
+                                            >
+                                              <Plus size={10} /> Assign Member
+                                            </button>
+                                            {assignDropdownId === c.contact_id && (
+                                              <>
+                                                <div className="fixed inset-0 z-10" onClick={() => setAssignDropdownId(null)} />
+                                                <div className="absolute left-0 top-full mt-1 w-56 bg-white border border-ui-border rounded-lg shadow-lg z-20 py-1 max-h-48 overflow-y-auto">
+                                                  {workspaceMembers
+                                                    .filter(m => !(teamAssignments[c.contact_id] || []).some(a => a.assigned_to === m.user_id))
+                                                    .map(m => (
+                                                      <button
+                                                        key={m.user_id}
+                                                        onClick={() => assignMember(c.contact_id, m.user_id)}
+                                                        className="w-full flex items-center gap-2 px-3 py-2 text-xs text-brand-charcoal hover:bg-brand-cream transition-colors"
+                                                      >
+                                                        <AvatarInitials name={m.user_full_name || '?'} size={20} />
+                                                        <div className="text-left">
+                                                          <div className="font-medium">{m.user_full_name}</div>
+                                                          <div className="text-ui-tertiary text-[10px]">{m.role}</div>
+                                                        </div>
+                                                      </button>
+                                                    ))}
+                                                  {workspaceMembers.filter(m => !(teamAssignments[c.contact_id] || []).some(a => a.assigned_to === m.user_id)).length === 0 && (
+                                                    <div className="px-3 py-2 text-xs text-ui-tertiary">All members assigned</div>
+                                                  )}
+                                                </div>
+                                              </>
+                                            )}
+                                          </div>
+                                        </div>
                                       </div>
 
                                       {/* AI Insights */}
@@ -1629,10 +2047,11 @@ export default function GuestIntelligencePage() {
                                       {/* Actions */}
                                       <div className="flex items-center gap-3 pt-1">
                                         <button
-                                          onClick={(e) => { e.stopPropagation(); setDossierContactId(c.contact_id) }}
-                                          className="px-3 py-1.5 border border-ui-border rounded-lg text-xs font-medium text-ui-secondary hover:bg-white transition-colors"
+                                          onClick={(e) => { e.stopPropagation(); approveContact(c.contact_id, c.full_name) }}
+                                          className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-md transition-colors"
                                         >
-                                          View Guest Profile
+                                          <Check size={12} />
+                                          Approve
                                         </button>
                                         <button
                                           onClick={(e) => { e.stopPropagation(); setWaveModalContactIds([c.contact_id]) }}
@@ -1641,15 +2060,19 @@ export default function GuestIntelligencePage() {
                                           <Plus size={12} />
                                           Add to Wave
                                         </button>
-                                        {isPending && (
-                                          <button
-                                            onClick={(e) => { e.stopPropagation(); declineContact(c.contact_id) }}
-                                            className="flex items-center gap-1.5 px-3 py-1.5 border border-red-200 text-red-600 hover:bg-red-50 text-xs font-semibold rounded-md transition-colors"
-                                          >
-                                            <XCircle size={12} />
-                                            Decline
-                                          </button>
-                                        )}
+                                        <button
+                                          onClick={(e) => { e.stopPropagation(); declineContact(c.contact_id) }}
+                                          className="flex items-center gap-1.5 px-3 py-1.5 border border-red-200 text-red-600 hover:bg-red-50 text-xs font-semibold rounded-md transition-colors"
+                                        >
+                                          <XCircle size={12} />
+                                          Decline
+                                        </button>
+                                        <button
+                                          onClick={(e) => { e.stopPropagation(); setDossierContactId(c.contact_id) }}
+                                          className="px-3 py-1.5 border border-ui-border rounded-lg text-xs font-medium text-ui-secondary hover:bg-white transition-colors"
+                                        >
+                                          View Guest Profile
+                                        </button>
                                         {c.scored_at && (
                                           <span className="text-[11px] text-ui-tertiary ml-auto">
                                             Scored {formatUSDate(new Date(c.scored_at))}
@@ -1677,6 +2100,17 @@ export default function GuestIntelligencePage() {
             </div>
           )}
         </>
+      )}
+
+      {/* Status change toast */}
+      {toast && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 px-5 py-3 bg-brand-charcoal text-white rounded-lg shadow-lg">
+          <Check size={16} className="text-emerald-400 shrink-0" />
+          <span className="text-sm font-medium">{toast.message}</span>
+          <button onClick={() => setToast(null)} className="text-white/60 hover:text-white ml-2">
+            <X size={14} />
+          </button>
+        </div>
       )}
 
       {/* Dossier Panel */}
