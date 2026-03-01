@@ -148,11 +148,18 @@ export async function getCheckinMetrics(
     SELECT ec.*,
       pc.tags,
       pc.ai_summary,
+      pc.guest_role,
+      pc.guest_priority,
       gs.relevance_score,
       gs.score_rationale,
       gs.talking_points,
       gs.matched_objectives,
-      ci_inv.table_assignment
+      ci_inv.table_assignment,
+      (SELECT u.full_name FROM guest_team_assignments gta
+       JOIN users u ON u.id = gta.assigned_to
+       WHERE gta.contact_id = ec.contact_id AND gta.event_id = ec.event_id
+       LIMIT 1
+      ) AS assigned_team_member
     FROM event_checkins ec
     LEFT JOIN people_contacts pc ON pc.id = ec.contact_id
     LEFT JOIN guest_scores gs ON gs.contact_id = ec.contact_id AND gs.event_id = ec.event_id
@@ -196,8 +203,16 @@ async function getNotArrivedGuests(
       c.full_name,
       c.company,
       c.title,
+      c.tags,
+      c.guest_role,
+      c.guest_priority,
       gs.relevance_score,
-      ci.table_assignment
+      ci.table_assignment,
+      (SELECT u.full_name FROM guest_team_assignments gta
+       JOIN users u ON u.id = gta.assigned_to
+       WHERE gta.contact_id = c.id AND gta.event_id = ${eventId}
+       LIMIT 1
+      ) AS assigned_team_member
     FROM campaign_invitations ci
     JOIN invitation_campaigns ic ON ic.id = ci.campaign_id
     JOIN people_contacts c ON c.id = ci.contact_id

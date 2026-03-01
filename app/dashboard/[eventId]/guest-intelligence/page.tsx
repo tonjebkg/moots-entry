@@ -411,7 +411,7 @@ export default function GuestIntelligencePage() {
   const [sourceFilter, setSourceFilter] = useState<string>('all')
   const [dossierContactId, setDossierContactId] = useState<string | null>(null)
   const [expandedId, setExpandedId] = useState<string | null>(null)
-  const [sortColumn, setSortColumn] = useState<'score' | 'name' | 'company' | 'title' | 'source' | 'status'>('score')
+  const [sortColumn, setSortColumn] = useState<'score' | 'name' | 'company' | 'title' | 'source' | 'status' | 'role' | 'priority'>('score')
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc')
 
   // Selection state
@@ -860,6 +860,11 @@ export default function GuestIntelligencePage() {
     : rankedFiltered
 
   // Sorting
+  const ROLE_SORT_ORDER: Record<string, number> = { TEAM_MEMBER: 1, PARTNER: 2, CO_HOST: 3, SPEAKER: 4, TALENT: 5 }
+  const PRIORITY_SORT_ORDER: Record<string, number> = { VIP: 1, TIER_1: 2, TIER_2: 3, TIER_3: 4, WAITLIST: 5 }
+  function getRoleOrder(role: string | null): number { return role ? (ROLE_SORT_ORDER[role] ?? 99) : 99 }
+  function getPriorityOrder(priority: string | null): number { return priority ? (PRIORITY_SORT_ORDER[priority] ?? 99) : 99 }
+
   function getStatusOrder(c: ScoredContact): number {
     if (c.invitation_status === 'ACCEPTED') return 6
     if (c.invitation_status === 'INVITED') return 5
@@ -880,6 +885,8 @@ export default function GuestIntelligencePage() {
       case 'title': return (a.title || '').localeCompare(b.title || '') * dir
       case 'source': return (a.source || '').localeCompare(b.source || '') * dir
       case 'status': return (getStatusOrder(a) - getStatusOrder(b)) * dir
+      case 'role': return (getRoleOrder(a.guest_role) - getRoleOrder(b.guest_role)) * dir
+      case 'priority': return (getPriorityOrder(a.guest_priority) - getPriorityOrder(b.guest_priority)) * dir
       default: return 0
     }
   })
@@ -1319,17 +1326,34 @@ export default function GuestIntelligencePage() {
                           </span>
                         </th>
                       ))}
-                      <th className="px-4 py-3 text-left font-semibold text-brand-charcoal" style={{ minWidth: 110 }}>Role</th>
-                      <th className="px-4 py-3 text-left font-semibold text-brand-charcoal" style={{ minWidth: 90 }}>Priority</th>
-                      <th className="px-4 py-3 text-left font-semibold text-brand-charcoal">Tags</th>
                       {([
-                        { key: 'source' as const, label: 'Source' },
-                        { key: 'status' as const, label: 'Event Status' },
+                        { key: 'role' as const, label: 'Role', minWidth: 180 },
+                        { key: 'priority' as const, label: 'Priority', minWidth: 110 },
                       ] as const).map(col => (
                         <th
                           key={col.key}
                           onClick={() => handleSort(col.key)}
                           className="px-4 py-3 text-left font-semibold text-brand-charcoal cursor-pointer select-none hover:bg-brand-cream/80 transition-colors"
+                          style={{ minWidth: col.minWidth }}
+                        >
+                          <span className="inline-flex items-center gap-1">
+                            {col.label}
+                            {sortColumn === col.key && (
+                              <span className="text-brand-terracotta text-sm">{sortDirection === 'asc' ? '▲' : '▼'}</span>
+                            )}
+                          </span>
+                        </th>
+                      ))}
+                      <th className="px-4 py-3 text-left font-semibold text-brand-charcoal">Tags</th>
+                      {([
+                        { key: 'source' as const, label: 'Source', minWidth: 0 },
+                        { key: 'status' as const, label: 'Event Status', minWidth: 140 },
+                      ] as const).map(col => (
+                        <th
+                          key={col.key}
+                          onClick={() => handleSort(col.key)}
+                          className="px-4 py-3 text-left font-semibold text-brand-charcoal cursor-pointer select-none hover:bg-brand-cream/80 transition-colors"
+                          style={col.minWidth ? { minWidth: col.minWidth } : undefined}
                         >
                           <span className="inline-flex items-center gap-1">
                             {col.label}
@@ -1396,7 +1420,7 @@ export default function GuestIntelligencePage() {
                                       : 'text-gray-400 bg-transparent border-transparent hover:bg-gray-50 hover:border-gray-200'
                                   }`}
                                 >
-                                  {c.guest_role && ROLE_DISPLAY[c.guest_role] ? ROLE_DISPLAY[c.guest_role].label : 'Set role'}
+                                  {c.guest_role && ROLE_DISPLAY[c.guest_role] ? ROLE_DISPLAY[c.guest_role].label : '—'}
                                   <ChevronDown size={10} />
                                 </button>
                                 {roleDropdownId === c.contact_id && (
@@ -1886,20 +1910,66 @@ export default function GuestIntelligencePage() {
                               className="rounded border-gray-300"
                             />
                           </th>
-                          <th className="px-4 py-3 text-center font-semibold text-brand-charcoal w-20">Score</th>
-                          <th className="px-4 py-3 text-left font-semibold text-brand-charcoal">Name</th>
-                          <th className="px-4 py-3 text-left font-semibold text-brand-charcoal">Company</th>
-                          <th className="px-4 py-3 text-left font-semibold text-brand-charcoal">Title</th>
-                          <th className="px-4 py-3 text-left font-semibold text-brand-charcoal" style={{ minWidth: 110 }}>Role</th>
-                          <th className="px-4 py-3 text-left font-semibold text-brand-charcoal" style={{ minWidth: 90 }}>Priority</th>
+                          {([
+                            { key: 'score' as const, label: 'Score', align: 'text-center', width: 'w-20' },
+                            { key: 'name' as const, label: 'Name', align: 'text-left', width: '' },
+                            { key: 'company' as const, label: 'Company', align: 'text-left', width: '' },
+                            { key: 'title' as const, label: 'Title', align: 'text-left', width: '' },
+                          ] as const).map(col => (
+                            <th
+                              key={col.key}
+                              onClick={() => handleSort(col.key)}
+                              className={`px-4 py-3 ${col.align} font-semibold text-brand-charcoal ${col.width} cursor-pointer select-none hover:bg-brand-cream/80 transition-colors`}
+                            >
+                              <span className="inline-flex items-center gap-1">
+                                {col.label}
+                                {sortColumn === col.key && (
+                                  <span className="text-brand-terracotta text-sm">{sortDirection === 'asc' ? '▲' : '▼'}</span>
+                                )}
+                              </span>
+                            </th>
+                          ))}
+                          {([
+                            { key: 'role' as const, label: 'Role', minWidth: 110 },
+                            { key: 'priority' as const, label: 'Priority', minWidth: 90 },
+                          ] as const).map(col => (
+                            <th
+                              key={col.key}
+                              onClick={() => handleSort(col.key)}
+                              className="px-4 py-3 text-left font-semibold text-brand-charcoal cursor-pointer select-none hover:bg-brand-cream/80 transition-colors"
+                              style={{ minWidth: col.minWidth }}
+                            >
+                              <span className="inline-flex items-center gap-1">
+                                {col.label}
+                                {sortColumn === col.key && (
+                                  <span className="text-brand-terracotta text-sm">{sortDirection === 'asc' ? '▲' : '▼'}</span>
+                                )}
+                              </span>
+                            </th>
+                          ))}
                           <th className="px-4 py-3 text-left font-semibold text-brand-charcoal">Tags</th>
-                          <th className="px-4 py-3 text-left font-semibold text-brand-charcoal">Source</th>
-                          <th className="px-4 py-3 text-left font-semibold text-brand-charcoal">Event Status</th>
+                          {([
+                            { key: 'source' as const, label: 'Source' },
+                            { key: 'status' as const, label: 'Event Status' },
+                          ] as const).map(col => (
+                            <th
+                              key={col.key}
+                              onClick={() => handleSort(col.key)}
+                              className="px-4 py-3 text-left font-semibold text-brand-charcoal cursor-pointer select-none hover:bg-brand-cream/80 transition-colors"
+                            >
+                              <span className="inline-flex items-center gap-1">
+                                {col.label}
+                                {sortColumn === col.key && (
+                                  <span className="text-brand-terracotta text-sm">{sortDirection === 'asc' ? '▲' : '▼'}</span>
+                                )}
+                              </span>
+                            </th>
+                          ))}
                           <th className="px-4 py-3 text-right font-semibold text-brand-charcoal w-10"></th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-ui-border">
-                        {viewContacts.filter(c => pendingMinScore === 0 || (c.relevance_score ?? 0) >= pendingMinScore).map(c => {
+                        {sortedViewContacts.filter(c => pendingMinScore === 0 || (c.relevance_score ?? 0) >= pendingMinScore).map(c => {
                           const srcInfo = c.source ? SOURCE_LABELS[c.source] : null
                           const cHasScore = c.score_id !== null && c.relevance_score !== null
                           const isExpanded = expandedId === c.contact_id
@@ -1944,7 +2014,7 @@ export default function GuestIntelligencePage() {
                                           : 'text-gray-400 bg-transparent border-transparent hover:bg-gray-50 hover:border-gray-200'
                                       }`}
                                     >
-                                      {c.guest_role && ROLE_DISPLAY[c.guest_role] ? ROLE_DISPLAY[c.guest_role].label : 'Set role'}
+                                      {c.guest_role && ROLE_DISPLAY[c.guest_role] ? ROLE_DISPLAY[c.guest_role].label : '—'}
                                       <ChevronDown size={10} />
                                     </button>
                                     {roleDropdownId === c.contact_id && (

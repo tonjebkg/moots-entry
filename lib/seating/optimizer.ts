@@ -281,10 +281,17 @@ export async function getSeatingAssignments(
       c.company,
       c.title,
       c.tags,
+      c.guest_role,
+      c.guest_priority,
       ci.table_assignment,
       ci.seat_assignment,
       ci.status,
-      gs.relevance_score
+      gs.relevance_score,
+      (SELECT u.full_name FROM guest_team_assignments gta
+       JOIN users u ON u.id = gta.assigned_to
+       WHERE gta.contact_id = c.id AND gta.event_id = ${eventId}
+       LIMIT 1
+      ) AS assigned_team_member
     FROM campaign_invitations ci
     JOIN people_contacts c ON c.id = ci.contact_id
     LEFT JOIN guest_scores gs ON gs.contact_id = c.id AND gs.event_id = ${eventId}

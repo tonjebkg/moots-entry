@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import { Users, Info, GripVertical } from 'lucide-react';
-import { TagBadge } from './ui/TagBadge';
 import {
   DndContext,
   DragOverlay,
@@ -24,6 +23,9 @@ interface TableAssignment {
   relevance_score: number | null;
   seat_assignment: number | null;
   rationale?: string;
+  guest_role?: string | null;
+  guest_priority?: string | null;
+  assigned_team_member?: string | null;
 }
 
 interface TableData {
@@ -37,15 +39,6 @@ interface SeatingChartProps {
   onRemoveGuest?: (contactId: string, tableNumber: number) => void;
   onGuestClick?: (contactId: string) => void;
   onMoveGuest?: (contactId: string, newTable: number) => void;
-  allTableNumbers?: number[];
-}
-
-function getTagVariant(tag: string): 'terracotta' | 'gold' | 'forest' | 'default' {
-  const t = tag.toLowerCase();
-  if (t.includes('vip') || t.includes('sponsor')) return 'terracotta';
-  if (t.includes('speaker') || t.includes('host')) return 'gold';
-  if (t.includes('portfolio') || t.includes('partner')) return 'forest';
-  return 'default';
 }
 
 /** Draggable guest card inside a table */
@@ -54,15 +47,11 @@ function DraggableGuest({
   tableNumber,
   onGuestClick,
   onRemoveGuest,
-  onMoveGuest,
-  allTableNumbers,
 }: {
   guest: TableAssignment;
   tableNumber: number;
   onGuestClick?: (contactId: string) => void;
   onRemoveGuest?: (contactId: string, tableNumber: number) => void;
-  onMoveGuest?: (contactId: string, newTable: number) => void;
-  allTableNumbers?: number[];
 }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: `guest-${guest.contact_id}`,
@@ -70,10 +59,7 @@ function DraggableGuest({
   });
 
   const tags = guest.tags || [];
-  const vipTag = tags.find(t => {
-    const tl = t.toLowerCase();
-    return tl.includes('vip') || tl.includes('sponsor') || tl.includes('speaker');
-  });
+  const hasSponsorTag = tags.some(t => t.toLowerCase().includes('sponsor'));
 
   return (
     <div
@@ -92,7 +78,7 @@ function DraggableGuest({
       </div>
 
       <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1.5 flex-wrap">
           {onGuestClick ? (
             <button
               onClick={() => onGuestClick(guest.contact_id)}
@@ -105,53 +91,37 @@ function DraggableGuest({
               {guest.full_name}
             </div>
           )}
-          {vipTag && (
-            <TagBadge label={vipTag} variant={getTagVariant(vipTag)} />
+          {guest.guest_priority === 'VIP' && (
+            <span className="px-1.5 py-0.5 text-[11px] font-bold bg-amber-100 text-amber-800 border border-amber-300 rounded">VIP</span>
+          )}
+          {guest.guest_role === 'TEAM_MEMBER' && (
+            <span className="px-1.5 py-0.5 text-[11px] font-bold bg-blue-50 text-blue-700 border border-blue-200 rounded">Team</span>
+          )}
+          {hasSponsorTag && (
+            <span className="px-1.5 py-0.5 text-[11px] font-bold bg-brand-forest/10 text-brand-forest border border-brand-forest/20 rounded">Sponsor</span>
           )}
         </div>
-        <div className="text-xs text-ui-tertiary truncate">
+        <div className="text-[13px] text-ui-tertiary truncate">
           {guest.title && guest.company
             ? `${guest.title} · ${guest.company}`
             : guest.company || guest.title || ''
           }
         </div>
+        {guest.assigned_team_member && (
+          <div className="text-[11px] text-ui-tertiary mt-0.5">Host: {guest.assigned_team_member}</div>
+        )}
       </div>
       <div className="flex items-center gap-2 shrink-0">
-        {guest.relevance_score != null && (
-          <span className="text-xs font-semibold text-brand-terracotta">
-            {guest.relevance_score}
-          </span>
-        )}
         {guest.rationale && (
           <span title={`Suggested: ${guest.rationale}`} className="cursor-help">
             <Info size={12} className="text-ui-tertiary hover:text-brand-terracotta transition-colors" />
           </span>
         )}
-        {onMoveGuest && allTableNumbers && (
-          <select
-            className="opacity-0 group-hover:opacity-100 text-xs border border-ui-border rounded px-1 py-0.5 bg-white transition-opacity focus:opacity-100"
-            value=""
-            onChange={(e) => {
-              const newTable = parseInt(e.target.value, 10);
-              if (newTable && newTable !== tableNumber) {
-                onMoveGuest(guest.contact_id, newTable);
-              }
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <option value="">Move to...</option>
-            {allTableNumbers
-              .filter(n => n !== tableNumber)
-              .map(n => (
-                <option key={n} value={n}>Table {n}</option>
-              ))
-            }
-          </select>
-        )}
         {onRemoveGuest && (
           <button
             onClick={() => onRemoveGuest(guest.contact_id, tableNumber)}
-            className="opacity-0 group-hover:opacity-100 text-xs text-red-500 hover:text-red-700 transition-opacity"
+            className="opacity-0 group-hover:opacity-100 text-sm text-red-500 hover:text-red-700 transition-opacity font-bold"
+            title="Unassign from table"
           >
             ×
           </button>
@@ -229,16 +199,16 @@ function DragGhost({ guest }: { guest: TableAssignment }) {
       <GripVertical size={14} className="text-brand-terracotta shrink-0" />
       <div className="min-w-0 flex-1">
         <div className="text-sm font-medium text-brand-charcoal truncate">{guest.full_name}</div>
-        <div className="text-xs text-ui-tertiary truncate">{guest.company || ''}</div>
+        <div className="text-[13px] text-ui-tertiary truncate">{guest.company || ''}</div>
       </div>
-      {guest.relevance_score != null && (
-        <span className="text-xs font-semibold text-brand-terracotta shrink-0">{guest.relevance_score}</span>
+      {guest.guest_priority === 'VIP' && (
+        <span className="px-1.5 py-0.5 text-[11px] font-bold bg-amber-100 text-amber-800 rounded shrink-0">VIP</span>
       )}
     </div>
   );
 }
 
-export function SeatingChart({ tables, onRemoveGuest, onGuestClick, onMoveGuest, allTableNumbers }: SeatingChartProps) {
+export function SeatingChart({ tables, onRemoveGuest, onGuestClick, onMoveGuest }: SeatingChartProps) {
   const [activeGuest, setActiveGuest] = useState<TableAssignment | null>(null);
 
   const sensors = useSensors(
@@ -297,8 +267,6 @@ export function SeatingChart({ tables, onRemoveGuest, onGuestClick, onMoveGuest,
                     tableNumber={table.table_number}
                     onGuestClick={onGuestClick}
                     onRemoveGuest={onRemoveGuest}
-                    onMoveGuest={onMoveGuest}
-                    allTableNumbers={allTableNumbers}
                   />
                 ))
               )}

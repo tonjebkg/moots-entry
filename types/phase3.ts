@@ -34,6 +34,9 @@ export interface EventCheckin {
   score_rationale?: string | null;
   talking_points?: string[] | null;
   matched_objectives?: any[] | null;
+  guest_role?: string | null;
+  guest_priority?: string | null;
+  assigned_team_member?: string | null;
 }
 
 export interface NotArrivedGuest {
@@ -43,6 +46,10 @@ export interface NotArrivedGuest {
   title: string | null;
   relevance_score: number | null;
   table_assignment: number | null;
+  tags?: string[] | null;
+  guest_role?: string | null;
+  guest_priority?: string | null;
+  assigned_team_member?: string | null;
 }
 
 export interface CheckinMetrics {

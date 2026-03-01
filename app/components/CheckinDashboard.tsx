@@ -1,13 +1,12 @@
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
-import { Search, UserPlus, UserCheck, RefreshCw, X, AlertCircle, CheckCircle, ChevronDown, ChevronRight, Target, Sparkles } from 'lucide-react'
+import { Search, UserPlus, UserCheck, RefreshCw, X, AlertCircle, CheckCircle, ChevronDown, ChevronRight } from 'lucide-react'
 import { CheckinMetricsBar } from './CheckinMetricsBar'
 import { WalkInForm } from './WalkInForm'
 import { DossierPanel } from './DossierPanel'
 import { AvatarInitials } from './ui/AvatarInitials'
 import { TagBadge } from './ui/TagBadge'
-import { ScoreBar } from './ui/ScoreBar'
 import { formatUSTime } from '@/lib/datetime'
 import type { CheckinMetrics, EventCheckin, NotArrivedGuest } from '@/types/phase3'
 
@@ -29,12 +28,12 @@ interface SearchResult {
   checkin_id: string | null
 }
 
-function getTagVariant(tag: string): 'terracotta' | 'gold' | 'forest' | 'default' {
-  const t = tag.toLowerCase()
-  if (t.includes('vip') || t.includes('sponsor')) return 'terracotta'
-  if (t.includes('speaker') || t.includes('host')) return 'gold'
-  if (t.includes('portfolio') || t.includes('partner')) return 'forest'
-  return 'default'
+const ROLE_LABELS: Record<string, string> = {
+  TEAM_MEMBER: 'Team Member', PARTNER: 'Partner', CO_HOST: 'Co-host', SPEAKER: 'Speaker', TALENT: 'Talent',
+}
+
+const PRIORITY_LABELS: Record<string, string> = {
+  VIP: 'VIP', TIER_1: 'Tier 1', TIER_2: 'Tier 2', TIER_3: 'Tier 3', WAITLIST: 'Waitlist',
 }
 
 export function CheckinDashboard({ eventId }: CheckinDashboardProps) {
@@ -50,8 +49,9 @@ export function CheckinDashboard({ eventId }: CheckinDashboardProps) {
   const [error, setError] = useState<string | null>(null)
   const [lastCheckedIn, setLastCheckedIn] = useState<string | null>(null)
   const [expandedRow, setExpandedRow] = useState<string | null>(null)
-  const [showNotArrived, setShowNotArrived] = useState(true)
-  const [sortCol, setSortCol] = useState<'time' | 'name' | 'score' | 'company' | 'table'>('time')
+  const [showNotArrived, setShowNotArrived] = useState<boolean | null>(null) // null = auto, boolean = user override
+  const [userToggledNotArrived, setUserToggledNotArrived] = useState(false)
+  const [sortCol, setSortCol] = useState<'time' | 'name' | 'company' | 'table'>('time')
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
 
   const fetchMetrics = useCallback(async () => {
@@ -155,7 +155,7 @@ export function CheckinDashboard({ eventId }: CheckinDashboardProps) {
       setSortDir(d => d === 'asc' ? 'desc' : 'asc')
     } else {
       setSortCol(col)
-      setSortDir(col === 'score' ? 'desc' : 'asc')
+      setSortDir('asc')
     }
   }
 
@@ -171,8 +171,6 @@ export function CheckinDashboard({ eventId }: CheckinDashboardProps) {
         return dir * (new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
       case 'name':
         return dir * a.full_name.localeCompare(b.full_name)
-      case 'score':
-        return dir * ((a.relevance_score ?? -1) - (b.relevance_score ?? -1))
       case 'company':
         return dir * (a.company || '').localeCompare(b.company || '')
       case 'table':
@@ -314,21 +312,27 @@ export function CheckinDashboard({ eventId }: CheckinDashboardProps) {
       </div>
 
       {/* Not Yet Arrived — shown first (most urgent during event) */}
-      {metrics && metrics.not_arrived_guests && metrics.not_arrived_guests.length > 0 && (
+      {metrics && metrics.not_arrived_guests && metrics.not_arrived_guests.length > 0 && (() => {
+        const notArrivedCount = metrics.not_arrived_guests.length
+        // Auto: expanded if ≤3, collapsed if >4. User override takes precedence.
+        const isExpanded = userToggledNotArrived
+          ? (showNotArrived ?? notArrivedCount <= 3)
+          : notArrivedCount <= 3
+        return (
         <div className="bg-white border border-ui-border rounded-lg overflow-hidden">
           <button
-            onClick={() => setShowNotArrived(!showNotArrived)}
+            onClick={() => { setShowNotArrived(!isExpanded); setUserToggledNotArrived(true) }}
             className="w-full px-4 py-3 border-b border-ui-border flex items-center justify-between hover:bg-brand-cream transition-colors"
           >
             <h3 className="text-sm font-semibold text-brand-charcoal">
-              Not Yet Arrived ({metrics.not_arrived_guests.length})
+              Not Yet Arrived ({notArrivedCount})
             </h3>
-            {showNotArrived
+            {isExpanded
               ? <ChevronDown size={16} className="text-ui-tertiary" />
               : <ChevronRight size={16} className="text-ui-tertiary" />
             }
           </button>
-          {showNotArrived && (
+          {isExpanded && (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
@@ -336,12 +340,17 @@ export function CheckinDashboard({ eventId }: CheckinDashboardProps) {
                     <th className="text-left px-4 py-2.5 font-medium text-ui-tertiary">Name</th>
                     <th className="text-left px-4 py-2.5 font-medium text-ui-tertiary">Company</th>
                     <th className="text-left px-4 py-2.5 font-medium text-ui-tertiary">Title</th>
-                    <th className="text-left px-4 py-2.5 font-medium text-ui-tertiary">Score</th>
+                    <th className="text-left px-4 py-2.5 font-medium text-ui-tertiary" style={{ minWidth: 130 }}>Role</th>
+                    <th className="text-left px-4 py-2.5 font-medium text-ui-tertiary" style={{ minWidth: 90 }}>Priority</th>
+                    <th className="text-left px-4 py-2.5 font-medium text-ui-tertiary">Tags</th>
+                    <th className="text-left px-4 py-2.5 font-medium text-ui-tertiary">Assigned To</th>
                     <th className="text-left px-4 py-2.5 font-medium text-ui-tertiary">Table</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-ui-border">
-                  {metrics.not_arrived_guests.map((guest: NotArrivedGuest) => (
+                  {metrics.not_arrived_guests.map((guest: NotArrivedGuest) => {
+                    const guestTags = guest.tags || []
+                    return (
                     <tr key={guest.contact_id} className="hover:bg-brand-cream transition-colors">
                       <td className="px-4 py-2.5">
                         <div className="flex items-center gap-2">
@@ -356,23 +365,36 @@ export function CheckinDashboard({ eventId }: CheckinDashboardProps) {
                       </td>
                       <td className="px-4 py-2.5 text-ui-secondary">{guest.company || '—'}</td>
                       <td className="px-4 py-2.5 text-ui-secondary">{guest.title || '—'}</td>
-                      <td className="px-4 py-2.5">
-                        {guest.relevance_score != null
-                          ? <ScoreBar score={guest.relevance_score} />
-                          : <span className="text-ui-tertiary">—</span>
-                        }
+                      <td className="px-4 py-2.5 text-ui-secondary">
+                        {guest.guest_role ? ROLE_LABELS[guest.guest_role] || guest.guest_role : '—'}
                       </td>
+                      <td className="px-4 py-2.5">
+                        {guest.guest_priority === 'VIP' ? (
+                          <span className="inline-flex px-2 py-0.5 text-[13px] font-semibold rounded border bg-amber-100 text-amber-800 border-amber-300">VIP</span>
+                        ) : guest.guest_priority ? (
+                          <span className="text-ui-secondary">{PRIORITY_LABELS[guest.guest_priority] || guest.guest_priority}</span>
+                        ) : '—'}
+                      </td>
+                      <td className="px-4 py-2.5">
+                        <div className="flex items-center gap-1">
+                          {guestTags.length > 0 && <TagBadge label={guestTags[0]} variant="default" />}
+                          {guestTags.length > 1 && <span className="text-[13px] text-ui-tertiary">+{guestTags.length - 1}</span>}
+                        </div>
+                      </td>
+                      <td className="px-4 py-2.5 text-ui-secondary">{guest.assigned_team_member || '—'}</td>
                       <td className="px-4 py-2.5 text-ui-secondary">
                         {guest.table_assignment ? `Table ${guest.table_assignment}` : '—'}
                       </td>
                     </tr>
-                  ))}
+                    )
+                  })}
                 </tbody>
               </table>
             </div>
           )}
         </div>
-      )}
+        )
+      })()}
 
       {/* Recent Check-ins Table */}
       {metrics && filteredCheckins.length > 0 && (
@@ -390,13 +412,12 @@ export function CheckinDashboard({ eventId }: CheckinDashboardProps) {
                   {([
                     { key: 'time' as const, label: 'Time', align: 'text-left' },
                     { key: 'name' as const, label: 'Name', align: 'text-left' },
-                    { key: 'score' as const, label: 'Score', align: 'text-center', width: 'w-20' },
                     { key: 'company' as const, label: 'Company', align: 'text-left' },
                   ]).map(col => (
                     <th
                       key={col.key}
                       onClick={() => handleSort(col.key)}
-                      className={`${col.align} px-4 py-2.5 font-medium text-ui-tertiary ${col.width || ''} cursor-pointer select-none hover:text-brand-charcoal transition-colors`}
+                      className={`${col.align} px-4 py-2.5 font-medium text-ui-tertiary cursor-pointer select-none hover:text-brand-charcoal transition-colors`}
                     >
                       <span className="inline-flex items-center gap-1">
                         {col.label}
@@ -407,7 +428,10 @@ export function CheckinDashboard({ eventId }: CheckinDashboardProps) {
                     </th>
                   ))}
                   <th className="text-left px-4 py-2.5 font-medium text-ui-tertiary">Title</th>
+                  <th className="text-left px-4 py-2.5 font-medium text-ui-tertiary" style={{ minWidth: 130 }}>Role</th>
+                  <th className="text-left px-4 py-2.5 font-medium text-ui-tertiary" style={{ minWidth: 90 }}>Priority</th>
                   <th className="text-left px-4 py-2.5 font-medium text-ui-tertiary">Tags</th>
+                  <th className="text-left px-4 py-2.5 font-medium text-ui-tertiary">Assigned To</th>
                   <th
                     onClick={() => handleSort('table')}
                     className="text-left px-4 py-2.5 font-medium text-ui-tertiary cursor-pointer select-none hover:text-brand-charcoal transition-colors"
@@ -454,36 +478,31 @@ export function CheckinDashboard({ eventId }: CheckinDashboardProps) {
                             >
                               {checkin.full_name}
                             </button>
-                            {tags.some(t => t.toLowerCase().includes('vip')) && (
-                              <span className="px-1.5 py-0.5 text-[9px] font-bold bg-brand-terracotta/10 text-brand-terracotta rounded">VIP</span>
-                            )}
-                            {tags.some(t => t.toLowerCase().includes('speaker')) && (
-                              <span className="px-1.5 py-0.5 text-[9px] font-bold bg-amber-100 text-amber-700 rounded">Speaker</span>
-                            )}
-                            {tags.some(t => t.toLowerCase().includes('sponsor')) && (
-                              <span className="px-1.5 py-0.5 text-[9px] font-bold bg-brand-forest/10 text-brand-forest rounded">Sponsor</span>
-                            )}
                           </div>
-                        </td>
-                        <td className="px-4 py-2.5 text-center">
-                          {checkin.relevance_score != null ? (
-                            <ScoreBar score={checkin.relevance_score} width={60} />
-                          ) : (
-                            <span className="text-xs text-ui-tertiary">--</span>
-                          )}
                         </td>
                         <td className="px-4 py-2.5 text-ui-secondary">{checkin.company || '—'}</td>
                         <td className="px-4 py-2.5 text-ui-secondary">{checkin.title || '—'}</td>
+                        <td className="px-4 py-2.5 text-ui-secondary">
+                          {checkin.guest_role ? ROLE_LABELS[checkin.guest_role] || checkin.guest_role : '—'}
+                        </td>
+                        <td className="px-4 py-2.5">
+                          {checkin.guest_priority === 'VIP' ? (
+                            <span className="inline-flex px-2 py-0.5 text-[13px] font-semibold rounded border bg-amber-100 text-amber-800 border-amber-300">VIP</span>
+                          ) : checkin.guest_priority ? (
+                            <span className="text-ui-secondary">{PRIORITY_LABELS[checkin.guest_priority] || checkin.guest_priority}</span>
+                          ) : <span className="text-ui-tertiary">—</span>}
+                        </td>
                         <td className="px-4 py-2.5">
                           <div className="flex items-center gap-1">
                             {tags.length > 0 && (
-                              <TagBadge label={tags[0]} variant={getTagVariant(tags[0])} />
+                              <TagBadge label={tags[0]} variant="default" />
                             )}
                             {tags.length > 1 && (
-                              <span className="text-xs text-ui-tertiary">+{tags.length - 1}</span>
+                              <span className="text-[13px] text-ui-tertiary">+{tags.length - 1}</span>
                             )}
                           </div>
                         </td>
+                        <td className="px-4 py-2.5 text-ui-secondary">{checkin.assigned_team_member || '—'}</td>
                         <td className="px-4 py-2.5 text-ui-secondary">
                           {checkin.table_assignment ? `Table ${checkin.table_assignment}` : '—'}
                         </td>
@@ -499,73 +518,34 @@ export function CheckinDashboard({ eventId }: CheckinDashboardProps) {
                       </tr>
                       {isExpanded && (
                         <tr>
-                          <td colSpan={9} className="px-0 py-0">
+                          <td colSpan={11} className="px-0 py-0">
                             <div className="border-t border-ui-border bg-brand-cream px-6 py-4 space-y-4">
-                              {/* Score + Tags + Notes row */}
+                              {/* Operational info row */}
                               <div className="flex items-center gap-4 flex-wrap">
-                                {checkin.relevance_score != null && (
-                                  <div className="flex items-center gap-2">
-                                    <span className="text-xs font-medium text-ui-tertiary">Score:</span>
-                                    <ScoreBar score={checkin.relevance_score} />
-                                  </div>
-                                )}
-                                {tags.length > 0 && (
-                                  <div className="flex items-center gap-1.5">
-                                    <span className="text-xs font-medium text-ui-tertiary">Tags:</span>
-                                    {tags.map(tag => (
-                                      <TagBadge key={tag} label={tag} variant={getTagVariant(tag)} />
-                                    ))}
-                                  </div>
-                                )}
                                 {checkin.notes && (
                                   <div className="flex items-center gap-1.5">
-                                    <span className="text-xs font-medium text-ui-tertiary">Notes:</span>
-                                    <span className="text-xs text-ui-secondary">{checkin.notes}</span>
+                                    <span className="text-[13px] font-medium text-ui-tertiary">Notes:</span>
+                                    <span className="text-[13px] text-ui-secondary">{checkin.notes}</span>
+                                  </div>
+                                )}
+                                {checkin.table_assignment && (
+                                  <div className="flex items-center gap-1.5">
+                                    <span className="text-[13px] font-medium text-ui-tertiary">Table:</span>
+                                    <span className="text-[13px] text-ui-secondary">Table {checkin.table_assignment}</span>
+                                  </div>
+                                )}
+                                {checkin.assigned_team_member && (
+                                  <div className="flex items-center gap-1.5">
+                                    <span className="text-[13px] font-medium text-ui-tertiary">Assigned To:</span>
+                                    <span className="text-[13px] text-ui-secondary">{checkin.assigned_team_member}</span>
                                   </div>
                                 )}
                               </div>
 
-                              {/* AI Insights */}
-                              {checkin.ai_summary && (
-                                <div>
-                                  <h4 className="text-xs font-semibold text-ui-tertiary uppercase tracking-wider mb-1.5">AI-Generated Insights</h4>
-                                  <p className="text-sm text-ui-secondary leading-relaxed">{checkin.ai_summary}</p>
-                                </div>
-                              )}
-
-                              {/* Why They Match */}
-                              {checkin.score_rationale && (
-                                <div>
-                                  <h4 className="text-xs font-semibold text-ui-tertiary uppercase tracking-wider mb-1.5">Why They Match</h4>
-                                  <p className="text-sm text-ui-secondary leading-relaxed">{checkin.score_rationale}</p>
-                                </div>
-                              )}
-
-                              {/* Objective breakdown */}
-                              {checkin.matched_objectives && checkin.matched_objectives.length > 0 && (
-                                <div>
-                                  <h4 className="text-xs font-semibold text-ui-tertiary uppercase tracking-wider mb-2">Objective Breakdown</h4>
-                                  <div className="space-y-1.5">
-                                    {checkin.matched_objectives.map((mo: any, i: number) => (
-                                      <div key={i} className="flex items-center gap-2">
-                                        <div className={`w-7 h-7 rounded flex items-center justify-center text-xs font-bold shrink-0 ${
-                                          mo.match_score >= 70 ? 'bg-emerald-50 text-emerald-700'
-                                            : mo.match_score >= 40 ? 'bg-amber-50 text-amber-700'
-                                            : 'bg-gray-50 text-ui-tertiary'
-                                        }`}>
-                                          {mo.match_score}
-                                        </div>
-                                        <span className="text-sm text-brand-charcoal">{mo.objective_text || 'Objective'}</span>
-                                      </div>
-                                    ))}
-                                  </div>
-                                </div>
-                              )}
-
-                              {/* Talking Points */}
+                              {/* Talking Points — kept for event-day conversation prep */}
                               {checkin.talking_points && checkin.talking_points.length > 0 && (
                                 <div>
-                                  <h4 className="text-xs font-semibold text-ui-tertiary uppercase tracking-wider mb-2">Talking Points</h4>
+                                  <h4 className="text-[13px] font-semibold text-ui-tertiary uppercase tracking-wider mb-2">Talking Points</h4>
                                   <ul className="space-y-1">
                                     {checkin.talking_points.map((tp, i) => (
                                       <li key={i} className="flex items-start gap-2 text-sm text-ui-secondary">
@@ -582,7 +562,7 @@ export function CheckinDashboard({ eventId }: CheckinDashboardProps) {
                                 <div className="pt-1">
                                   <button
                                     onClick={() => setDossierContactId(checkin.contact_id!)}
-                                    className="px-3 py-1.5 border border-ui-border rounded-lg text-xs font-medium text-ui-secondary hover:bg-white transition-colors"
+                                    className="px-3 py-1.5 border border-ui-border rounded-lg text-[13px] font-medium text-ui-secondary hover:bg-white transition-colors"
                                   >
                                     View Full Profile
                                   </button>
