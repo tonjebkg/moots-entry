@@ -16,7 +16,7 @@ export function AvatarInitials({ name, size = 34, className = '' }: AvatarInitia
   return (
     <div
       className={`shrink-0 rounded-full bg-gradient-to-br from-brand-terracotta to-brand-forest flex items-center justify-center text-white font-semibold ${className}`}
-      style={{ width: size, height: size, fontSize: size * 0.38 }}
+      style={{ width: size, height: size, fontSize: Math.max(11, size * 0.38) }}
     >
       {initials}
     </div>

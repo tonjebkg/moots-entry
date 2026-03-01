@@ -33,6 +33,10 @@ export const createContactSchema = z.object({
   source_detail: z.string().max(500).optional().nullable(),
 });
 
+export const GUEST_ROLE_VALUES = [
+  'TIER_1', 'TIER_2', 'TIER_3', 'TEAM_MEMBER', 'PARTNER', 'CO_HOST', 'SPEAKER', 'TALENT', 'VIP',
+] as const;
+
 export const updateContactSchema = z.object({
   full_name: z.string().min(1).max(200).optional(),
   first_name: z.string().max(100).optional().nullable(),
@@ -50,6 +54,7 @@ export const updateContactSchema = z.object({
   board_affiliations: z.array(z.string()).optional(),
   tags: z.array(z.string().max(50)).optional(),
   internal_notes: z.string().max(5000).optional().nullable(),
+  guest_role: z.enum(GUEST_ROLE_VALUES).optional().nullable(),
 });
 
 export const contactSearchSchema = z.object({

@@ -15,7 +15,7 @@ const variantStyles: Record<TagVariant, string> = {
 
 export function TagBadge({ label, variant = 'default', className = '' }: TagBadgeProps) {
   return (
-    <span className={`inline-flex px-2 py-0.5 text-xs font-medium rounded-full ${variantStyles[variant]} ${className}`}>
+    <span className={`inline-flex px-2 py-0.5 text-[13px] font-medium rounded-full ${variantStyles[variant]} ${className}`}>
       {label}
     </span>
   )

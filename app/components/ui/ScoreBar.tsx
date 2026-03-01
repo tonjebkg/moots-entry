@@ -22,7 +22,7 @@ export function ScoreBar({ score, maxScore = 100, width = 80 }: ScoreBarProps) {
           style={{ width: `${pct}%` }}
         />
       </div>
-      <span className="text-xs font-semibold text-brand-charcoal tabular-nums w-6 text-right">{score}</span>
+      <span className="text-sm font-semibold text-brand-charcoal tabular-nums w-7 text-right">{score}</span>
     </div>
   )
 }

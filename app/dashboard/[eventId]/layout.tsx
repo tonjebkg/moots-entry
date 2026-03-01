@@ -307,7 +307,7 @@ export default async function EventLayout({ children, params }: LayoutProps) {
 
         {/* Tab Content - Full Width */}
         <AgentContextProvider>
-          <div className="px-8 py-8 pb-28">
+          <div className="px-8 py-8 pb-36">
             {children}
           </div>
           <ChatPanel eventId={eventId} />
