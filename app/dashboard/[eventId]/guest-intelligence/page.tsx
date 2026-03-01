@@ -49,6 +49,7 @@ interface ScoredContact {
   campaign_id: string | null
   referred_by_name: string | null
   guest_role: string | null
+  guest_priority: string | null
   rsvp_submission_id: string | null
 }
 
@@ -94,22 +95,32 @@ const ALL_STATUS_OPTIONS = [
   { value: 'WAITLIST', label: 'Waitlist', color: 'text-gray-600' },
 ]
 
-// Role options for inline dropdown (ordered lowest to highest hierarchy)
+// Role options — functional role at the event (what this person DOES)
 const ROLE_OPTIONS = [
   { value: '', label: '—', color: 'text-gray-400' },
-  { value: 'TIER_1', label: 'Tier 1', color: 'text-brand-charcoal' },
-  { value: 'TIER_2', label: 'Tier 2', color: 'text-brand-charcoal' },
-  { value: 'TIER_3', label: 'Tier 3', color: 'text-brand-charcoal' },
   { value: 'TEAM_MEMBER', label: 'Team Member', color: 'text-blue-700' },
   { value: 'PARTNER', label: 'Partner', color: 'text-emerald-700' },
   { value: 'CO_HOST', label: 'Co-host', color: 'text-violet-700' },
   { value: 'SPEAKER', label: 'Speaker', color: 'text-amber-700' },
   { value: 'TALENT', label: 'Talent', color: 'text-pink-700' },
-  { value: 'VIP', label: 'VIP', color: 'text-brand-terracotta' },
 ]
 
 const ROLE_DISPLAY: Record<string, { label: string; color: string }> = Object.fromEntries(
   ROLE_OPTIONS.filter(o => o.value).map(o => [o.value, { label: o.label, color: o.color }])
+)
+
+// Priority options — invitation priority tier (maps to campaign waves)
+const PRIORITY_OPTIONS = [
+  { value: '', label: '—', color: 'text-gray-400', bg: '' },
+  { value: 'VIP', label: 'VIP', color: 'text-amber-800', bg: 'bg-amber-100 border-amber-300' },
+  { value: 'TIER_1', label: 'Tier 1', color: 'text-brand-charcoal', bg: '' },
+  { value: 'TIER_2', label: 'Tier 2', color: 'text-brand-charcoal', bg: '' },
+  { value: 'TIER_3', label: 'Tier 3', color: 'text-brand-charcoal', bg: '' },
+  { value: 'WAITLIST', label: 'Waitlist', color: 'text-gray-500', bg: '' },
+]
+
+const PRIORITY_DISPLAY: Record<string, { label: string; color: string; bg: string }> = Object.fromEntries(
+  PRIORITY_OPTIONS.filter(o => o.value).map(o => [o.value, { label: o.label, color: o.color, bg: o.bg }])
 )
 
 const FILTER_LABELS: Record<string, string> = {
@@ -127,11 +138,9 @@ const DEFAULT_STATS: Stats = {
   qualified_count: 0, pending_review_count: 0, selected_count: 0, confirmed_count: 0,
 }
 
-function getTagVariant(tag: string): 'terracotta' | 'gold' | 'forest' | 'default' {
-  const lower = tag.toLowerCase()
-  if (lower.includes('priority') || lower.includes('vip')) return 'terracotta'
-  if (lower.includes('high value') || lower.includes('investor') || lower.includes('speaker')) return 'gold'
-  if (lower.includes('coi') || lower.includes('board') || lower.includes('executive')) return 'forest'
+function getTagVariant(_tag: string): 'default' {
+  // All tags use the same neutral gray pill styling.
+  // VIP distinction belongs in the Priority column, not in tags.
   return 'default'
 }
 
@@ -352,8 +361,8 @@ function ContactRow({
                 onClick={(e) => { e.stopPropagation(); onAddToWave() }}
                 className="flex items-center gap-1.5 px-3 py-1.5 bg-brand-terracotta hover:bg-brand-terracotta/90 text-white text-[13px] font-semibold rounded-md transition-colors"
               >
-                <Plus size={12} />
-                Add to Wave
+                <Send size={12} />
+                Send Invites
               </button>
             )}
             {isPending && onDecline && (
@@ -421,8 +430,9 @@ export default function GuestIntelligencePage() {
   // Status dropdown per contact
   const [statusDropdownId, setStatusDropdownId] = useState<string | null>(null)
 
-  // Role dropdown per contact
+  // Role + Priority dropdown per contact
   const [roleDropdownId, setRoleDropdownId] = useState<string | null>(null)
+  const [priorityDropdownId, setPriorityDropdownId] = useState<string | null>(null)
 
   // Bulk actions
   const [bulkStatusOpen, setBulkStatusOpen] = useState(false)
@@ -713,13 +723,28 @@ export default function GuestIntelligencePage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ guest_role: role || null }),
       })
-      // Optimistically update local state
       setContacts(prev => prev.map(c =>
         c.contact_id === contactId ? { ...c, guest_role: role || null } : c
       ))
       setRoleDropdownId(null)
     } catch (err) {
       console.error('Failed to update role:', err)
+    }
+  }
+
+  async function updatePriority(contactId: string, priority: string | null) {
+    try {
+      await fetch(`/api/contacts/${contactId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ guest_priority: priority || null }),
+      })
+      setContacts(prev => prev.map(c =>
+        c.contact_id === contactId ? { ...c, guest_priority: priority || null } : c
+      ))
+      setPriorityDropdownId(null)
+    } catch (err) {
+      console.error('Failed to update priority:', err)
     }
   }
 
@@ -1294,7 +1319,8 @@ export default function GuestIntelligencePage() {
                           </span>
                         </th>
                       ))}
-                      <th className="px-4 py-3 text-left font-semibold text-brand-charcoal w-28">Role</th>
+                      <th className="px-4 py-3 text-left font-semibold text-brand-charcoal" style={{ minWidth: 110 }}>Role</th>
+                      <th className="px-4 py-3 text-left font-semibold text-brand-charcoal" style={{ minWidth: 90 }}>Priority</th>
                       <th className="px-4 py-3 text-left font-semibold text-brand-charcoal">Tags</th>
                       {([
                         { key: 'source' as const, label: 'Source' },
@@ -1391,6 +1417,39 @@ export default function GuestIntelligencePage() {
                                 )}
                               </div>
                             </td>
+                            <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                              <div className="relative">
+                                <button
+                                  onClick={() => setPriorityDropdownId(priorityDropdownId === c.contact_id ? null : c.contact_id)}
+                                  className={`inline-flex items-center gap-1 px-2 py-0.5 text-[13px] font-medium rounded border whitespace-nowrap transition-all cursor-pointer ${
+                                    c.guest_priority && PRIORITY_DISPLAY[c.guest_priority]
+                                      ? PRIORITY_DISPLAY[c.guest_priority].bg
+                                        ? `${PRIORITY_DISPLAY[c.guest_priority].color} ${PRIORITY_DISPLAY[c.guest_priority].bg} hover:ring-1 hover:ring-amber-400/40`
+                                        : `${PRIORITY_DISPLAY[c.guest_priority].color} bg-gray-50 border-gray-200 hover:ring-1 hover:ring-brand-terracotta/30`
+                                      : 'text-gray-400 bg-transparent border-transparent hover:bg-gray-50 hover:border-gray-200'
+                                  }`}
+                                >
+                                  {c.guest_priority && PRIORITY_DISPLAY[c.guest_priority] ? PRIORITY_DISPLAY[c.guest_priority].label : '—'}
+                                  <ChevronDown size={10} />
+                                </button>
+                                {priorityDropdownId === c.contact_id && (
+                                  <>
+                                    <div className="fixed inset-0 z-10" onClick={() => setPriorityDropdownId(null)} />
+                                    <div className="absolute left-0 top-full mt-1 w-36 bg-white border border-ui-border rounded-lg shadow-lg z-20 py-1">
+                                      {PRIORITY_OPTIONS.map(opt => (
+                                        <button
+                                          key={opt.value}
+                                          onClick={() => updatePriority(c.contact_id, opt.value || null)}
+                                          className={`w-full text-left px-3 py-1.5 text-[13px] font-medium ${opt.color} hover:bg-brand-cream transition-colors ${c.guest_priority === opt.value || (!c.guest_priority && !opt.value) ? 'bg-brand-cream/60' : ''} ${opt.value === 'VIP' ? 'font-semibold' : ''}`}
+                                        >
+                                          {opt.label}
+                                        </button>
+                                      ))}
+                                    </div>
+                                  </>
+                                )}
+                              </div>
+                            </td>
                             <td className="px-4 py-3">
                               {(c.tags || []).length > 0 ? (
                                 <div className="flex items-center gap-1 flex-wrap">
@@ -1461,9 +1520,9 @@ export default function GuestIntelligencePage() {
                           {/* Expandable detail row */}
                           {isExpanded && (
                             <tr>
-                              <td colSpan={10} className="px-0 py-0">
+                              <td colSpan={11} className="px-0 py-0">
                                 <div className="border-t border-ui-border bg-brand-cream px-6 py-4 space-y-4">
-                                  {/* Guest name + role header */}
+                                  {/* Guest name + role + priority header */}
                                   <div className="flex items-center gap-3">
                                     <AvatarInitials name={c.full_name || '?'} size={36} />
                                     <div>
@@ -1472,6 +1531,13 @@ export default function GuestIntelligencePage() {
                                         {c.guest_role && ROLE_DISPLAY[c.guest_role] && (
                                           <span className={`text-[13px] font-semibold ${ROLE_DISPLAY[c.guest_role].color}`}>
                                             {ROLE_DISPLAY[c.guest_role].label}
+                                          </span>
+                                        )}
+                                        {c.guest_priority && PRIORITY_DISPLAY[c.guest_priority] && (
+                                          <span className={`inline-flex px-2 py-0.5 text-[13px] font-semibold rounded ${
+                                            PRIORITY_DISPLAY[c.guest_priority].bg || 'bg-gray-50 text-brand-charcoal'
+                                          } ${PRIORITY_DISPLAY[c.guest_priority].color}`}>
+                                            {PRIORITY_DISPLAY[c.guest_priority].label}
                                           </span>
                                         )}
                                       </div>
@@ -1562,7 +1628,7 @@ export default function GuestIntelligencePage() {
                                           className="px-2.5 py-1.5 text-[13px] border border-ui-border rounded-md bg-white focus:outline-none focus:border-brand-terracotta w-48"
                                         />
                                         <div className="flex gap-1">
-                                          {['VIP', 'Speaker', 'Priority'].filter(s => !(c.tags || []).includes(s)).slice(0, 3).map(s => (
+                                          {['Speaker', 'Priority'].filter(s => !(c.tags || []).includes(s)).map(s => (
                                             <button
                                               key={s}
                                               onClick={() => addTagToContact(c.contact_id, s)}
@@ -1711,8 +1777,8 @@ export default function GuestIntelligencePage() {
                                         onClick={(e) => { e.stopPropagation(); setWaveModalContactIds([c.contact_id]) }}
                                         className="flex items-center gap-1.5 px-3 py-1.5 bg-brand-terracotta hover:bg-brand-terracotta/90 text-white text-[13px] font-semibold rounded-md transition-colors"
                                       >
-                                        <Plus size={12} />
-                                        Add to Wave
+                                        <Send size={12} />
+                                        Send Invites
                                       </button>
                                     )}
                                     {isPending && (
@@ -1824,7 +1890,8 @@ export default function GuestIntelligencePage() {
                           <th className="px-4 py-3 text-left font-semibold text-brand-charcoal">Name</th>
                           <th className="px-4 py-3 text-left font-semibold text-brand-charcoal">Company</th>
                           <th className="px-4 py-3 text-left font-semibold text-brand-charcoal">Title</th>
-                          <th className="px-4 py-3 text-left font-semibold text-brand-charcoal w-28">Role</th>
+                          <th className="px-4 py-3 text-left font-semibold text-brand-charcoal" style={{ minWidth: 110 }}>Role</th>
+                          <th className="px-4 py-3 text-left font-semibold text-brand-charcoal" style={{ minWidth: 90 }}>Priority</th>
                           <th className="px-4 py-3 text-left font-semibold text-brand-charcoal">Tags</th>
                           <th className="px-4 py-3 text-left font-semibold text-brand-charcoal">Source</th>
                           <th className="px-4 py-3 text-left font-semibold text-brand-charcoal">Event Status</th>
@@ -1889,6 +1956,39 @@ export default function GuestIntelligencePage() {
                                               key={opt.value}
                                               onClick={() => updateRole(c.contact_id, opt.value || null)}
                                               className={`w-full text-left px-3 py-1.5 text-[13px] font-medium ${opt.color} hover:bg-brand-cream transition-colors ${c.guest_role === opt.value || (!c.guest_role && !opt.value) ? 'bg-brand-cream/60' : ''}`}
+                                            >
+                                              {opt.label}
+                                            </button>
+                                          ))}
+                                        </div>
+                                      </>
+                                    )}
+                                  </div>
+                                </td>
+                                <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                                  <div className="relative">
+                                    <button
+                                      onClick={() => setPriorityDropdownId(priorityDropdownId === c.contact_id ? null : c.contact_id)}
+                                      className={`inline-flex items-center gap-1 px-2 py-0.5 text-[13px] font-medium rounded border whitespace-nowrap transition-all cursor-pointer ${
+                                        c.guest_priority && PRIORITY_DISPLAY[c.guest_priority]
+                                          ? PRIORITY_DISPLAY[c.guest_priority].bg
+                                            ? `${PRIORITY_DISPLAY[c.guest_priority].color} ${PRIORITY_DISPLAY[c.guest_priority].bg} hover:ring-1 hover:ring-amber-400/40`
+                                            : `${PRIORITY_DISPLAY[c.guest_priority].color} bg-gray-50 border-gray-200 hover:ring-1 hover:ring-brand-terracotta/30`
+                                          : 'text-gray-400 bg-transparent border-transparent hover:bg-gray-50 hover:border-gray-200'
+                                      }`}
+                                    >
+                                      {c.guest_priority && PRIORITY_DISPLAY[c.guest_priority] ? PRIORITY_DISPLAY[c.guest_priority].label : '—'}
+                                      <ChevronDown size={10} />
+                                    </button>
+                                    {priorityDropdownId === c.contact_id && (
+                                      <>
+                                        <div className="fixed inset-0 z-10" onClick={() => setPriorityDropdownId(null)} />
+                                        <div className="absolute left-0 top-full mt-1 w-36 bg-white border border-ui-border rounded-lg shadow-lg z-20 py-1">
+                                          {PRIORITY_OPTIONS.map(opt => (
+                                            <button
+                                              key={opt.value}
+                                              onClick={() => updatePriority(c.contact_id, opt.value || null)}
+                                              className={`w-full text-left px-3 py-1.5 text-[13px] font-medium ${opt.color} hover:bg-brand-cream transition-colors ${c.guest_priority === opt.value || (!c.guest_priority && !opt.value) ? 'bg-brand-cream/60' : ''} ${opt.value === 'VIP' ? 'font-semibold' : ''}`}
                                             >
                                               {opt.label}
                                             </button>
@@ -1981,9 +2081,9 @@ export default function GuestIntelligencePage() {
                               {/* Expandable detail row */}
                               {isExpanded && (
                                 <tr>
-                                  <td colSpan={11} className="px-0 py-0">
+                                  <td colSpan={12} className="px-0 py-0">
                                     <div className="border-t border-ui-border bg-brand-cream px-6 py-4 space-y-4">
-                                      {/* Guest name + role header */}
+                                      {/* Guest name + role + priority header */}
                                       <div className="flex items-center gap-3">
                                         <AvatarInitials name={c.full_name || '?'} size={36} />
                                         <div>
@@ -1992,6 +2092,13 @@ export default function GuestIntelligencePage() {
                                             {c.guest_role && ROLE_DISPLAY[c.guest_role] && (
                                               <span className={`text-[13px] font-semibold ${ROLE_DISPLAY[c.guest_role].color}`}>
                                                 {ROLE_DISPLAY[c.guest_role].label}
+                                              </span>
+                                            )}
+                                            {c.guest_priority && PRIORITY_DISPLAY[c.guest_priority] && (
+                                              <span className={`inline-flex px-2 py-0.5 text-[13px] font-semibold rounded ${
+                                                PRIORITY_DISPLAY[c.guest_priority].bg || 'bg-gray-50 text-brand-charcoal'
+                                              } ${PRIORITY_DISPLAY[c.guest_priority].color}`}>
+                                                {PRIORITY_DISPLAY[c.guest_priority].label}
                                               </span>
                                             )}
                                           </div>
@@ -2082,7 +2189,7 @@ export default function GuestIntelligencePage() {
                                               className="px-2.5 py-1.5 text-[13px] border border-ui-border rounded-md bg-white focus:outline-none focus:border-brand-terracotta w-48"
                                             />
                                             <div className="flex gap-1">
-                                              {['VIP', 'Speaker', 'Priority'].filter(s => !(c.tags || []).includes(s)).slice(0, 3).map(s => (
+                                              {['Speaker', 'Priority'].filter(s => !(c.tags || []).includes(s)).map(s => (
                                                 <button
                                                   key={s}
                                                   onClick={() => addTagToContact(c.contact_id, s)}
@@ -2219,8 +2326,8 @@ export default function GuestIntelligencePage() {
                                           onClick={(e) => { e.stopPropagation(); setWaveModalContactIds([c.contact_id]) }}
                                           className="flex items-center gap-1.5 px-3 py-1.5 bg-brand-terracotta hover:bg-brand-terracotta/90 text-white text-[13px] font-semibold rounded-md transition-colors"
                                         >
-                                          <Plus size={12} />
-                                          Add to Wave
+                                          <Send size={12} />
+                                          Send Invites
                                         </button>
                                         <button
                                           onClick={(e) => { e.stopPropagation(); declineContact(c.contact_id) }}
@@ -2321,13 +2428,13 @@ export default function GuestIntelligencePage() {
             <div className="border-2 border-dashed border-ui-border rounded-lg p-8 text-center">
               <Upload size={32} className="mx-auto mb-3 text-ui-tertiary" />
               <p className="text-sm font-medium text-brand-charcoal mb-1">Drag & drop your CSV file here</p>
-              <p className="text-xs text-ui-tertiary mb-4">or click to browse — supports .csv and .xlsx</p>
+              <p className="text-[13px] text-ui-tertiary mb-4">or click to browse — supports .csv and .xlsx</p>
               <input type="file" accept=".csv,.xlsx" className="hidden" id="csv-upload" onChange={() => alert('CSV import coming soon — contact support for bulk imports.')} />
               <label htmlFor="csv-upload" className="inline-flex px-4 py-2 bg-brand-terracotta text-white text-sm font-semibold rounded-pill cursor-pointer hover:bg-brand-terracotta/90 transition-colors">
                 Choose File
               </label>
             </div>
-            <p className="text-xs text-ui-tertiary mt-3">After upload, you&apos;ll map columns to contact fields before importing.</p>
+            <p className="text-[13px] text-ui-tertiary mt-3">After upload, you&apos;ll map columns to contact fields before importing.</p>
           </div>
         </div>
       )}

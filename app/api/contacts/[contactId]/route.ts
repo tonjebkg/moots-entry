@@ -88,6 +88,7 @@ export const PATCH = withErrorHandling(async (request: NextRequest, { params }: 
   if (data.net_worth_range !== undefined) updates.net_worth_range = data.net_worth_range;
   if (data.internal_notes !== undefined) updates.internal_notes = data.internal_notes;
   if (data.guest_role !== undefined) updates.guest_role = data.guest_role;
+  if (data.guest_priority !== undefined) updates.guest_priority = data.guest_priority;
 
   // Recompute dedup key if name or emails changed
   const newName = data.full_name ?? existing[0].full_name;
@@ -113,6 +114,7 @@ export const PATCH = withErrorHandling(async (request: NextRequest, { params }: 
       tags = ${data.tags ?? null},
       internal_notes = ${data.internal_notes !== undefined ? data.internal_notes : null},
       guest_role = ${data.guest_role !== undefined ? data.guest_role : null},
+      guest_priority = ${data.guest_priority !== undefined ? data.guest_priority : null},
       dedup_key = ${dedupKey}
     WHERE id = ${contactId} AND workspace_id = ${auth.workspace.id}
     RETURNING *

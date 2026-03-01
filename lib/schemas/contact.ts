@@ -34,7 +34,11 @@ export const createContactSchema = z.object({
 });
 
 export const GUEST_ROLE_VALUES = [
-  'TIER_1', 'TIER_2', 'TIER_3', 'TEAM_MEMBER', 'PARTNER', 'CO_HOST', 'SPEAKER', 'TALENT', 'VIP',
+  'TEAM_MEMBER', 'PARTNER', 'CO_HOST', 'SPEAKER', 'TALENT',
+] as const;
+
+export const GUEST_PRIORITY_VALUES = [
+  'VIP', 'TIER_1', 'TIER_2', 'TIER_3', 'WAITLIST',
 ] as const;
 
 export const updateContactSchema = z.object({
@@ -55,6 +59,7 @@ export const updateContactSchema = z.object({
   tags: z.array(z.string().max(50)).optional(),
   internal_notes: z.string().max(5000).optional().nullable(),
   guest_role: z.enum(GUEST_ROLE_VALUES).optional().nullable(),
+  guest_priority: z.enum(GUEST_PRIORITY_VALUES).optional().nullable(),
 });
 
 export const contactSearchSchema = z.object({

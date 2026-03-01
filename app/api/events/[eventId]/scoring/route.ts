@@ -46,7 +46,7 @@ export const GET = withErrorHandling(async (request: NextRequest, { params }: Ro
     SELECT
       c.id AS contact_id, c.full_name, c.first_name, c.last_name, c.photo_url,
       c.company, c.title, c.emails, c.tags, c.enrichment_status, c.ai_summary,
-      c.source, c.linkedin_url, c.guest_role,
+      c.source, c.linkedin_url, c.guest_role, c.guest_priority,
       gs.id AS score_id, gs.relevance_score, gs.matched_objectives,
       gs.score_rationale, gs.talking_points, gs.scored_at, gs.model_version,
       ci.id AS invitation_id, ci.status AS invitation_status,
