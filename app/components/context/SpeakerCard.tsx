@@ -60,14 +60,14 @@ export function SpeakerCard({ speaker, rank }: SpeakerCardProps) {
                 </span>
               )}
             </div>
-            <div className="text-xs text-ui-tertiary truncate">{speaker.title}</div>
+            <div className="text-[13px] text-ui-tertiary truncate">{speaker.title}</div>
           </div>
         </div>
         <div className="text-center shrink-0">
           <div className={`text-xl font-extrabold leading-none ${relevanceColor}`}>
             {speaker.relevance}
           </div>
-          <div className="text-[9px] text-ui-tertiary font-semibold uppercase tracking-[0.05em]">
+          <div className="text-[11px] text-ui-tertiary font-semibold uppercase tracking-[0.05em]">
             Match
           </div>
         </div>
@@ -75,10 +75,10 @@ export function SpeakerCard({ speaker, rank }: SpeakerCardProps) {
 
       {/* Quick info tags */}
       <div className="flex gap-1.5 mt-2.5 flex-wrap">
-        <span className="text-[11px] px-2 py-0.5 rounded bg-brand-forest/10 text-brand-forest font-medium">
+        <span className="text-[13px] px-2 py-0.5 rounded bg-brand-forest/10 text-brand-forest font-medium">
           {speaker.pastEvents.split(',')[0]}
         </span>
-        <span className="text-[11px] px-2 py-0.5 rounded bg-[#EDE8FF] text-[#6B5CE7] font-medium">
+        <span className="text-[13px] px-2 py-0.5 rounded bg-[#EDE8FF] text-[#6B5CE7] font-medium">
           {speaker.speakingExperience.split(',')[0]}
         </span>
       </div>
@@ -91,13 +91,13 @@ export function SpeakerCard({ speaker, rank }: SpeakerCardProps) {
           <DetailBlock label="Why They Fit" text={speaker.fitAnalysis} />
           <DetailBlock label="Relationship" text={speaker.relationshipStatus} />
           <div className="flex gap-1.5 mt-1">
-            <button className="text-xs font-semibold py-[5px] px-3 rounded-md bg-brand-terracotta text-white border-none cursor-pointer">
+            <button className="text-[13px] font-semibold py-[5px] px-3 rounded-md bg-brand-terracotta text-white border-none cursor-pointer">
               Draft outreach
             </button>
-            <button className="text-xs font-semibold py-[5px] px-3 rounded-md bg-transparent text-brand-terracotta border border-brand-terracotta/25 cursor-pointer">
+            <button className="text-[13px] font-semibold py-[5px] px-3 rounded-md bg-transparent text-brand-terracotta border border-brand-terracotta/25 cursor-pointer">
               Add to guest list
             </button>
-            <button className="text-xs font-semibold py-[5px] px-3 rounded-md bg-transparent text-ui-tertiary border border-ui-border cursor-pointer">
+            <button className="text-[13px] font-semibold py-[5px] px-3 rounded-md bg-transparent text-ui-tertiary border border-ui-border cursor-pointer">
               View full profile
             </button>
           </div>
@@ -106,7 +106,7 @@ export function SpeakerCard({ speaker, rank }: SpeakerCardProps) {
 
       {/* Expand hint */}
       {!expanded && (
-        <div className="text-[11px] text-ui-tertiary mt-1.5 italic">
+        <div className="text-[13px] text-ui-tertiary mt-1.5 italic">
           Click to see full profile and outreach options
         </div>
       )}
@@ -117,10 +117,10 @@ export function SpeakerCard({ speaker, rank }: SpeakerCardProps) {
 function DetailBlock({ label, text }: { label: string; text: string }) {
   return (
     <div>
-      <div className="text-[10px] font-bold text-ui-tertiary uppercase tracking-[0.05em] mb-0.5">
+      <div className="text-[12px] font-bold text-ui-tertiary uppercase tracking-[0.05em] mb-0.5">
         {label}
       </div>
-      <div className="text-[13px] text-brand-charcoal leading-relaxed">{text}</div>
+      <div className="text-sm text-brand-charcoal leading-relaxed">{text}</div>
     </div>
   )
 }

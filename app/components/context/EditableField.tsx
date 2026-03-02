@@ -28,7 +28,7 @@ export function EditableField({ value, onSave, placeholder = 'Click to add...', 
     return (
       <div
         onClick={() => setEditing(true)}
-        className={`text-[13px] leading-relaxed cursor-pointer py-px border-b border-dashed border-transparent hover:border-ui-border transition-colors ${
+        className={`text-sm leading-relaxed cursor-pointer py-px border-b border-dashed border-transparent hover:border-ui-border transition-colors ${
           value ? 'text-brand-charcoal' : 'text-ui-tertiary'
         }`}
       >
@@ -49,7 +49,7 @@ export function EditableField({ value, onSave, placeholder = 'Click to add...', 
           }}
           onBlur={save}
           rows={3}
-          className="flex-1 text-[13px] px-2 py-1 border-[1.5px] border-brand-terracotta rounded-[5px] bg-white text-brand-charcoal resize-vertical font-sans focus:outline-none"
+          className="flex-1 text-sm px-2 py-1 border-[1.5px] border-brand-terracotta rounded-[5px] bg-white text-brand-charcoal resize-vertical font-sans focus:outline-none"
         />
       </div>
     )
@@ -66,7 +66,7 @@ export function EditableField({ value, onSave, placeholder = 'Click to add...', 
           if (e.key === 'Escape') cancel()
         }}
         onBlur={save}
-        className="flex-1 text-[13px] px-2 py-1 border-[1.5px] border-brand-terracotta rounded-[5px] bg-white text-brand-charcoal font-sans focus:outline-none"
+        className="flex-1 text-sm px-2 py-1 border-[1.5px] border-brand-terracotta rounded-[5px] bg-white text-brand-charcoal font-sans focus:outline-none"
       />
     </div>
   )

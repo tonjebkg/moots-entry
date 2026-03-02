@@ -27,7 +27,7 @@ export function CollapsibleSection({ title, icon, badge, defaultOpen = true, chi
           }`}
         />
         {icon && <span className="text-ui-tertiary flex items-center">{icon}</span>}
-        <span className="text-[12px] font-semibold tracking-wide uppercase text-ui-tertiary">
+        <span className="text-[13px] font-semibold tracking-wide uppercase text-ui-tertiary">
           {title}
         </span>
         {badge}

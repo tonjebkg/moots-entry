@@ -12,7 +12,7 @@ export function GeneratedContextCards({ data }: GeneratedContextCardsProps) {
     <div className="flex flex-col gap-3 mb-4">
       {/* Partners */}
       <div className="bg-white border border-ui-border rounded-[10px] p-3.5">
-        <div className="text-[11px] font-bold tracking-[0.08em] uppercase text-ui-tertiary mb-1.5">
+        <div className="text-[13px] font-bold tracking-[0.08em] uppercase text-ui-tertiary mb-1.5">
           Partners
         </div>
         {data.sponsors.map((s, i) => (
@@ -25,12 +25,12 @@ export function GeneratedContextCards({ data }: GeneratedContextCardsProps) {
             <div className="flex items-center gap-2">
               <Building2 size={15} className="text-ui-tertiary" />
               <div>
-                <div className="text-[13px] font-semibold text-brand-charcoal">{s.name}</div>
-                <div className="text-[11px] text-ui-tertiary">{s.role}</div>
+                <div className="text-sm font-semibold text-brand-charcoal">{s.name}</div>
+                <div className="text-[13px] text-ui-tertiary">{s.role}</div>
               </div>
             </div>
             <span
-              className={`inline-flex items-center text-[11px] font-semibold px-2.5 py-0.5 rounded ${
+              className={`inline-flex items-center text-[13px] font-semibold px-2.5 py-0.5 rounded ${
                 s.tier === 'Primary'
                   ? 'bg-brand-terracotta/10 text-brand-terracotta'
                   : s.tier === 'Gold'
@@ -48,11 +48,11 @@ export function GeneratedContextCards({ data }: GeneratedContextCardsProps) {
       <div className="bg-brand-terracotta/[0.06] border border-brand-terracotta/20 rounded-[10px] p-3.5">
         <div className="flex items-center gap-1.5 mb-1.5">
           <Sparkles size={14} className="text-brand-terracotta" />
-          <span className="text-[11px] font-bold tracking-[0.08em] uppercase text-brand-terracotta">
+          <span className="text-[13px] font-bold tracking-[0.08em] uppercase text-brand-terracotta">
             Strategic Significance
           </span>
         </div>
-        <p className="text-[13px] text-brand-charcoal leading-relaxed m-0">
+        <p className="text-sm text-brand-charcoal leading-relaxed m-0">
           {data.strategicSignificance}
         </p>
       </div>
@@ -61,14 +61,14 @@ export function GeneratedContextCards({ data }: GeneratedContextCardsProps) {
       <div className="bg-amber-50 border border-amber-300/30 rounded-[10px] p-3.5">
         <div className="flex items-center gap-1.5 mb-1.5">
           <Zap size={14} className="text-amber-600" />
-          <span className="text-[11px] font-bold tracking-[0.08em] uppercase text-amber-800">
+          <span className="text-[13px] font-bold tracking-[0.08em] uppercase text-amber-800">
             Market Context
           </span>
-          <span className="inline-flex items-center text-[10px] font-medium bg-amber-100/60 text-amber-700 px-2 py-0.5 rounded">
+          <span className="inline-flex items-center text-[12px] font-medium bg-amber-100/60 text-amber-700 px-2 py-0.5 rounded">
             AI Researched
           </span>
         </div>
-        <p className="text-[13px] text-amber-900 leading-relaxed m-0">{data.marketContext}</p>
+        <p className="text-sm text-amber-900 leading-relaxed m-0">{data.marketContext}</p>
       </div>
 
       {/* Completeness */}
@@ -84,11 +84,11 @@ function CompletenessCard({ items }: { items: GeneratedContext['completeness'] }
   return (
     <div className="bg-white border border-ui-border rounded-[10px] p-3.5">
       <div className="flex justify-between items-center mb-2">
-        <span className="text-[11px] font-bold tracking-[0.08em] uppercase text-ui-tertiary">
+        <span className="text-[13px] font-bold tracking-[0.08em] uppercase text-ui-tertiary">
           Context Completeness
         </span>
         <span
-          className={`text-[13px] font-bold ${pct >= 60 ? 'text-brand-forest' : 'text-amber-600'}`}
+          className={`text-sm font-bold ${pct >= 60 ? 'text-brand-forest' : 'text-amber-600'}`}
         >
           {pct}%
         </span>
@@ -103,7 +103,7 @@ function CompletenessCard({ items }: { items: GeneratedContext['completeness'] }
         {items.map((it, i) => (
           <span
             key={i}
-            className={`text-xs px-2.5 py-[3px] rounded ${
+            className={`text-[13px] px-2.5 py-[3px] rounded ${
               it.done
                 ? 'bg-brand-forest/10 text-brand-forest font-semibold'
                 : 'bg-[#F5F2EE] text-[#aaa] font-normal'

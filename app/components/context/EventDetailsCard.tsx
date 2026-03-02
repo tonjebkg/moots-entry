@@ -110,7 +110,7 @@ function DatePickerField({
   return (
     <div className="relative">
       <div
-        className={`text-[13px] leading-relaxed cursor-pointer py-px border-b border-dashed border-transparent hover:border-ui-border transition-colors flex items-center gap-1.5 pointer-events-none ${
+        className={`text-sm leading-relaxed cursor-pointer py-px border-b border-dashed border-transparent hover:border-ui-border transition-colors flex items-center gap-1.5 pointer-events-none ${
           displayValue ? 'text-brand-charcoal' : 'text-ui-tertiary'
         }`}
       >
@@ -154,7 +154,7 @@ function TimeDropdownField({
     <div ref={ref} className="relative">
       <button
         onClick={() => setOpen(!open)}
-        className={`text-[13px] leading-relaxed cursor-pointer py-px border-b border-dashed border-transparent hover:border-ui-border transition-colors flex items-center gap-1.5 bg-transparent border-none font-sans ${
+        className={`text-sm leading-relaxed cursor-pointer py-px border-b border-dashed border-transparent hover:border-ui-border transition-colors flex items-center gap-1.5 bg-transparent border-none font-sans ${
           value ? 'text-brand-charcoal' : 'text-ui-tertiary'
         }`}
       >
@@ -171,7 +171,7 @@ function TimeDropdownField({
                 onSave(t)
                 setOpen(false)
               }}
-              className={`w-full text-left text-[13px] px-3 py-1.5 hover:bg-brand-cream transition-colors font-sans border-none bg-transparent cursor-pointer ${
+              className={`w-full text-left text-sm px-3 py-1.5 hover:bg-brand-cream transition-colors font-sans border-none bg-transparent cursor-pointer ${
                 t === value ? 'text-brand-terracotta font-semibold bg-brand-terracotta/5' : 'text-brand-charcoal'
               }`}
             >
@@ -201,7 +201,7 @@ function SelectField({
     <select
       value={value}
       onChange={(e) => onSave(e.target.value)}
-      className={`text-[13px] leading-relaxed cursor-pointer py-px bg-transparent border-b border-dashed border-transparent hover:border-ui-border transition-colors font-sans focus:outline-none focus:border-brand-terracotta w-full ${
+      className={`text-sm leading-relaxed cursor-pointer py-0.5 bg-transparent border-b border-dashed border-transparent hover:border-ui-border transition-colors font-sans focus:outline-none focus:border-brand-terracotta w-full ${
         value ? 'text-brand-charcoal' : 'text-ui-tertiary'
       }`}
     >
@@ -226,7 +226,7 @@ function FormatChips({ value, onSave }: { value: string; onSave: (v: string) => 
         <button
           key={f.value}
           onClick={() => onSave(f.value)}
-          className={`text-[12px] font-semibold px-2.5 py-1 rounded-full border transition-all font-sans cursor-pointer ${
+          className={`text-[13px] font-semibold px-2.5 py-1 rounded-full border transition-all font-sans cursor-pointer ${
             value === f.value
               ? 'bg-brand-terracotta text-white border-brand-terracotta'
               : 'bg-white text-brand-charcoal border-ui-border hover:border-brand-terracotta/40'
@@ -253,10 +253,10 @@ export function EventDetailsCard({
       <div className="flex gap-3.5">
         <EventImageUpload image={eventData.image} onImageChange={(v) => onUpdate('image', v)} />
         <div className="flex-1 min-w-0 flex flex-col justify-center">
-          <div className="text-[11px] font-medium text-ui-tertiary mb-0.5">Event Name</div>
+          <div className="text-[13px] font-medium text-ui-tertiary mb-0.5">Event Name</div>
           <EditableField value={eventData.name} onSave={(v) => onUpdate('name', v)} placeholder="Event name" />
           <div className="mt-2.5">
-            <div className="text-[11px] font-medium text-ui-tertiary mb-1">Format</div>
+            <div className="text-[13px] font-medium text-ui-tertiary mb-1">Format</div>
             <FormatChips value={eventData.type} onSave={(v) => onUpdate('type', v)} />
           </div>
         </div>
@@ -266,7 +266,7 @@ export function EventDetailsCard({
       <div>
         <div className="grid grid-cols-2 gap-3 mb-2.5">
           <div>
-            <div className="text-[11px] font-medium text-ui-tertiary mb-1">Start Date</div>
+            <div className="text-[13px] font-medium text-ui-tertiary mb-1">Start Date</div>
             <DatePickerField
               value={eventData.startDate}
               onSave={(v) => onUpdate('startDate', v)}
@@ -274,7 +274,7 @@ export function EventDetailsCard({
             />
           </div>
           <div>
-            <div className="text-[11px] font-medium text-ui-tertiary mb-1">Start Time</div>
+            <div className="text-[13px] font-medium text-ui-tertiary mb-1">Start Time</div>
             <TimeDropdownField
               value={eventData.startTime}
               onSave={(v) => onUpdate('startTime', v)}
@@ -284,7 +284,7 @@ export function EventDetailsCard({
         </div>
         <div className="grid grid-cols-2 gap-3 mb-2.5">
           <div>
-            <div className="text-[11px] font-medium text-ui-tertiary mb-1">End Date</div>
+            <div className="text-[13px] font-medium text-ui-tertiary mb-1">End Date</div>
             <DatePickerField
               value={eventData.endDate}
               onSave={(v) => onUpdate('endDate', v)}
@@ -292,7 +292,7 @@ export function EventDetailsCard({
             />
           </div>
           <div>
-            <div className="text-[11px] font-medium text-ui-tertiary mb-1">End Time</div>
+            <div className="text-[13px] font-medium text-ui-tertiary mb-1">End Time</div>
             <TimeDropdownField
               value={eventData.endTime}
               onSave={(v) => onUpdate('endTime', v)}
@@ -301,7 +301,7 @@ export function EventDetailsCard({
           </div>
         </div>
         <div>
-          <div className="text-[11px] font-medium text-ui-tertiary mb-1">Timezone</div>
+          <div className="text-[13px] font-medium text-ui-tertiary mb-1">Timezone</div>
           <SelectField
             value={eventData.timezone}
             options={TIMEZONES.map((tz) => ({
@@ -316,10 +316,10 @@ export function EventDetailsCard({
 
       {/* Location */}
       <div>
-        <div className="text-[11px] font-medium text-ui-tertiary mb-1.5">Location</div>
+        <div className="text-[13px] font-medium text-ui-tertiary mb-1.5">Location</div>
         <div className="grid grid-cols-3 gap-2">
           <div>
-            <div className="text-[10px] text-ui-tertiary/70 mb-0.5">Venue</div>
+            <div className="text-[12px] text-ui-tertiary/70 mb-0.5">Venue</div>
             <EditableField
               value={eventData.venueName}
               onSave={(v) => onUpdate('venueName', v)}
@@ -327,11 +327,11 @@ export function EventDetailsCard({
             />
           </div>
           <div>
-            <div className="text-[10px] text-ui-tertiary/70 mb-0.5">City</div>
+            <div className="text-[12px] text-ui-tertiary/70 mb-0.5">City</div>
             <EditableField value={eventData.city} onSave={(v) => onUpdate('city', v)} placeholder="City" />
           </div>
           <div>
-            <div className="text-[10px] text-ui-tertiary/70 mb-0.5">State</div>
+            <div className="text-[12px] text-ui-tertiary/70 mb-0.5">State</div>
             <EditableField value={eventData.state} onSave={(v) => onUpdate('state', v)} placeholder="State" />
           </div>
         </div>
@@ -340,7 +340,7 @@ export function EventDetailsCard({
       {/* Other details — 2-column grid, no icons */}
       <div className="grid grid-cols-2 gap-x-4 gap-y-3">
         <div>
-          <div className="text-[11px] font-medium text-ui-tertiary mb-0.5">Capacity</div>
+          <div className="text-[13px] font-medium text-ui-tertiary mb-0.5">Capacity</div>
           <EditableField
             value={eventData.capacity}
             onSave={(v) => onUpdate('capacity', v)}
@@ -348,7 +348,7 @@ export function EventDetailsCard({
           />
         </div>
         <div>
-          <div className="text-[11px] font-medium text-ui-tertiary mb-0.5">Hosting Company</div>
+          <div className="text-[13px] font-medium text-ui-tertiary mb-0.5">Hosting Company</div>
           <EditableField
             value={eventData.hostingCompany}
             onSave={(v) => onUpdate('hostingCompany', v)}
@@ -356,7 +356,7 @@ export function EventDetailsCard({
           />
         </div>
         <div>
-          <div className="text-[11px] font-medium text-ui-tertiary mb-0.5">Dress Code</div>
+          <div className="text-[13px] font-medium text-ui-tertiary mb-0.5">Dress Code</div>
           <EditableField
             value={eventData.dressCode}
             onSave={(v) => onUpdate('dressCode', v)}
@@ -364,10 +364,10 @@ export function EventDetailsCard({
           />
         </div>
         <div>
-          <div className="text-[11px] font-medium text-ui-tertiary mb-0.5">Visibility</div>
+          <div className="text-[13px] font-medium text-ui-tertiary mb-0.5">Visibility</div>
           <button
             onClick={() => onUpdate('isPrivate', eventData.isPrivate ? '' : 'true')}
-            className={`text-[13px] font-medium cursor-pointer bg-transparent border-none font-sans transition-colors ${
+            className={`text-sm font-medium cursor-pointer bg-transparent border-none font-sans transition-colors ${
               eventData.isPrivate ? 'text-brand-terracotta' : 'text-ui-tertiary'
             }`}
           >
@@ -378,7 +378,7 @@ export function EventDetailsCard({
 
       {/* Description */}
       <div>
-        <div className="text-[11px] font-medium text-ui-tertiary mb-0.5">Description</div>
+        <div className="text-[13px] font-medium text-ui-tertiary mb-0.5">Description</div>
         <EditableField
           value={eventData.description}
           onSave={(v) => onUpdate('description', v)}
@@ -391,8 +391,8 @@ export function EventDetailsCard({
       {teamMembers.length > 0 && (
         <div>
           <div className="flex items-center justify-between mb-1.5">
-            <div className="text-[11px] font-medium text-ui-tertiary">Team</div>
-            <button className="flex items-center gap-1 text-[11px] text-brand-terracotta font-semibold bg-transparent border-none cursor-pointer font-sans hover:underline">
+            <div className="text-[13px] font-medium text-ui-tertiary">Team</div>
+            <button className="flex items-center gap-1 text-[13px] text-brand-terracotta font-semibold bg-transparent border-none cursor-pointer font-sans hover:underline">
               Manage <ExternalLink size={10} />
             </button>
           </div>
@@ -406,7 +406,7 @@ export function EventDetailsCard({
                     .join('')
                     .slice(0, 2)}
                 </div>
-                <span className="text-[12px] text-brand-charcoal font-medium">{m.name}</span>
+                <span className="text-[13px] text-brand-charcoal font-medium">{m.name}</span>
               </div>
             ))}
           </div>
@@ -455,7 +455,7 @@ function EventImageUpload({ image, onImageChange }: { image: string; onImageChan
           className={`flex flex-col items-center gap-0.5 transition-colors ${hover ? 'text-brand-terracotta' : 'text-ui-tertiary'}`}
         >
           <ImagePlus size={22} />
-          <span className="text-[9px] font-semibold tracking-[0.02em]">Add image</span>
+          <span className="text-[11px] font-semibold tracking-[0.02em]">Add image</span>
         </div>
       )}
     </label>

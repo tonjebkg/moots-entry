@@ -84,7 +84,7 @@ export function ActivityItemRow({ item, isLatest }: ActivityItemProps) {
         ) : (
           <>
             {meta.label && (
-              <div className={`text-[11px] font-bold tracking-[0.04em] uppercase mb-[3px] ${meta.color}`}>
+              <div className={`text-[13px] font-bold tracking-[0.04em] uppercase mb-[3px] ${meta.color}`}>
                 {meta.label}
               </div>
             )}
@@ -103,7 +103,7 @@ export function ActivityItemRow({ item, isLatest }: ActivityItemProps) {
 
         {/* Details bullet list */}
         {item.details && item.details.length > 0 && (
-          <div className="mt-2 p-2.5 px-3 bg-brand-cream rounded-lg border border-ui-border text-[13px] text-brand-charcoal leading-relaxed">
+          <div className="mt-2 p-2.5 px-3 bg-brand-cream rounded-lg border border-ui-border text-sm text-brand-charcoal leading-relaxed">
             {item.details.map((d, i) => (
               <div key={i} className={`flex gap-1.5 items-start ${i < item.details!.length - 1 ? 'mb-1.5' : ''}`}>
                 <span className="text-brand-terracotta shrink-0 mt-0.5">•</span>
@@ -133,7 +133,7 @@ export function ActivityItemRow({ item, isLatest }: ActivityItemProps) {
 
         {/* Timestamp */}
         {item.timestamp && (
-          <div className="text-[11px] text-[#aaa] mt-1">{formatRelativeTime(item.timestamp)}</div>
+          <div className="text-[13px] text-[#aaa] mt-1">{formatRelativeTime(item.timestamp)}</div>
         )}
       </div>
     </div>

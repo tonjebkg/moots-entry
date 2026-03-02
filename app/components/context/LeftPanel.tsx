@@ -54,9 +54,9 @@ export function LeftPanel({
   teamMembers = [],
 }: LeftPanelProps) {
   const [dragOver, setDragOver] = useState(false)
-  const [showLinkInput, setShowLinkInput] = useState(false)
   const [newUrl, setNewUrl] = useState('')
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const linkInputRef = useRef<HTMLInputElement>(null)
 
   const handleDrop = (e: DragEvent) => {
     e.preventDefault()
@@ -70,7 +70,6 @@ export function LeftPanel({
     if (!newUrl.trim()) return
     onAddLink(newUrl.trim())
     setNewUrl('')
-    setShowLinkInput(false)
   }
 
   const hasContent = documents.length > 0 || links.length > 0
@@ -83,8 +82,8 @@ export function LeftPanel({
           <FileText size={14} className="text-brand-forest" />
         </div>
         <div>
-          <div className="text-sm font-bold text-brand-charcoal">Event Context</div>
-          <div className="text-[11px] font-medium text-ui-tertiary">Add documents and links for AI analysis</div>
+          <div className="text-[15px] font-bold text-brand-charcoal">Event Context</div>
+          <div className="text-[13px] font-medium text-ui-tertiary">Add documents and links for AI analysis</div>
         </div>
       </div>
 
@@ -128,11 +127,11 @@ export function LeftPanel({
               <div className={`mb-1.5 flex justify-center ${dragOver ? 'text-brand-terracotta' : 'text-ui-tertiary'}`}>
                 <Upload size={22} />
               </div>
-              <div className="text-[13px] text-brand-charcoal font-medium">
+              <div className="text-sm text-brand-charcoal font-medium">
                 Drop files here or{' '}
                 <span className="text-brand-terracotta font-semibold">browse</span>
               </div>
-              <div className="text-[11px] text-[#999] mt-0.5">
+              <div className="text-[13px] text-[#999] mt-0.5">
                 Event briefs, sponsor decks, guest lists, agendas
               </div>
             </div>
@@ -150,59 +149,61 @@ export function LeftPanel({
             <div className="mt-3">
               <div className="flex items-center justify-between mb-1.5">
                 <div className="flex items-center gap-1.5">
-                  <LinkIcon size={13} className="text-ui-tertiary" />
-                  <span className="text-[12px] font-semibold text-ui-tertiary">Links</span>
+                  <LinkIcon size={14} className="text-ui-tertiary" />
+                  <span className="text-sm font-semibold text-ui-tertiary">Links</span>
                   {links.length > 0 && (
-                    <span className="text-[10px] font-bold text-brand-forest bg-brand-forest/10 px-1.5 py-px rounded-full">
+                    <span className="text-[11px] font-bold text-brand-forest bg-brand-forest/10 px-1.5 py-px rounded-full">
                       {links.length}
                     </span>
                   )}
                 </div>
-                <button
-                  onClick={() => setShowLinkInput(true)}
-                  className="flex items-center gap-0.5 text-[11px] text-brand-terracotta bg-transparent border-none cursor-pointer font-semibold font-sans"
-                >
-                  <Plus size={12} /> Add
-                </button>
+                {links.length > 0 && (
+                  <button
+                    onClick={() => linkInputRef.current?.focus()}
+                    className="flex items-center gap-0.5 text-[13px] text-brand-terracotta bg-transparent border-none cursor-pointer font-semibold font-sans"
+                  >
+                    <Plus size={13} /> Add
+                  </button>
+                )}
               </div>
               {links.map((l) => (
                 <div
                   key={l.id}
-                  className="flex items-center gap-2 px-2.5 py-1.5 bg-brand-cream/60 rounded-md border border-ui-border/60 mb-1"
+                  className="flex items-center gap-2 px-2.5 py-1.5 bg-brand-cream/60 rounded-md border border-ui-border/60 mb-1.5"
                 >
-                  <Globe size={13} className="text-brand-terracotta shrink-0" />
+                  <Globe size={14} className="text-brand-terracotta shrink-0" />
                   <div className="flex-1 min-w-0">
-                    <div className="text-[12px] font-medium text-brand-charcoal truncate">{l.label}</div>
+                    <div className="text-sm font-medium text-brand-charcoal truncate">{l.label}</div>
                   </div>
                   <button
                     onClick={() => onRemoveLink(l.id)}
                     className="bg-transparent border-none cursor-pointer text-[#ccc] hover:text-red-400 p-0.5 transition-colors"
                   >
-                    <Trash2 size={12} />
+                    <Trash2 size={13} />
                   </button>
                 </div>
               ))}
-              {showLinkInput && (
-                <div className="flex gap-1.5 mt-1">
-                  <input
-                    autoFocus
-                    value={newUrl}
-                    onChange={(e) => setNewUrl(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') handleAddLink()
-                      if (e.key === 'Escape') { setShowLinkInput(false); setNewUrl('') }
-                    }}
-                    placeholder="Paste a URL..."
-                    className="flex-1 text-[13px] py-[6px] px-2.5 border border-ui-border rounded-md font-sans focus:outline-none focus:border-brand-terracotta"
-                  />
-                  <button
-                    onClick={handleAddLink}
-                    className="text-[12px] py-[6px] px-3 border-none rounded-md bg-brand-terracotta text-white cursor-pointer font-semibold font-sans"
-                  >
-                    Add
-                  </button>
-                </div>
-              )}
+              {/* Always-visible URL input */}
+              <div className="flex gap-1.5 mt-1">
+                <input
+                  ref={linkInputRef}
+                  value={newUrl}
+                  onChange={(e) => setNewUrl(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') handleAddLink()
+                    if (e.key === 'Escape') setNewUrl('')
+                  }}
+                  placeholder="Paste a URL..."
+                  className="flex-1 text-sm py-[6px] px-2.5 border border-ui-border rounded-md font-sans focus:outline-none focus:border-brand-terracotta"
+                />
+                <button
+                  onClick={handleAddLink}
+                  disabled={!newUrl.trim()}
+                  className="text-[13px] py-[6px] px-3 border-none rounded-md bg-brand-terracotta text-white cursor-pointer font-semibold font-sans disabled:opacity-40"
+                >
+                  Add
+                </button>
+              </div>
             </div>
           </>
         )}
@@ -214,7 +215,7 @@ export function LeftPanel({
               title="Documents"
               badge={
                 documents.length > 0 ? (
-                  <span className="text-[10px] font-bold bg-brand-forest/10 text-brand-forest px-1.5 py-px rounded-full">
+                  <span className="text-[11px] font-bold bg-brand-forest/10 text-brand-forest px-1.5 py-px rounded-full">
                     {documents.length}
                   </span>
                 ) : undefined
@@ -231,7 +232,7 @@ export function LeftPanel({
                   dragOver ? 'border-brand-terracotta bg-brand-terracotta/5' : 'border-ui-border bg-brand-cream/50'
                 }`}
               >
-                <div className="text-[12px] text-brand-charcoal font-medium">
+                <div className="text-sm text-brand-charcoal font-medium">
                   Drop files or <span className="text-brand-terracotta font-semibold">browse</span>
                 </div>
               </div>
@@ -248,59 +249,61 @@ export function LeftPanel({
               title="Links"
               badge={
                 links.length > 0 ? (
-                  <span className="text-[10px] font-bold bg-brand-forest/10 text-brand-forest px-1.5 py-px rounded-full">
+                  <span className="text-[11px] font-bold bg-brand-forest/10 text-brand-forest px-1.5 py-px rounded-full">
                     {links.length}
                   </span>
                 ) : undefined
               }
               defaultOpen={false}
             >
-              <div className="flex justify-end mb-1.5">
-                <button
-                  onClick={() => setShowLinkInput(true)}
-                  className="flex items-center gap-0.5 text-[11px] text-brand-terracotta bg-transparent border-none cursor-pointer font-semibold font-sans"
-                >
-                  <Plus size={12} /> Add
-                </button>
-              </div>
+              {links.length > 0 && (
+                <div className="flex justify-end mb-1.5">
+                  <button
+                    onClick={() => linkInputRef.current?.focus()}
+                    className="flex items-center gap-0.5 text-[13px] text-brand-terracotta bg-transparent border-none cursor-pointer font-semibold font-sans"
+                  >
+                    <Plus size={13} /> Add
+                  </button>
+                </div>
+              )}
               {links.map((l) => (
                 <div
                   key={l.id}
-                  className="flex items-center gap-2 px-2.5 py-1.5 bg-brand-cream/60 rounded-md border border-ui-border/60 mb-1"
+                  className="flex items-center gap-2 px-2.5 py-1.5 bg-brand-cream/60 rounded-md border border-ui-border/60 mb-1.5"
                 >
-                  <Globe size={13} className="text-brand-terracotta shrink-0" />
+                  <Globe size={14} className="text-brand-terracotta shrink-0" />
                   <div className="flex-1 min-w-0">
-                    <div className="text-[12px] font-medium text-brand-charcoal truncate">{l.label}</div>
+                    <div className="text-sm font-medium text-brand-charcoal truncate">{l.label}</div>
                   </div>
                   <button
                     onClick={() => onRemoveLink(l.id)}
                     className="bg-transparent border-none cursor-pointer text-[#ccc] hover:text-red-400 p-0.5 transition-colors"
                   >
-                    <Trash2 size={12} />
+                    <Trash2 size={13} />
                   </button>
                 </div>
               ))}
-              {showLinkInput && (
-                <div className="flex gap-1.5 mt-1">
-                  <input
-                    autoFocus
-                    value={newUrl}
-                    onChange={(e) => setNewUrl(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') handleAddLink()
-                      if (e.key === 'Escape') { setShowLinkInput(false); setNewUrl('') }
-                    }}
-                    placeholder="Paste a URL..."
-                    className="flex-1 text-[13px] py-[6px] px-2.5 border border-ui-border rounded-md font-sans focus:outline-none focus:border-brand-terracotta"
-                  />
-                  <button
-                    onClick={handleAddLink}
-                    className="text-[12px] py-[6px] px-3 border-none rounded-md bg-brand-terracotta text-white cursor-pointer font-semibold font-sans"
-                  >
-                    Add
-                  </button>
-                </div>
-              )}
+              {/* Always-visible URL input */}
+              <div className="flex gap-1.5 mt-1">
+                <input
+                  ref={linkInputRef}
+                  value={newUrl}
+                  onChange={(e) => setNewUrl(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') handleAddLink()
+                    if (e.key === 'Escape') setNewUrl('')
+                  }}
+                  placeholder="Paste a URL..."
+                  className="flex-1 text-sm py-[6px] px-2.5 border border-ui-border rounded-md font-sans focus:outline-none focus:border-brand-terracotta"
+                />
+                <button
+                  onClick={handleAddLink}
+                  disabled={!newUrl.trim()}
+                  className="text-[13px] py-[6px] px-3 border-none rounded-md bg-brand-terracotta text-white cursor-pointer font-semibold font-sans disabled:opacity-40"
+                >
+                  Add
+                </button>
+              </div>
             </CollapsibleSection>
           </>
         )}
@@ -319,7 +322,7 @@ export function LeftPanel({
           title="Partners"
           badge={
             partners.length > 0 ? (
-              <span className="text-[10px] font-bold bg-brand-forest/10 text-brand-forest px-1.5 py-px rounded-full">
+              <span className="text-[11px] font-bold bg-brand-forest/10 text-brand-forest px-1.5 py-px rounded-full">
                 {partners.length}
               </span>
             ) : undefined
@@ -374,8 +377,8 @@ function DocumentRow({ doc, onRemove }: { doc: EventDocument; onRemove: (id: str
       <div className="flex items-center gap-2">
         <FileText size={16} className={FILE_TYPE_COLORS[doc.type] || 'text-gray-500'} />
         <div>
-          <div className="text-[13px] font-medium text-brand-charcoal">{doc.name}</div>
-          <div className="text-[10px] text-ui-tertiary">{doc.sizeFormatted}</div>
+          <div className="text-sm font-medium text-brand-charcoal">{doc.name}</div>
+          <div className="text-[12px] text-ui-tertiary">{doc.sizeFormatted}</div>
         </div>
       </div>
       <div className="flex items-center gap-1.5">
@@ -384,7 +387,7 @@ function DocumentRow({ doc, onRemove }: { doc: EventDocument; onRemove: (id: str
         ) : doc.status === 'analyzing' ? (
           <Loader2 size={14} className="animate-spin text-brand-terracotta" />
         ) : doc.status === 'error' ? (
-          <span className="text-[10px] font-semibold text-red-500">Error</span>
+          <span className="text-[12px] font-semibold text-red-500">Error</span>
         ) : doc.status === 'uploading' ? (
           <Loader2 size={14} className="animate-spin text-ui-tertiary" />
         ) : null}
@@ -425,7 +428,7 @@ function PartnersSection({
   return (
     <div>
       {partners.length === 0 && !showForm && (
-        <div className="text-[12px] text-ui-tertiary py-3 text-center">
+        <div className="text-sm text-ui-tertiary py-3 text-center">
           No partners yet
         </div>
       )}
@@ -436,8 +439,8 @@ function PartnersSection({
           className="flex items-center justify-between px-2.5 py-[7px] bg-brand-cream/60 rounded-md mb-1.5"
         >
           <div>
-            <div className="text-[13px] font-medium text-brand-charcoal">{p.companyName}</div>
-            <div className="text-[11px] text-ui-tertiary">{p.role} · {p.tier}</div>
+            <div className="text-sm font-medium text-brand-charcoal">{p.companyName}</div>
+            <div className="text-[13px] text-ui-tertiary">{p.role} · {p.tier}</div>
           </div>
           {onRemovePartner && (
             <button
@@ -458,30 +461,30 @@ function PartnersSection({
             onChange={(e) => setName(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
             placeholder="Company name"
-            className="text-[13px] px-2.5 py-1.5 border border-ui-border rounded-md bg-white font-sans focus:outline-none focus:border-brand-terracotta"
+            className="text-sm px-2.5 py-1.5 border border-ui-border rounded-md bg-white font-sans focus:outline-none focus:border-brand-terracotta"
           />
           <div className="flex gap-2">
-            <select value={role} onChange={(e) => setRole(e.target.value as EventPartner['role'])} className="flex-1 text-[12px] px-2 py-1.5 border border-ui-border rounded-md bg-white font-sans focus:outline-none">
+            <select value={role} onChange={(e) => setRole(e.target.value as EventPartner['role'])} className="flex-1 text-sm px-2 py-1.5 border border-ui-border rounded-md bg-white font-sans focus:outline-none">
               <option value="Sponsor">Sponsor</option>
               <option value="Partner">Partner</option>
               <option value="Co-host">Co-host</option>
               <option value="Venue">Venue</option>
             </select>
-            <select value={tier} onChange={(e) => setTier(e.target.value as EventPartner['tier'])} className="flex-1 text-[12px] px-2 py-1.5 border border-ui-border rounded-md bg-white font-sans focus:outline-none">
+            <select value={tier} onChange={(e) => setTier(e.target.value as EventPartner['tier'])} className="flex-1 text-sm px-2 py-1.5 border border-ui-border rounded-md bg-white font-sans focus:outline-none">
               <option value="Primary">Primary</option>
               <option value="Gold">Gold</option>
               <option value="Silver">Silver</option>
             </select>
           </div>
           <div className="flex gap-1.5 justify-end">
-            <button onClick={() => setShowForm(false)} className="text-[12px] px-3 py-1 rounded-md bg-transparent border border-ui-border text-ui-tertiary cursor-pointer font-sans">Cancel</button>
-            <button onClick={handleSubmit} disabled={!name.trim()} className="text-[12px] px-3 py-1 rounded-md bg-brand-terracotta text-white border-none cursor-pointer font-semibold font-sans disabled:opacity-40">Add</button>
+            <button onClick={() => setShowForm(false)} className="text-[13px] px-3 py-1 rounded-md bg-transparent border border-ui-border text-ui-tertiary cursor-pointer font-sans">Cancel</button>
+            <button onClick={handleSubmit} disabled={!name.trim()} className="text-[13px] px-3 py-1 rounded-md bg-brand-terracotta text-white border-none cursor-pointer font-semibold font-sans disabled:opacity-40">Add</button>
           </div>
         </div>
       ) : onAddPartner && (
         <button
           onClick={() => setShowForm(true)}
-          className="flex items-center gap-1 text-[11px] text-brand-terracotta bg-transparent border-none cursor-pointer font-semibold font-sans mt-1"
+          className="flex items-center gap-1 text-[13px] text-brand-terracotta bg-transparent border-none cursor-pointer font-semibold font-sans mt-1"
         >
           <Plus size={12} /> Add partner
         </button>

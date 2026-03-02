@@ -75,8 +75,8 @@ export function RightPanel({
             <Sparkles size={14} className="text-brand-terracotta" />
           </div>
           <div>
-            <div className="text-sm font-bold text-brand-charcoal">Moots Intelligence</div>
-            <div className={`text-[11px] font-medium ${statusColor} ${isProcessing ? 'animate-pulse' : ''}`}>
+            <div className="text-[15px] font-bold text-brand-charcoal">Moots Intelligence</div>
+            <div className={`text-[13px] font-medium ${statusColor} ${isProcessing ? 'animate-pulse' : ''}`}>
               {statusText}
             </div>
           </div>
@@ -101,13 +101,13 @@ export function RightPanel({
           {/* Empty state onboarding hints — whispered, minimal */}
           {isInitialState && (
             <div className="mt-6 space-y-2.5 pl-1">
-              <div className="text-[12px] text-ui-tertiary/60 leading-relaxed">
+              <div className="text-sm text-ui-tertiary/60 leading-relaxed">
                 <span className="text-ui-tertiary/80 font-medium">1.</span> Upload documents — AI reads & extracts key info
               </div>
-              <div className="text-[12px] text-ui-tertiary/60 leading-relaxed">
+              <div className="text-sm text-ui-tertiary/60 leading-relaxed">
                 <span className="text-ui-tertiary/80 font-medium">2.</span> Generate context — AI researches market & finds insights
               </div>
-              <div className="text-[12px] text-ui-tertiary/60 leading-relaxed">
+              <div className="text-sm text-ui-tertiary/60 leading-relaxed">
                 <span className="text-ui-tertiary/80 font-medium">3.</span> Ask questions — AI helps with speakers, partners, strategy
               </div>
             </div>
@@ -120,7 +120,7 @@ export function RightPanel({
         {userScrolled && (
           <button
             onClick={onScrollToBottom}
-            className="absolute bottom-3 left-1/2 -translate-x-1/2 bg-brand-terracotta text-white border-none rounded-full py-1.5 px-4 text-xs font-semibold cursor-pointer shadow-lg flex items-center gap-1.5 font-sans z-10"
+            className="absolute bottom-3 left-1/2 -translate-x-1/2 bg-brand-terracotta text-white border-none rounded-full py-1.5 px-4 text-[13px] font-semibold cursor-pointer shadow-lg flex items-center gap-1.5 font-sans z-10"
           >
             ↓ Latest activity
           </button>
@@ -135,7 +135,7 @@ export function RightPanel({
             <button
               key={p}
               onClick={() => onSend(p)}
-              className="text-[12px] px-2.5 py-1 rounded-full bg-brand-cream text-brand-charcoal/70 border border-ui-border hover:border-brand-terracotta/30 hover:text-brand-terracotta transition-colors font-sans cursor-pointer"
+              className="text-[13px] px-2.5 py-1 rounded-full bg-brand-cream text-brand-charcoal/70 border border-ui-border hover:border-brand-terracotta/30 hover:text-brand-terracotta transition-colors font-sans cursor-pointer"
             >
               {p}
             </button>
@@ -150,7 +150,7 @@ export function RightPanel({
               onChange={(e) => setInputMsg(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleSend()}
               placeholder="Ask Moots to research, look up sponsors, find competing events..."
-              className="flex-1 text-[13px] border-none bg-transparent outline-none font-sans text-brand-charcoal placeholder:text-ui-tertiary"
+              className="flex-1 text-sm border-none bg-transparent outline-none font-sans text-brand-charcoal placeholder:text-ui-tertiary"
             />
             <button
               onClick={handleSend}
