@@ -44,6 +44,12 @@ export function middleware(request: NextRequest) {
     return addSecurityHeaders(response);
   }
 
+  // Door View (staff check-in — token-authenticated, no session required)
+  if (pathname.startsWith('/door/')) {
+    const response = NextResponse.next();
+    return addSecurityHeaders(response);
+  }
+
   // Public RSVP pages (/e/[slug])
   if (pathname.startsWith('/e/')) {
     const response = NextResponse.next();
@@ -73,7 +79,8 @@ export function middleware(request: NextRequest) {
     /^\/api\/rsvp\//.test(pathname) ||
     /^\/api\/join\//.test(pathname) ||
     /^\/api\/auth\//.test(pathname) || // Auth endpoints are public
-    /^\/api\/public\//.test(pathname); // Public API endpoints (RSVP, etc.)
+    /^\/api\/public\//.test(pathname) || // Public API endpoints (RSVP, etc.)
+    /^\/api\/door\//.test(pathname); // Door View endpoints (token-authenticated)
 
   // Handle CORS preflight for public endpoints
   if (isPublicApiPath && method === 'OPTIONS') {
@@ -128,6 +135,12 @@ export function middleware(request: NextRequest) {
     if (/^\/api\/public\//.test(pathname)) {
       const response = NextResponse.next();
       addCorsHeaders(response, origin);
+      return addSecurityHeaders(response);
+    }
+
+    // Door View API endpoints (token-authenticated, no session required)
+    if (/^\/api\/door\//.test(pathname)) {
+      const response = NextResponse.next();
       return addSecurityHeaders(response);
     }
 
@@ -195,6 +208,7 @@ export const config = {
     // Protected pages
     '/dashboard/:path*',
     '/checkin/:path*',
+    '/door/:path*',
     // Public guest pages
     '/rsvp/:path*',
     '/join/:path*',
