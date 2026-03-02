@@ -64,7 +64,7 @@ export function GeneratedContextCards({ data }: GeneratedContextCardsProps) {
           <span className="text-[11px] font-bold tracking-[0.08em] uppercase text-amber-800">
             Market Context
           </span>
-          <span className="inline-flex items-center text-[11px] font-semibold bg-amber-100 text-amber-800 px-2.5 py-0.5 rounded">
+          <span className="inline-flex items-center text-[10px] font-medium bg-amber-100/60 text-amber-700 px-2 py-0.5 rounded">
             AI Researched
           </span>
         </div>

@@ -4,12 +4,7 @@ import { useState, useRef, useEffect } from 'react'
 import {
   Calendar,
   Clock,
-  MapPin,
-  Users,
-  Building2,
   ImagePlus,
-  Globe,
-  Lock,
   ChevronDown,
   ExternalLink,
 } from 'lucide-react'
@@ -252,87 +247,79 @@ export function EventDetailsCard({
   teamMembers = [],
 }: EventDetailsCardProps) {
   return (
-    <div>
+    <div className="space-y-4">
 
       {/* Top row: Image + Name/Format */}
-      <div className="flex gap-3.5 mb-3 pb-3 border-b border-ui-border">
+      <div className="flex gap-3.5">
         <EventImageUpload image={eventData.image} onImageChange={(v) => onUpdate('image', v)} />
         <div className="flex-1 min-w-0 flex flex-col justify-center">
-          <div className="text-[10px] font-bold text-ui-tertiary uppercase tracking-[0.04em] mb-0.5">Event Name</div>
+          <div className="text-[11px] font-medium text-ui-tertiary mb-0.5">Event Name</div>
           <EditableField value={eventData.name} onSave={(v) => onUpdate('name', v)} placeholder="Event name" />
-          <div className="mt-2">
-            <div className="text-[10px] font-bold text-ui-tertiary uppercase tracking-[0.04em] mb-1">Event Format</div>
+          <div className="mt-2.5">
+            <div className="text-[11px] font-medium text-ui-tertiary mb-1">Format</div>
             <FormatChips value={eventData.type} onSave={(v) => onUpdate('type', v)} />
           </div>
         </div>
       </div>
 
-      {/* Start Date/Time row */}
-      <div className="grid grid-cols-2 gap-3 mb-2">
-        <div>
-          <div className="text-[10px] font-bold text-ui-tertiary uppercase tracking-[0.04em] mb-1">Start Date</div>
-          <DatePickerField
-            value={eventData.startDate}
-            onSave={(v) => onUpdate('startDate', v)}
-            placeholder="Select start date"
-          />
+      {/* Date & Time */}
+      <div>
+        <div className="grid grid-cols-2 gap-3 mb-2.5">
+          <div>
+            <div className="text-[11px] font-medium text-ui-tertiary mb-1">Start Date</div>
+            <DatePickerField
+              value={eventData.startDate}
+              onSave={(v) => onUpdate('startDate', v)}
+              placeholder="Select start date"
+            />
+          </div>
+          <div>
+            <div className="text-[11px] font-medium text-ui-tertiary mb-1">Start Time</div>
+            <TimeDropdownField
+              value={eventData.startTime}
+              onSave={(v) => onUpdate('startTime', v)}
+              placeholder="Select time"
+            />
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-3 mb-2.5">
+          <div>
+            <div className="text-[11px] font-medium text-ui-tertiary mb-1">End Date</div>
+            <DatePickerField
+              value={eventData.endDate}
+              onSave={(v) => onUpdate('endDate', v)}
+              placeholder="Select end date"
+            />
+          </div>
+          <div>
+            <div className="text-[11px] font-medium text-ui-tertiary mb-1">End Time</div>
+            <TimeDropdownField
+              value={eventData.endTime}
+              onSave={(v) => onUpdate('endTime', v)}
+              placeholder="Select time"
+            />
+          </div>
         </div>
         <div>
-          <div className="text-[10px] font-bold text-ui-tertiary uppercase tracking-[0.04em] mb-1">Start Time</div>
-          <TimeDropdownField
-            value={eventData.startTime}
-            onSave={(v) => onUpdate('startTime', v)}
-            placeholder="Select time"
+          <div className="text-[11px] font-medium text-ui-tertiary mb-1">Timezone</div>
+          <SelectField
+            value={eventData.timezone}
+            options={TIMEZONES.map((tz) => ({
+              value: tz,
+              label: tz.replace(/_/g, ' ').replace('America/', ''),
+            }))}
+            onSave={(v) => onUpdate('timezone', v)}
+            placeholder="Select timezone"
           />
         </div>
       </div>
 
-      {/* End Date/Time row */}
-      <div className="grid grid-cols-2 gap-3 mb-2">
-        <div>
-          <div className="text-[10px] font-bold text-ui-tertiary uppercase tracking-[0.04em] mb-1">End Date</div>
-          <DatePickerField
-            value={eventData.endDate}
-            onSave={(v) => onUpdate('endDate', v)}
-            placeholder="Select end date"
-          />
-        </div>
-        <div>
-          <div className="text-[10px] font-bold text-ui-tertiary uppercase tracking-[0.04em] mb-1">End Time</div>
-          <TimeDropdownField
-            value={eventData.endTime}
-            onSave={(v) => onUpdate('endTime', v)}
-            placeholder="Select time"
-          />
-        </div>
-      </div>
-
-      {/* Timezone */}
-      <div className="mb-3">
-        <div className="text-[10px] font-bold text-ui-tertiary uppercase tracking-[0.04em] mb-1 flex items-center gap-1">
-          <Globe size={12} className="text-ui-tertiary" /> Timezone
-        </div>
-        <SelectField
-          value={eventData.timezone}
-          options={TIMEZONES.map((tz) => ({
-            value: tz,
-            label: tz.replace(/_/g, ' ').replace('America/', ''),
-          }))}
-          onSave={(v) => onUpdate('timezone', v)}
-          placeholder="Select timezone"
-        />
-      </div>
-
-      <div className="border-t border-ui-border pt-2.5 mb-2.5" />
-
-      {/* Location — 3 fields */}
-      <div className="mb-2.5">
-        <div className="text-[10px] font-bold text-ui-tertiary uppercase tracking-[0.04em] mb-1 flex items-center gap-1">
-          <MapPin size={12} className="text-ui-tertiary" /> Location
-        </div>
+      {/* Location */}
+      <div>
+        <div className="text-[11px] font-medium text-ui-tertiary mb-1.5">Location</div>
         <div className="grid grid-cols-3 gap-2">
           <div>
-            <div className="text-[10px] text-ui-tertiary mb-0.5">Venue</div>
+            <div className="text-[10px] text-ui-tertiary/70 mb-0.5">Venue</div>
             <EditableField
               value={eventData.venueName}
               onSave={(v) => onUpdate('venueName', v)}
@@ -340,74 +327,58 @@ export function EventDetailsCard({
             />
           </div>
           <div>
-            <div className="text-[10px] text-ui-tertiary mb-0.5">City</div>
+            <div className="text-[10px] text-ui-tertiary/70 mb-0.5">City</div>
             <EditableField value={eventData.city} onSave={(v) => onUpdate('city', v)} placeholder="City" />
           </div>
           <div>
-            <div className="text-[10px] text-ui-tertiary mb-0.5">State</div>
+            <div className="text-[10px] text-ui-tertiary/70 mb-0.5">State</div>
             <EditableField value={eventData.state} onSave={(v) => onUpdate('state', v)} placeholder="State" />
           </div>
         </div>
       </div>
 
-      {/* Remaining fields — 2-column grid */}
-      <div className="grid grid-cols-2 gap-3 mb-2.5">
-        <div className="flex gap-2 items-start">
-          <Users size={15} className="text-ui-tertiary mt-[3px] shrink-0" />
-          <div className="flex-1 min-w-0">
-            <div className="text-[10px] font-bold text-ui-tertiary uppercase tracking-[0.04em] mb-0.5">Capacity</div>
-            <EditableField
-              value={eventData.capacity}
-              onSave={(v) => onUpdate('capacity', v)}
-              placeholder="Number of guests"
-            />
-          </div>
+      {/* Other details — 2-column grid, no icons */}
+      <div className="grid grid-cols-2 gap-x-4 gap-y-3">
+        <div>
+          <div className="text-[11px] font-medium text-ui-tertiary mb-0.5">Capacity</div>
+          <EditableField
+            value={eventData.capacity}
+            onSave={(v) => onUpdate('capacity', v)}
+            placeholder="Number of guests"
+          />
         </div>
-        <div className="flex gap-2 items-start">
-          <Building2 size={15} className="text-ui-tertiary mt-[3px] shrink-0" />
-          <div className="flex-1 min-w-0">
-            <div className="text-[10px] font-bold text-ui-tertiary uppercase tracking-[0.04em] mb-0.5">
-              Hosting Company
-            </div>
-            <EditableField
-              value={eventData.hostingCompany}
-              onSave={(v) => onUpdate('hostingCompany', v)}
-              placeholder="Company name"
-            />
-          </div>
+        <div>
+          <div className="text-[11px] font-medium text-ui-tertiary mb-0.5">Hosting Company</div>
+          <EditableField
+            value={eventData.hostingCompany}
+            onSave={(v) => onUpdate('hostingCompany', v)}
+            placeholder="Company name"
+          />
         </div>
-        <div className="flex gap-2 items-start">
-          <span className="text-[13px] mt-[1px] shrink-0">👔</span>
-          <div className="flex-1 min-w-0">
-            <div className="text-[10px] font-bold text-ui-tertiary uppercase tracking-[0.04em] mb-0.5">Dress Code</div>
-            <EditableField
-              value={eventData.dressCode}
-              onSave={(v) => onUpdate('dressCode', v)}
-              placeholder="e.g. Black tie, Smart casual"
-            />
-          </div>
+        <div>
+          <div className="text-[11px] font-medium text-ui-tertiary mb-0.5">Dress Code</div>
+          <EditableField
+            value={eventData.dressCode}
+            onSave={(v) => onUpdate('dressCode', v)}
+            placeholder="e.g. Black tie, Smart casual"
+          />
         </div>
-        <div className="flex gap-2 items-start">
-          <Lock size={15} className="text-ui-tertiary mt-[3px] shrink-0" />
-          <div className="flex-1 min-w-0">
-            <div className="text-[10px] font-bold text-ui-tertiary uppercase tracking-[0.04em] mb-0.5">
-              Private Event
-            </div>
-            <button
-              onClick={() => onUpdate('isPrivate', eventData.isPrivate ? '' : 'true')}
-              className={`text-[13px] font-medium cursor-pointer bg-transparent border-none font-sans transition-colors ${
-                eventData.isPrivate ? 'text-brand-terracotta' : 'text-ui-tertiary'
-              }`}
-            >
-              {eventData.isPrivate ? 'Invite-only' : 'Public'}
-            </button>
-          </div>
+        <div>
+          <div className="text-[11px] font-medium text-ui-tertiary mb-0.5">Visibility</div>
+          <button
+            onClick={() => onUpdate('isPrivate', eventData.isPrivate ? '' : 'true')}
+            className={`text-[13px] font-medium cursor-pointer bg-transparent border-none font-sans transition-colors ${
+              eventData.isPrivate ? 'text-brand-terracotta' : 'text-ui-tertiary'
+            }`}
+          >
+            {eventData.isPrivate ? 'Invite-only' : 'Public'}
+          </button>
         </div>
       </div>
 
       {/* Description */}
-      <div className="border-t border-ui-border pt-2.5 mb-3">
-        <div className="text-[10px] font-bold text-ui-tertiary uppercase tracking-[0.04em] mb-[3px]">Description</div>
+      <div>
+        <div className="text-[11px] font-medium text-ui-tertiary mb-0.5">Description</div>
         <EditableField
           value={eventData.description}
           onSave={(v) => onUpdate('description', v)}
@@ -418,11 +389,11 @@ export function EventDetailsCard({
 
       {/* Team section */}
       {teamMembers.length > 0 && (
-        <div className="border-t border-ui-border pt-2.5 mb-3">
-          <div className="flex items-center justify-between mb-2">
-            <div className="text-[10px] font-bold text-ui-tertiary uppercase tracking-[0.08em]">Team</div>
+        <div>
+          <div className="flex items-center justify-between mb-1.5">
+            <div className="text-[11px] font-medium text-ui-tertiary">Team</div>
             <button className="flex items-center gap-1 text-[11px] text-brand-terracotta font-semibold bg-transparent border-none cursor-pointer font-sans hover:underline">
-              Manage team <ExternalLink size={10} />
+              Manage <ExternalLink size={10} />
             </button>
           </div>
           <div className="flex items-center gap-1.5 flex-wrap">
