@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, type DragEvent } from 'react'
-import { Upload, FileText, Globe, Plus, Trash2, Sparkles, Loader2, Check } from 'lucide-react'
+import { Upload, FileText, Globe, Plus, Trash2, Sparkles, Loader2, Check, Link as LinkIcon } from 'lucide-react'
 import { CollapsibleSection } from './CollapsibleSection'
 import { EventDetailsCard, type EventDetailsData, type EventPartner, type TeamMember } from './EventDetailsCard'
 import { GeneratedContextCards } from './GeneratedContextCards'
@@ -73,228 +73,269 @@ export function LeftPanel({
     setShowLinkInput(false)
   }
 
+  const hasContent = documents.length > 0 || links.length > 0
+
   return (
     <div className="flex flex-col h-full overflow-hidden">
-      {/* Header */}
-      <div className="px-5 pt-4 pb-3 pl-6 shrink-0 border-b border-ui-border">
-        <h2 className="text-xl font-bold text-brand-charcoal m-0">Event Context</h2>
-        <p className="text-[13px] text-ui-tertiary mt-1 mb-0">
-          Add documents, links, and information. The more context, the smarter the AI.
-        </p>
+      {/* Header — matched height with right panel */}
+      <div className="px-6 py-3.5 shrink-0 border-b border-ui-border flex items-center gap-2.5">
+        <div className="w-[30px] h-[30px] rounded-full bg-brand-forest/10 flex items-center justify-center shrink-0">
+          <FileText size={14} className="text-brand-forest" />
+        </div>
+        <div>
+          <div className="text-sm font-bold text-brand-charcoal">Event Context</div>
+          <div className="text-[11px] font-medium text-ui-tertiary">Add documents and links for AI analysis</div>
+        </div>
       </div>
 
-      {/* Scrollable area — pb-20 ensures content isn't obscured by generate button */}
-      <div className="flex-1 overflow-y-auto px-5 py-4 pl-6 pb-20">
-        {/* Generated Context — top priority */}
-        {isGenerated && generatedContext ? (
+      {/* Scrollable area */}
+      <div className="flex-1 overflow-y-auto px-5 py-4 pl-6 pb-24">
+
+        {/* ─── POST-GENERATION: Generated Context at top ─── */}
+        {isGenerated && generatedContext && (
           <GeneratedContextCards data={generatedContext} />
-        ) : (
-          <div className="text-center py-7 px-5 text-ui-tertiary bg-white border border-ui-border rounded-[10px] mb-4">
-            <div className="mb-1.5 text-brand-terracotta flex justify-center">
-              <Sparkles size={22} />
-            </div>
-            <div className="text-sm font-semibold text-brand-charcoal">
-              Generated context will appear here
-            </div>
-            <div className="text-[13px] mt-1">
-              Upload documents and let the AI analyse your event.
-            </div>
-          </div>
         )}
 
-        {/* Event Details — collapsible, editable */}
-        <CollapsibleSection
-          title="Event Details"
-          icon={<FileText size={15} />}
-          badge={
-            <span className="inline-flex items-center text-[10px] font-semibold px-[7px] py-px rounded bg-brand-forest/10 text-brand-forest">
-              Editable
-            </span>
-          }
-          defaultOpen={!isGenerated}
-        >
+        {/* ─── EMPTY STATE: Upload zone + Links at top ─── */}
+        {!isGenerated && (
+          <>
+            {/* Upload zone */}
+            <div
+              onClick={() => fileInputRef.current?.click()}
+              onDragOver={(e) => {
+                e.preventDefault()
+                setDragOver(true)
+              }}
+              onDragLeave={() => setDragOver(false)}
+              onDrop={handleDrop}
+              className={`border-2 border-dashed rounded-[10px] py-5 px-4 text-center cursor-pointer transition-all ${
+                dragOver
+                  ? 'border-brand-terracotta bg-brand-terracotta/5'
+                  : 'border-ui-border hover:border-brand-terracotta/30 bg-brand-cream/50'
+              }`}
+            >
+              <input
+                ref={fileInputRef}
+                type="file"
+                multiple
+                accept=".pdf,.docx,.xlsx,.pptx,.csv,.txt"
+                className="hidden"
+                onChange={(e) => {
+                  if (e.target.files?.length) onUploadFiles(e.target.files)
+                  e.target.value = ''
+                }}
+              />
+              <div className={`mb-1.5 flex justify-center ${dragOver ? 'text-brand-terracotta' : 'text-ui-tertiary'}`}>
+                <Upload size={22} />
+              </div>
+              <div className="text-[13px] text-brand-charcoal font-medium">
+                Drop files here or{' '}
+                <span className="text-brand-terracotta font-semibold">browse</span>
+              </div>
+              <div className="text-[11px] text-[#999] mt-0.5">
+                Event briefs, sponsor decks, guest lists, agendas
+              </div>
+            </div>
+
+            {/* Uploaded files (inline, no collapsible wrapper) */}
+            {documents.length > 0 && (
+              <div className="flex flex-col gap-1.5 mt-2.5">
+                {documents.map((d) => (
+                  <DocumentRow key={d.id} doc={d} onRemove={onRemoveDocument} />
+                ))}
+              </div>
+            )}
+
+            {/* Links — compact inline section */}
+            <div className="mt-3">
+              <div className="flex items-center justify-between mb-1.5">
+                <div className="flex items-center gap-1.5">
+                  <LinkIcon size={13} className="text-ui-tertiary" />
+                  <span className="text-[12px] font-semibold text-ui-tertiary">Links</span>
+                  {links.length > 0 && (
+                    <span className="text-[10px] font-bold text-brand-forest bg-brand-forest/10 px-1.5 py-px rounded-full">
+                      {links.length}
+                    </span>
+                  )}
+                </div>
+                <button
+                  onClick={() => setShowLinkInput(true)}
+                  className="flex items-center gap-0.5 text-[11px] text-brand-terracotta bg-transparent border-none cursor-pointer font-semibold font-sans"
+                >
+                  <Plus size={12} /> Add
+                </button>
+              </div>
+              {links.map((l) => (
+                <div
+                  key={l.id}
+                  className="flex items-center gap-2 px-2.5 py-1.5 bg-brand-cream/60 rounded-md border border-ui-border/60 mb-1"
+                >
+                  <Globe size={13} className="text-brand-terracotta shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <div className="text-[12px] font-medium text-brand-charcoal truncate">{l.label}</div>
+                  </div>
+                  <button
+                    onClick={() => onRemoveLink(l.id)}
+                    className="bg-transparent border-none cursor-pointer text-[#ccc] hover:text-red-400 p-0.5 transition-colors"
+                  >
+                    <Trash2 size={12} />
+                  </button>
+                </div>
+              ))}
+              {showLinkInput && (
+                <div className="flex gap-1.5 mt-1">
+                  <input
+                    autoFocus
+                    value={newUrl}
+                    onChange={(e) => setNewUrl(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') handleAddLink()
+                      if (e.key === 'Escape') { setShowLinkInput(false); setNewUrl('') }
+                    }}
+                    placeholder="Paste a URL..."
+                    className="flex-1 text-[13px] py-[6px] px-2.5 border border-ui-border rounded-md font-sans focus:outline-none focus:border-brand-terracotta"
+                  />
+                  <button
+                    onClick={handleAddLink}
+                    className="text-[12px] py-[6px] px-3 border-none rounded-md bg-brand-terracotta text-white cursor-pointer font-semibold font-sans"
+                  >
+                    Add
+                  </button>
+                </div>
+              )}
+            </div>
+          </>
+        )}
+
+        {/* ─── POST-GENERATION: Documents/Links as collapsible ─── */}
+        {isGenerated && (
+          <>
+            <CollapsibleSection
+              title="Documents"
+              badge={
+                documents.length > 0 ? (
+                  <span className="text-[10px] font-bold bg-brand-forest/10 text-brand-forest px-1.5 py-px rounded-full">
+                    {documents.length}
+                  </span>
+                ) : undefined
+              }
+              defaultOpen={false}
+            >
+              {/* Upload zone */}
+              <div
+                onClick={() => fileInputRef.current?.click()}
+                onDragOver={(e) => { e.preventDefault(); setDragOver(true) }}
+                onDragLeave={() => setDragOver(false)}
+                onDrop={handleDrop}
+                className={`border-2 border-dashed rounded-lg py-3 px-4 text-center cursor-pointer transition-all mb-2 ${
+                  dragOver ? 'border-brand-terracotta bg-brand-terracotta/5' : 'border-ui-border bg-brand-cream/50'
+                }`}
+              >
+                <div className="text-[12px] text-brand-charcoal font-medium">
+                  Drop files or <span className="text-brand-terracotta font-semibold">browse</span>
+                </div>
+              </div>
+              {documents.length > 0 && (
+                <div className="flex flex-col gap-1.5">
+                  {documents.map((d) => (
+                    <DocumentRow key={d.id} doc={d} onRemove={onRemoveDocument} />
+                  ))}
+                </div>
+              )}
+            </CollapsibleSection>
+
+            <CollapsibleSection
+              title="Links"
+              badge={
+                links.length > 0 ? (
+                  <span className="text-[10px] font-bold bg-brand-forest/10 text-brand-forest px-1.5 py-px rounded-full">
+                    {links.length}
+                  </span>
+                ) : undefined
+              }
+              defaultOpen={false}
+            >
+              <div className="flex justify-end mb-1.5">
+                <button
+                  onClick={() => setShowLinkInput(true)}
+                  className="flex items-center gap-0.5 text-[11px] text-brand-terracotta bg-transparent border-none cursor-pointer font-semibold font-sans"
+                >
+                  <Plus size={12} /> Add
+                </button>
+              </div>
+              {links.map((l) => (
+                <div
+                  key={l.id}
+                  className="flex items-center gap-2 px-2.5 py-1.5 bg-brand-cream/60 rounded-md border border-ui-border/60 mb-1"
+                >
+                  <Globe size={13} className="text-brand-terracotta shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <div className="text-[12px] font-medium text-brand-charcoal truncate">{l.label}</div>
+                  </div>
+                  <button
+                    onClick={() => onRemoveLink(l.id)}
+                    className="bg-transparent border-none cursor-pointer text-[#ccc] hover:text-red-400 p-0.5 transition-colors"
+                  >
+                    <Trash2 size={12} />
+                  </button>
+                </div>
+              ))}
+              {showLinkInput && (
+                <div className="flex gap-1.5 mt-1">
+                  <input
+                    autoFocus
+                    value={newUrl}
+                    onChange={(e) => setNewUrl(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') handleAddLink()
+                      if (e.key === 'Escape') { setShowLinkInput(false); setNewUrl('') }
+                    }}
+                    placeholder="Paste a URL..."
+                    className="flex-1 text-[13px] py-[6px] px-2.5 border border-ui-border rounded-md font-sans focus:outline-none focus:border-brand-terracotta"
+                  />
+                  <button
+                    onClick={handleAddLink}
+                    className="text-[12px] py-[6px] px-3 border-none rounded-md bg-brand-terracotta text-white cursor-pointer font-semibold font-sans"
+                  >
+                    Add
+                  </button>
+                </div>
+              )}
+            </CollapsibleSection>
+          </>
+        )}
+
+        {/* Event Details — always collapsible, collapsed by default */}
+        <CollapsibleSection title="Event Details" defaultOpen={false}>
           <EventDetailsCard
             eventData={eventData}
             onUpdate={onEventUpdate}
-            partners={partners}
-            onAddPartner={onAddPartner}
-            onRemovePartner={onRemovePartner}
             teamMembers={teamMembers}
           />
         </CollapsibleSection>
 
-        {/* Documents — collapsible */}
+        {/* Partners — collapsible */}
         <CollapsibleSection
-          title="Documents"
-          icon={<FileText size={15} />}
+          title="Partners"
           badge={
-            documents.length > 0 ? (
-              <span className="text-[10px] font-bold bg-brand-forest/10 text-brand-forest px-[7px] py-px rounded-full">
-                {documents.length}
+            partners.length > 0 ? (
+              <span className="text-[10px] font-bold bg-brand-forest/10 text-brand-forest px-1.5 py-px rounded-full">
+                {partners.length}
               </span>
             ) : undefined
           }
-          defaultOpen={!isGenerated}
+          defaultOpen={false}
         >
-          {/* Upload zone */}
-          <div
-            onClick={() => fileInputRef.current?.click()}
-            onDragOver={(e) => {
-              e.preventDefault()
-              setDragOver(true)
-            }}
-            onDragLeave={() => setDragOver(false)}
-            onDrop={handleDrop}
-            className={`border-2 border-dashed rounded-[10px] py-[18px] px-4 text-center cursor-pointer transition-all mb-2.5 ${
-              dragOver
-                ? 'border-brand-terracotta bg-brand-terracotta/5'
-                : 'border-ui-border bg-brand-cream'
-            }`}
-          >
-            <input
-              ref={fileInputRef}
-              type="file"
-              multiple
-              accept=".pdf,.docx,.xlsx,.pptx,.csv,.txt"
-              className="hidden"
-              onChange={(e) => {
-                if (e.target.files?.length) onUploadFiles(e.target.files)
-                e.target.value = ''
-              }}
-            />
-            <div
-              className={`mb-1 flex justify-center ${dragOver ? 'text-brand-terracotta' : 'text-ui-tertiary'}`}
-            >
-              <Upload size={20} />
-            </div>
-            <div className="text-[13px] text-brand-charcoal font-medium">
-              Drop files here or{' '}
-              <span className="text-brand-terracotta font-semibold">browse</span>
-            </div>
-            <div className="text-[11px] text-[#999] mt-0.5">
-              Event briefs, sponsor decks, guest lists, agendas
-            </div>
-          </div>
-
-          {/* Uploaded files */}
-          {documents.length > 0 && (
-            <div className="flex flex-col gap-1.5">
-              {documents.map((d) => (
-                <div
-                  key={d.id}
-                  className="flex items-center justify-between px-2.5 py-2 bg-white rounded-lg border border-ui-border"
-                >
-                  <div className="flex items-center gap-2">
-                    <FileText size={18} className={FILE_TYPE_COLORS[d.type] || 'text-gray-500'} />
-                    <div>
-                      <div className="text-[13px] font-medium text-brand-charcoal">{d.name}</div>
-                      <div className="text-[11px] text-ui-tertiary">{d.sizeFormatted}</div>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    {d.status === 'analyzed' ? (
-                      <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-0.5 rounded bg-brand-forest/10 text-brand-forest">
-                        <Check size={12} /> Analyzed
-                      </span>
-                    ) : d.status === 'analyzing' ? (
-                      <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-0.5 rounded bg-brand-terracotta/10 text-brand-terracotta">
-                        <Loader2 size={12} className="animate-spin" /> Reading...
-                      </span>
-                    ) : d.status === 'error' ? (
-                      <span className="inline-flex items-center text-[11px] font-semibold px-2.5 py-0.5 rounded bg-red-50 text-red-600">
-                        Error
-                      </span>
-                    ) : d.status === 'uploading' ? (
-                      <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-0.5 rounded bg-gray-100 text-ui-tertiary">
-                        <Loader2 size={12} className="animate-spin" /> Uploading
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center text-[11px] font-semibold px-2.5 py-0.5 rounded bg-[#F0EDEA] text-ui-tertiary">
-                        Queued
-                      </span>
-                    )}
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        onRemoveDocument(d.id)
-                      }}
-                      className="bg-transparent border-none cursor-pointer text-[#ccc] hover:text-red-400 p-0.5 transition-colors"
-                    >
-                      <Trash2 size={15} />
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </CollapsibleSection>
-
-        {/* Links & References — collapsible */}
-        <CollapsibleSection
-          title="Links & References"
-          icon={<Globe size={15} />}
-          badge={
-            links.length > 0 ? (
-              <span className="text-[10px] font-bold bg-brand-forest/10 text-brand-forest px-[7px] py-px rounded-full">
-                {links.length}
-              </span>
-            ) : undefined
-          }
-          defaultOpen={!isGenerated}
-        >
-          <div className="bg-white border border-ui-border rounded-[10px] p-3">
-            <div className={`flex justify-end ${links.length || showLinkInput ? 'mb-2' : ''}`}>
-              <button
-                onClick={() => setShowLinkInput(true)}
-                className="flex items-center gap-1 text-xs text-brand-terracotta bg-transparent border-none cursor-pointer font-semibold"
-              >
-                <Plus size={14} /> Add
-              </button>
-            </div>
-            {links.map((l) => (
-              <div
-                key={l.id}
-                className="flex items-center gap-2 px-2.5 py-1.5 bg-brand-cream rounded-md border border-ui-border mb-1.5"
-              >
-                <Globe size={15} className="text-brand-terracotta shrink-0" />
-                <div className="flex-1 min-w-0">
-                  <div className="text-[13px] font-medium text-brand-terracotta truncate">
-                    {l.label}
-                  </div>
-                  <div className="text-[11px] text-ui-tertiary truncate">{l.url}</div>
-                </div>
-                <button
-                  onClick={() => onRemoveLink(l.id)}
-                  className="bg-transparent border-none cursor-pointer text-[#ccc] hover:text-red-400 p-0.5 transition-colors"
-                >
-                  <Trash2 size={13} />
-                </button>
-              </div>
-            ))}
-            {showLinkInput && (
-              <div className="flex gap-1.5 mt-1">
-                <input
-                  autoFocus
-                  value={newUrl}
-                  onChange={(e) => setNewUrl(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && handleAddLink()}
-                  placeholder="Paste a URL..."
-                  className="flex-1 text-[13px] py-[7px] px-2.5 border border-ui-border rounded-md font-sans focus:outline-none focus:border-brand-terracotta"
-                />
-                <button
-                  onClick={handleAddLink}
-                  className="text-xs py-[7px] px-3.5 border-none rounded-md bg-brand-terracotta text-white cursor-pointer font-semibold"
-                >
-                  Add
-                </button>
-              </div>
-            )}
-          </div>
+          <PartnersSection
+            partners={partners}
+            onAddPartner={onAddPartner}
+            onRemovePartner={onRemovePartner}
+          />
         </CollapsibleSection>
       </div>
 
-      {/* Generate button — fixed bottom (visible when docs or links exist) */}
-      {(documents.length > 0 || links.length > 0) && (
+      {/* Generate button — fixed bottom */}
+      {(hasContent || isGenerated) && (
         <div className="px-5 py-3 pb-4 pl-6 border-t border-ui-border bg-white shrink-0">
           <button
             onClick={onGenerate}
@@ -307,7 +348,7 @@ export function LeftPanel({
           >
             {isGenerating ? (
               <>
-                <Loader2 size={16} className="animate-spin" /> Analysing documents...
+                <Loader2 size={16} className="animate-spin" /> Analysing...
               </>
             ) : isGenerated ? (
               <>
@@ -320,6 +361,130 @@ export function LeftPanel({
             )}
           </button>
         </div>
+      )}
+    </div>
+  )
+}
+
+/* ─── Document Row ─── */
+
+function DocumentRow({ doc, onRemove }: { doc: EventDocument; onRemove: (id: string) => void }) {
+  return (
+    <div className="flex items-center justify-between px-2.5 py-2 bg-white rounded-lg border border-ui-border">
+      <div className="flex items-center gap-2">
+        <FileText size={16} className={FILE_TYPE_COLORS[doc.type] || 'text-gray-500'} />
+        <div>
+          <div className="text-[13px] font-medium text-brand-charcoal">{doc.name}</div>
+          <div className="text-[10px] text-ui-tertiary">{doc.sizeFormatted}</div>
+        </div>
+      </div>
+      <div className="flex items-center gap-1.5">
+        {doc.status === 'analyzed' ? (
+          <Check size={14} className="text-brand-forest" />
+        ) : doc.status === 'analyzing' ? (
+          <Loader2 size={14} className="animate-spin text-brand-terracotta" />
+        ) : doc.status === 'error' ? (
+          <span className="text-[10px] font-semibold text-red-500">Error</span>
+        ) : doc.status === 'uploading' ? (
+          <Loader2 size={14} className="animate-spin text-ui-tertiary" />
+        ) : null}
+        <button
+          onClick={(e) => { e.stopPropagation(); onRemove(doc.id) }}
+          className="bg-transparent border-none cursor-pointer text-[#ccc] hover:text-red-400 p-0.5 transition-colors"
+        >
+          <Trash2 size={13} />
+        </button>
+      </div>
+    </div>
+  )
+}
+
+/* ─── Partners Section ─── */
+
+function PartnersSection({
+  partners,
+  onAddPartner,
+  onRemovePartner,
+}: {
+  partners: EventPartner[]
+  onAddPartner?: (partner: Omit<EventPartner, 'id'>) => void
+  onRemovePartner?: (id: string) => void
+}) {
+  const [showForm, setShowForm] = useState(false)
+  const [name, setName] = useState('')
+  const [role, setRole] = useState<EventPartner['role']>('Sponsor')
+  const [tier, setTier] = useState<EventPartner['tier']>('Gold')
+
+  const handleSubmit = () => {
+    if (!name.trim() || !onAddPartner) return
+    onAddPartner({ companyName: name.trim(), role, tier })
+    setName('')
+    setShowForm(false)
+  }
+
+  return (
+    <div>
+      {partners.length === 0 && !showForm && (
+        <div className="text-[12px] text-ui-tertiary py-3 text-center">
+          No partners yet
+        </div>
+      )}
+
+      {partners.map((p) => (
+        <div
+          key={p.id}
+          className="flex items-center justify-between px-2.5 py-[7px] bg-brand-cream/60 rounded-md mb-1.5"
+        >
+          <div>
+            <div className="text-[13px] font-medium text-brand-charcoal">{p.companyName}</div>
+            <div className="text-[11px] text-ui-tertiary">{p.role} · {p.tier}</div>
+          </div>
+          {onRemovePartner && (
+            <button
+              onClick={() => onRemovePartner(p.id)}
+              className="bg-transparent border-none cursor-pointer text-[#ccc] hover:text-red-400 p-0.5 transition-colors"
+            >
+              <Trash2 size={13} />
+            </button>
+          )}
+        </div>
+      ))}
+
+      {showForm ? (
+        <div className="flex flex-col gap-2 p-2.5 bg-brand-cream/40 rounded-lg border border-ui-border mt-1">
+          <input
+            autoFocus
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
+            placeholder="Company name"
+            className="text-[13px] px-2.5 py-1.5 border border-ui-border rounded-md bg-white font-sans focus:outline-none focus:border-brand-terracotta"
+          />
+          <div className="flex gap-2">
+            <select value={role} onChange={(e) => setRole(e.target.value as EventPartner['role'])} className="flex-1 text-[12px] px-2 py-1.5 border border-ui-border rounded-md bg-white font-sans focus:outline-none">
+              <option value="Sponsor">Sponsor</option>
+              <option value="Partner">Partner</option>
+              <option value="Co-host">Co-host</option>
+              <option value="Venue">Venue</option>
+            </select>
+            <select value={tier} onChange={(e) => setTier(e.target.value as EventPartner['tier'])} className="flex-1 text-[12px] px-2 py-1.5 border border-ui-border rounded-md bg-white font-sans focus:outline-none">
+              <option value="Primary">Primary</option>
+              <option value="Gold">Gold</option>
+              <option value="Silver">Silver</option>
+            </select>
+          </div>
+          <div className="flex gap-1.5 justify-end">
+            <button onClick={() => setShowForm(false)} className="text-[12px] px-3 py-1 rounded-md bg-transparent border border-ui-border text-ui-tertiary cursor-pointer font-sans">Cancel</button>
+            <button onClick={handleSubmit} disabled={!name.trim()} className="text-[12px] px-3 py-1 rounded-md bg-brand-terracotta text-white border-none cursor-pointer font-semibold font-sans disabled:opacity-40">Add</button>
+          </div>
+        </div>
+      ) : onAddPartner && (
+        <button
+          onClick={() => setShowForm(true)}
+          className="flex items-center gap-1 text-[11px] text-brand-terracotta bg-transparent border-none cursor-pointer font-semibold font-sans mt-1"
+        >
+          <Plus size={12} /> Add partner
+        </button>
       )}
     </div>
   )

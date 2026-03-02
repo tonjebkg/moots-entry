@@ -11,8 +11,6 @@ import {
   Globe,
   Lock,
   ChevronDown,
-  Plus,
-  Trash2,
   ExternalLink,
 } from 'lucide-react'
 import { EditableField } from './EditableField'
@@ -91,9 +89,6 @@ export interface EventDetailsData {
 interface EventDetailsCardProps {
   eventData: EventDetailsData
   onUpdate: (key: string, value: string) => void
-  partners?: EventPartner[]
-  onAddPartner?: (partner: Omit<EventPartner, 'id'>) => void
-  onRemovePartner?: (id: string) => void
   teamMembers?: TeamMember[]
 }
 
@@ -108,8 +103,6 @@ function DatePickerField({
   onSave: (v: string) => void
   placeholder?: string
 }) {
-  const inputRef = useRef<HTMLInputElement>(null)
-
   // value is stored as YYYY-MM-DD for the input
   const displayValue = value
     ? (() => {
@@ -122,8 +115,7 @@ function DatePickerField({
   return (
     <div className="relative">
       <div
-        onClick={() => inputRef.current?.showPicker()}
-        className={`text-[13px] leading-relaxed cursor-pointer py-px border-b border-dashed border-transparent hover:border-ui-border transition-colors flex items-center gap-1.5 ${
+        className={`text-[13px] leading-relaxed cursor-pointer py-px border-b border-dashed border-transparent hover:border-ui-border transition-colors flex items-center gap-1.5 pointer-events-none ${
           displayValue ? 'text-brand-charcoal' : 'text-ui-tertiary'
         }`}
       >
@@ -131,11 +123,11 @@ function DatePickerField({
         {displayValue || placeholder}
       </div>
       <input
-        ref={inputRef}
         type="date"
         value={value}
         onChange={(e) => onSave(e.target.value)}
-        className="absolute inset-0 opacity-0 cursor-pointer w-full"
+        className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+        style={{ colorScheme: 'light' }}
       />
     </div>
   )
@@ -252,95 +244,15 @@ function FormatChips({ value, onSave }: { value: string; onSave: (v: string) => 
   )
 }
 
-/* ─── Partner Form (inline) ─── */
-
-const PARTNER_ROLES = ['Sponsor', 'Partner', 'Co-host', 'Venue'] as const
-const PARTNER_TIERS = ['Primary', 'Gold', 'Silver'] as const
-
-function PartnerForm({ onAdd, onCancel }: { onAdd: (p: Omit<EventPartner, 'id'>) => void; onCancel: () => void }) {
-  const [name, setName] = useState('')
-  const [role, setRole] = useState<EventPartner['role']>('Sponsor')
-  const [tier, setTier] = useState<EventPartner['tier']>('Gold')
-
-  const handleSubmit = () => {
-    if (!name.trim()) return
-    onAdd({ companyName: name.trim(), role, tier })
-    setName('')
-  }
-
-  return (
-    <div className="flex flex-col gap-2 p-2.5 bg-brand-cream rounded-lg border border-ui-border">
-      <input
-        autoFocus
-        value={name}
-        onChange={(e) => setName(e.target.value)}
-        onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
-        placeholder="Company name"
-        className="text-[13px] px-2.5 py-1.5 border border-ui-border rounded-md bg-white font-sans focus:outline-none focus:border-brand-terracotta"
-      />
-      <div className="flex gap-2">
-        <select
-          value={role}
-          onChange={(e) => setRole(e.target.value as EventPartner['role'])}
-          className="flex-1 text-[12px] px-2 py-1.5 border border-ui-border rounded-md bg-white font-sans focus:outline-none"
-        >
-          {PARTNER_ROLES.map((r) => (
-            <option key={r} value={r}>
-              {r}
-            </option>
-          ))}
-        </select>
-        <select
-          value={tier}
-          onChange={(e) => setTier(e.target.value as EventPartner['tier'])}
-          className="flex-1 text-[12px] px-2 py-1.5 border border-ui-border rounded-md bg-white font-sans focus:outline-none"
-        >
-          {PARTNER_TIERS.map((t) => (
-            <option key={t} value={t}>
-              {t}
-            </option>
-          ))}
-        </select>
-      </div>
-      <div className="flex gap-1.5 justify-end">
-        <button
-          onClick={onCancel}
-          className="text-[12px] px-3 py-1 rounded-md bg-transparent border border-ui-border text-ui-tertiary cursor-pointer font-sans hover:bg-white"
-        >
-          Cancel
-        </button>
-        <button
-          onClick={handleSubmit}
-          disabled={!name.trim()}
-          className="text-[12px] px-3 py-1 rounded-md bg-brand-terracotta text-white border-none cursor-pointer font-semibold font-sans disabled:opacity-40"
-        >
-          Add
-        </button>
-      </div>
-    </div>
-  )
-}
-
 /* ─── Main Component ─── */
 
 export function EventDetailsCard({
   eventData,
   onUpdate,
-  partners = [],
-  onAddPartner,
-  onRemovePartner,
   teamMembers = [],
 }: EventDetailsCardProps) {
-  const [showPartnerForm, setShowPartnerForm] = useState(false)
-
   return (
-    <div className="bg-white border border-ui-border rounded-[10px] p-3.5 mb-4">
-      <div className="flex justify-between items-center mb-2.5">
-        <span className="text-[11px] font-bold tracking-[0.08em] uppercase text-ui-tertiary">Event Details</span>
-        <span className="inline-flex items-center text-[11px] font-semibold px-2.5 py-0.5 rounded bg-brand-forest/10 text-brand-forest">
-          From event setup
-        </span>
-      </div>
+    <div>
 
       {/* Top row: Image + Name/Format */}
       <div className="flex gap-3.5 mb-3 pb-3 border-b border-ui-border">
@@ -530,74 +442,6 @@ export function EventDetailsCard({
         </div>
       )}
 
-      {/* Partners / Sponsors section */}
-      <div className="border-t border-ui-border pt-2.5">
-        <div className="flex items-center justify-between mb-2">
-          <div className="text-[10px] font-bold text-ui-tertiary uppercase tracking-[0.08em]">
-            Partners / Sponsors
-          </div>
-          {!showPartnerForm && onAddPartner && (
-            <button
-              onClick={() => setShowPartnerForm(true)}
-              className="flex items-center gap-1 text-[11px] text-brand-terracotta font-semibold bg-transparent border-none cursor-pointer font-sans"
-            >
-              <Plus size={12} /> Add partner
-            </button>
-          )}
-        </div>
-
-        {partners.length === 0 && !showPartnerForm && (
-          <div className="text-[12px] text-ui-tertiary py-2 text-center bg-brand-cream rounded-lg">
-            No partners added yet
-          </div>
-        )}
-
-        {partners.map((p) => (
-          <div
-            key={p.id}
-            className="flex items-center justify-between px-2.5 py-[7px] bg-brand-cream rounded-md mb-1.5"
-          >
-            <div className="flex items-center gap-2">
-              <Building2 size={14} className="text-ui-tertiary" />
-              <div>
-                <div className="text-[13px] font-semibold text-brand-charcoal">{p.companyName}</div>
-                <div className="text-[11px] text-ui-tertiary">{p.role}</div>
-              </div>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <span
-                className={`inline-flex items-center text-[11px] font-semibold px-2 py-0.5 rounded ${
-                  p.tier === 'Primary'
-                    ? 'bg-brand-terracotta/10 text-brand-terracotta'
-                    : p.tier === 'Gold'
-                      ? 'bg-amber-50 text-amber-700'
-                      : 'bg-gray-100 text-gray-600'
-                }`}
-              >
-                {p.tier}
-              </span>
-              {onRemovePartner && (
-                <button
-                  onClick={() => onRemovePartner(p.id)}
-                  className="bg-transparent border-none cursor-pointer text-[#ccc] hover:text-red-400 p-0.5 transition-colors"
-                >
-                  <Trash2 size={13} />
-                </button>
-              )}
-            </div>
-          </div>
-        ))}
-
-        {showPartnerForm && onAddPartner && (
-          <PartnerForm
-            onAdd={(p) => {
-              onAddPartner(p)
-              setShowPartnerForm(false)
-            }}
-            onCancel={() => setShowPartnerForm(false)}
-          />
-        )}
-      </div>
     </div>
   )
 }

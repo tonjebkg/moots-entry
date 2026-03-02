@@ -10,10 +10,10 @@ interface GeneratedContextCardsProps {
 export function GeneratedContextCards({ data }: GeneratedContextCardsProps) {
   return (
     <div className="flex flex-col gap-3 mb-4">
-      {/* Sponsors */}
+      {/* Partners */}
       <div className="bg-white border border-ui-border rounded-[10px] p-3.5">
         <div className="text-[11px] font-bold tracking-[0.08em] uppercase text-ui-tertiary mb-1.5">
-          Sponsors
+          Partners
         </div>
         {data.sponsors.map((s, i) => (
           <div
