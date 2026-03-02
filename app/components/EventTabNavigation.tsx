@@ -21,6 +21,7 @@ export function EventTabNavigation({ eventId }: EventTabNavigationProps) {
 
   const tabs: TabDef[] = [
     { key: 'overview', label: 'Overview', href: `/dashboard/${eventId}/overview`, phase: null },
+    { key: 'context', label: 'Context', href: `/dashboard/${eventId}/context`, phase: null },
     { key: 'objectives', label: 'Objectives', href: `/dashboard/${eventId}/objectives`, phase: 'PRE-EVENT' },
     { key: 'guest-intelligence', label: 'Guest Intelligence', href: `/dashboard/${eventId}/guest-intelligence`, phase: 'PRE-EVENT' },
     { key: 'campaigns', label: 'Campaigns', href: `/dashboard/${eventId}/campaigns`, phase: 'PRE-EVENT' },

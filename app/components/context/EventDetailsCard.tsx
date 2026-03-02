@@ -1,0 +1,648 @@
+'use client'
+
+import { useState, useRef, useEffect } from 'react'
+import {
+  Calendar,
+  Clock,
+  MapPin,
+  Users,
+  Building2,
+  ImagePlus,
+  Globe,
+  Lock,
+  ChevronDown,
+  Plus,
+  Trash2,
+  ExternalLink,
+} from 'lucide-react'
+import { EditableField } from './EditableField'
+
+/* ─── Shared data from creation wizard ─── */
+
+const FORMAT_OPTIONS = [
+  { value: 'curated-dinner', label: 'Curated Dinner' },
+  { value: 'branded-house', label: 'Branded House' },
+  { value: 'annual-retreat', label: 'Annual Retreat' },
+  { value: 'custom', label: 'Custom' },
+]
+
+const TIMEZONES = [
+  'America/New_York',
+  'America/Chicago',
+  'America/Denver',
+  'America/Los_Angeles',
+  'America/Phoenix',
+  'America/Toronto',
+  'America/Vancouver',
+  'UTC',
+]
+
+function generateTimeOptions(): string[] {
+  const times: string[] = []
+  for (let h = 0; h < 24; h++) {
+    for (let m = 0; m < 60; m += 30) {
+      const ampm = h >= 12 ? 'PM' : 'AM'
+      const hours12 = h % 12 || 12
+      const pad = (n: number) => (n < 10 ? `0${n}` : `${n}`)
+      times.push(`${hours12}:${pad(m)} ${ampm}`)
+    }
+  }
+  return times
+}
+
+const TIME_OPTIONS = generateTimeOptions()
+
+/* ─── Types ─── */
+
+export interface EventPartner {
+  id: string
+  companyName: string
+  role: 'Sponsor' | 'Partner' | 'Co-host' | 'Venue'
+  tier: 'Primary' | 'Gold' | 'Silver'
+}
+
+export interface TeamMember {
+  id: string
+  name: string
+  email: string
+  role: string
+  avatarUrl?: string
+}
+
+export interface EventDetailsData {
+  name: string
+  type: string
+  startDate: string
+  startTime: string
+  endDate: string
+  endTime: string
+  timezone: string
+  venueName: string
+  city: string
+  state: string
+  capacity: string
+  hostingCompany: string
+  dressCode: string
+  description: string
+  image: string
+  isPrivate: boolean
+}
+
+interface EventDetailsCardProps {
+  eventData: EventDetailsData
+  onUpdate: (key: string, value: string) => void
+  partners?: EventPartner[]
+  onAddPartner?: (partner: Omit<EventPartner, 'id'>) => void
+  onRemovePartner?: (id: string) => void
+  teamMembers?: TeamMember[]
+}
+
+/* ─── Date Picker ─── */
+
+function DatePickerField({
+  value,
+  onSave,
+  placeholder = 'Select date',
+}: {
+  value: string
+  onSave: (v: string) => void
+  placeholder?: string
+}) {
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  // value is stored as YYYY-MM-DD for the input
+  const displayValue = value
+    ? (() => {
+        const parts = value.split('-')
+        if (parts.length === 3) return `${parts[1]}/${parts[2]}/${parts[0]}`
+        return value
+      })()
+    : ''
+
+  return (
+    <div className="relative">
+      <div
+        onClick={() => inputRef.current?.showPicker()}
+        className={`text-[13px] leading-relaxed cursor-pointer py-px border-b border-dashed border-transparent hover:border-ui-border transition-colors flex items-center gap-1.5 ${
+          displayValue ? 'text-brand-charcoal' : 'text-ui-tertiary'
+        }`}
+      >
+        <Calendar size={13} className="text-ui-tertiary shrink-0" />
+        {displayValue || placeholder}
+      </div>
+      <input
+        ref={inputRef}
+        type="date"
+        value={value}
+        onChange={(e) => onSave(e.target.value)}
+        className="absolute inset-0 opacity-0 cursor-pointer w-full"
+      />
+    </div>
+  )
+}
+
+/* ─── Time Dropdown ─── */
+
+function TimeDropdownField({
+  value,
+  onSave,
+  placeholder = 'Select time',
+}: {
+  value: string
+  onSave: (v: string) => void
+  placeholder?: string
+}) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    }
+    if (open) document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [open])
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        onClick={() => setOpen(!open)}
+        className={`text-[13px] leading-relaxed cursor-pointer py-px border-b border-dashed border-transparent hover:border-ui-border transition-colors flex items-center gap-1.5 bg-transparent border-none font-sans ${
+          value ? 'text-brand-charcoal' : 'text-ui-tertiary'
+        }`}
+      >
+        <Clock size={13} className="text-ui-tertiary shrink-0" />
+        {value || placeholder}
+        <ChevronDown size={11} className="text-ui-tertiary" />
+      </button>
+      {open && (
+        <div className="absolute top-full left-0 z-20 mt-1 bg-white border border-ui-border rounded-lg shadow-lg max-h-48 overflow-y-auto w-[130px]">
+          {TIME_OPTIONS.map((t) => (
+            <button
+              key={t}
+              onClick={() => {
+                onSave(t)
+                setOpen(false)
+              }}
+              className={`w-full text-left text-[13px] px-3 py-1.5 hover:bg-brand-cream transition-colors font-sans border-none bg-transparent cursor-pointer ${
+                t === value ? 'text-brand-terracotta font-semibold bg-brand-terracotta/5' : 'text-brand-charcoal'
+              }`}
+            >
+              {t}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+/* ─── Select Dropdown ─── */
+
+function SelectField({
+  value,
+  options,
+  onSave,
+  placeholder,
+}: {
+  value: string
+  options: { value: string; label: string }[]
+  onSave: (v: string) => void
+  placeholder?: string
+}) {
+  return (
+    <select
+      value={value}
+      onChange={(e) => onSave(e.target.value)}
+      className={`text-[13px] leading-relaxed cursor-pointer py-px bg-transparent border-b border-dashed border-transparent hover:border-ui-border transition-colors font-sans focus:outline-none focus:border-brand-terracotta w-full ${
+        value ? 'text-brand-charcoal' : 'text-ui-tertiary'
+      }`}
+    >
+      <option value="" disabled>
+        {placeholder || 'Select...'}
+      </option>
+      {options.map((o) => (
+        <option key={o.value} value={o.value}>
+          {o.label}
+        </option>
+      ))}
+    </select>
+  )
+}
+
+/* ─── Format Chips ─── */
+
+function FormatChips({ value, onSave }: { value: string; onSave: (v: string) => void }) {
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      {FORMAT_OPTIONS.map((f) => (
+        <button
+          key={f.value}
+          onClick={() => onSave(f.value)}
+          className={`text-[12px] font-semibold px-2.5 py-1 rounded-full border transition-all font-sans cursor-pointer ${
+            value === f.value
+              ? 'bg-brand-terracotta text-white border-brand-terracotta'
+              : 'bg-white text-brand-charcoal border-ui-border hover:border-brand-terracotta/40'
+          }`}
+        >
+          {f.label}
+        </button>
+      ))}
+    </div>
+  )
+}
+
+/* ─── Partner Form (inline) ─── */
+
+const PARTNER_ROLES = ['Sponsor', 'Partner', 'Co-host', 'Venue'] as const
+const PARTNER_TIERS = ['Primary', 'Gold', 'Silver'] as const
+
+function PartnerForm({ onAdd, onCancel }: { onAdd: (p: Omit<EventPartner, 'id'>) => void; onCancel: () => void }) {
+  const [name, setName] = useState('')
+  const [role, setRole] = useState<EventPartner['role']>('Sponsor')
+  const [tier, setTier] = useState<EventPartner['tier']>('Gold')
+
+  const handleSubmit = () => {
+    if (!name.trim()) return
+    onAdd({ companyName: name.trim(), role, tier })
+    setName('')
+  }
+
+  return (
+    <div className="flex flex-col gap-2 p-2.5 bg-brand-cream rounded-lg border border-ui-border">
+      <input
+        autoFocus
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+        onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
+        placeholder="Company name"
+        className="text-[13px] px-2.5 py-1.5 border border-ui-border rounded-md bg-white font-sans focus:outline-none focus:border-brand-terracotta"
+      />
+      <div className="flex gap-2">
+        <select
+          value={role}
+          onChange={(e) => setRole(e.target.value as EventPartner['role'])}
+          className="flex-1 text-[12px] px-2 py-1.5 border border-ui-border rounded-md bg-white font-sans focus:outline-none"
+        >
+          {PARTNER_ROLES.map((r) => (
+            <option key={r} value={r}>
+              {r}
+            </option>
+          ))}
+        </select>
+        <select
+          value={tier}
+          onChange={(e) => setTier(e.target.value as EventPartner['tier'])}
+          className="flex-1 text-[12px] px-2 py-1.5 border border-ui-border rounded-md bg-white font-sans focus:outline-none"
+        >
+          {PARTNER_TIERS.map((t) => (
+            <option key={t} value={t}>
+              {t}
+            </option>
+          ))}
+        </select>
+      </div>
+      <div className="flex gap-1.5 justify-end">
+        <button
+          onClick={onCancel}
+          className="text-[12px] px-3 py-1 rounded-md bg-transparent border border-ui-border text-ui-tertiary cursor-pointer font-sans hover:bg-white"
+        >
+          Cancel
+        </button>
+        <button
+          onClick={handleSubmit}
+          disabled={!name.trim()}
+          className="text-[12px] px-3 py-1 rounded-md bg-brand-terracotta text-white border-none cursor-pointer font-semibold font-sans disabled:opacity-40"
+        >
+          Add
+        </button>
+      </div>
+    </div>
+  )
+}
+
+/* ─── Main Component ─── */
+
+export function EventDetailsCard({
+  eventData,
+  onUpdate,
+  partners = [],
+  onAddPartner,
+  onRemovePartner,
+  teamMembers = [],
+}: EventDetailsCardProps) {
+  const [showPartnerForm, setShowPartnerForm] = useState(false)
+
+  return (
+    <div className="bg-white border border-ui-border rounded-[10px] p-3.5 mb-4">
+      <div className="flex justify-between items-center mb-2.5">
+        <span className="text-[11px] font-bold tracking-[0.08em] uppercase text-ui-tertiary">Event Details</span>
+        <span className="inline-flex items-center text-[11px] font-semibold px-2.5 py-0.5 rounded bg-brand-forest/10 text-brand-forest">
+          From event setup
+        </span>
+      </div>
+
+      {/* Top row: Image + Name/Format */}
+      <div className="flex gap-3.5 mb-3 pb-3 border-b border-ui-border">
+        <EventImageUpload image={eventData.image} onImageChange={(v) => onUpdate('image', v)} />
+        <div className="flex-1 min-w-0 flex flex-col justify-center">
+          <div className="text-[10px] font-bold text-ui-tertiary uppercase tracking-[0.04em] mb-0.5">Event Name</div>
+          <EditableField value={eventData.name} onSave={(v) => onUpdate('name', v)} placeholder="Event name" />
+          <div className="mt-2">
+            <div className="text-[10px] font-bold text-ui-tertiary uppercase tracking-[0.04em] mb-1">Event Format</div>
+            <FormatChips value={eventData.type} onSave={(v) => onUpdate('type', v)} />
+          </div>
+        </div>
+      </div>
+
+      {/* Start Date/Time row */}
+      <div className="grid grid-cols-2 gap-3 mb-2">
+        <div>
+          <div className="text-[10px] font-bold text-ui-tertiary uppercase tracking-[0.04em] mb-1">Start Date</div>
+          <DatePickerField
+            value={eventData.startDate}
+            onSave={(v) => onUpdate('startDate', v)}
+            placeholder="Select start date"
+          />
+        </div>
+        <div>
+          <div className="text-[10px] font-bold text-ui-tertiary uppercase tracking-[0.04em] mb-1">Start Time</div>
+          <TimeDropdownField
+            value={eventData.startTime}
+            onSave={(v) => onUpdate('startTime', v)}
+            placeholder="Select time"
+          />
+        </div>
+      </div>
+
+      {/* End Date/Time row */}
+      <div className="grid grid-cols-2 gap-3 mb-2">
+        <div>
+          <div className="text-[10px] font-bold text-ui-tertiary uppercase tracking-[0.04em] mb-1">End Date</div>
+          <DatePickerField
+            value={eventData.endDate}
+            onSave={(v) => onUpdate('endDate', v)}
+            placeholder="Select end date"
+          />
+        </div>
+        <div>
+          <div className="text-[10px] font-bold text-ui-tertiary uppercase tracking-[0.04em] mb-1">End Time</div>
+          <TimeDropdownField
+            value={eventData.endTime}
+            onSave={(v) => onUpdate('endTime', v)}
+            placeholder="Select time"
+          />
+        </div>
+      </div>
+
+      {/* Timezone */}
+      <div className="mb-3">
+        <div className="text-[10px] font-bold text-ui-tertiary uppercase tracking-[0.04em] mb-1 flex items-center gap-1">
+          <Globe size={12} className="text-ui-tertiary" /> Timezone
+        </div>
+        <SelectField
+          value={eventData.timezone}
+          options={TIMEZONES.map((tz) => ({
+            value: tz,
+            label: tz.replace(/_/g, ' ').replace('America/', ''),
+          }))}
+          onSave={(v) => onUpdate('timezone', v)}
+          placeholder="Select timezone"
+        />
+      </div>
+
+      <div className="border-t border-ui-border pt-2.5 mb-2.5" />
+
+      {/* Location — 3 fields */}
+      <div className="mb-2.5">
+        <div className="text-[10px] font-bold text-ui-tertiary uppercase tracking-[0.04em] mb-1 flex items-center gap-1">
+          <MapPin size={12} className="text-ui-tertiary" /> Location
+        </div>
+        <div className="grid grid-cols-3 gap-2">
+          <div>
+            <div className="text-[10px] text-ui-tertiary mb-0.5">Venue</div>
+            <EditableField
+              value={eventData.venueName}
+              onSave={(v) => onUpdate('venueName', v)}
+              placeholder="Venue name"
+            />
+          </div>
+          <div>
+            <div className="text-[10px] text-ui-tertiary mb-0.5">City</div>
+            <EditableField value={eventData.city} onSave={(v) => onUpdate('city', v)} placeholder="City" />
+          </div>
+          <div>
+            <div className="text-[10px] text-ui-tertiary mb-0.5">State</div>
+            <EditableField value={eventData.state} onSave={(v) => onUpdate('state', v)} placeholder="State" />
+          </div>
+        </div>
+      </div>
+
+      {/* Remaining fields — 2-column grid */}
+      <div className="grid grid-cols-2 gap-3 mb-2.5">
+        <div className="flex gap-2 items-start">
+          <Users size={15} className="text-ui-tertiary mt-[3px] shrink-0" />
+          <div className="flex-1 min-w-0">
+            <div className="text-[10px] font-bold text-ui-tertiary uppercase tracking-[0.04em] mb-0.5">Capacity</div>
+            <EditableField
+              value={eventData.capacity}
+              onSave={(v) => onUpdate('capacity', v)}
+              placeholder="Number of guests"
+            />
+          </div>
+        </div>
+        <div className="flex gap-2 items-start">
+          <Building2 size={15} className="text-ui-tertiary mt-[3px] shrink-0" />
+          <div className="flex-1 min-w-0">
+            <div className="text-[10px] font-bold text-ui-tertiary uppercase tracking-[0.04em] mb-0.5">
+              Hosting Company
+            </div>
+            <EditableField
+              value={eventData.hostingCompany}
+              onSave={(v) => onUpdate('hostingCompany', v)}
+              placeholder="Company name"
+            />
+          </div>
+        </div>
+        <div className="flex gap-2 items-start">
+          <span className="text-[13px] mt-[1px] shrink-0">👔</span>
+          <div className="flex-1 min-w-0">
+            <div className="text-[10px] font-bold text-ui-tertiary uppercase tracking-[0.04em] mb-0.5">Dress Code</div>
+            <EditableField
+              value={eventData.dressCode}
+              onSave={(v) => onUpdate('dressCode', v)}
+              placeholder="e.g. Black tie, Smart casual"
+            />
+          </div>
+        </div>
+        <div className="flex gap-2 items-start">
+          <Lock size={15} className="text-ui-tertiary mt-[3px] shrink-0" />
+          <div className="flex-1 min-w-0">
+            <div className="text-[10px] font-bold text-ui-tertiary uppercase tracking-[0.04em] mb-0.5">
+              Private Event
+            </div>
+            <button
+              onClick={() => onUpdate('isPrivate', eventData.isPrivate ? '' : 'true')}
+              className={`text-[13px] font-medium cursor-pointer bg-transparent border-none font-sans transition-colors ${
+                eventData.isPrivate ? 'text-brand-terracotta' : 'text-ui-tertiary'
+              }`}
+            >
+              {eventData.isPrivate ? 'Invite-only' : 'Public'}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Description */}
+      <div className="border-t border-ui-border pt-2.5 mb-3">
+        <div className="text-[10px] font-bold text-ui-tertiary uppercase tracking-[0.04em] mb-[3px]">Description</div>
+        <EditableField
+          value={eventData.description}
+          onSave={(v) => onUpdate('description', v)}
+          placeholder="Describe the event..."
+          multiline
+        />
+      </div>
+
+      {/* Team section */}
+      {teamMembers.length > 0 && (
+        <div className="border-t border-ui-border pt-2.5 mb-3">
+          <div className="flex items-center justify-between mb-2">
+            <div className="text-[10px] font-bold text-ui-tertiary uppercase tracking-[0.08em]">Team</div>
+            <button className="flex items-center gap-1 text-[11px] text-brand-terracotta font-semibold bg-transparent border-none cursor-pointer font-sans hover:underline">
+              Manage team <ExternalLink size={10} />
+            </button>
+          </div>
+          <div className="flex items-center gap-1.5 flex-wrap">
+            {teamMembers.map((m) => (
+              <div key={m.id} className="flex items-center gap-1.5 bg-brand-cream rounded-full pl-0.5 pr-2.5 py-0.5">
+                <div className="w-6 h-6 rounded-full bg-brand-terracotta/15 flex items-center justify-center text-[10px] font-bold text-brand-terracotta">
+                  {m.name
+                    .split(' ')
+                    .map((n) => n[0])
+                    .join('')
+                    .slice(0, 2)}
+                </div>
+                <span className="text-[12px] text-brand-charcoal font-medium">{m.name}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Partners / Sponsors section */}
+      <div className="border-t border-ui-border pt-2.5">
+        <div className="flex items-center justify-between mb-2">
+          <div className="text-[10px] font-bold text-ui-tertiary uppercase tracking-[0.08em]">
+            Partners / Sponsors
+          </div>
+          {!showPartnerForm && onAddPartner && (
+            <button
+              onClick={() => setShowPartnerForm(true)}
+              className="flex items-center gap-1 text-[11px] text-brand-terracotta font-semibold bg-transparent border-none cursor-pointer font-sans"
+            >
+              <Plus size={12} /> Add partner
+            </button>
+          )}
+        </div>
+
+        {partners.length === 0 && !showPartnerForm && (
+          <div className="text-[12px] text-ui-tertiary py-2 text-center bg-brand-cream rounded-lg">
+            No partners added yet
+          </div>
+        )}
+
+        {partners.map((p) => (
+          <div
+            key={p.id}
+            className="flex items-center justify-between px-2.5 py-[7px] bg-brand-cream rounded-md mb-1.5"
+          >
+            <div className="flex items-center gap-2">
+              <Building2 size={14} className="text-ui-tertiary" />
+              <div>
+                <div className="text-[13px] font-semibold text-brand-charcoal">{p.companyName}</div>
+                <div className="text-[11px] text-ui-tertiary">{p.role}</div>
+              </div>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span
+                className={`inline-flex items-center text-[11px] font-semibold px-2 py-0.5 rounded ${
+                  p.tier === 'Primary'
+                    ? 'bg-brand-terracotta/10 text-brand-terracotta'
+                    : p.tier === 'Gold'
+                      ? 'bg-amber-50 text-amber-700'
+                      : 'bg-gray-100 text-gray-600'
+                }`}
+              >
+                {p.tier}
+              </span>
+              {onRemovePartner && (
+                <button
+                  onClick={() => onRemovePartner(p.id)}
+                  className="bg-transparent border-none cursor-pointer text-[#ccc] hover:text-red-400 p-0.5 transition-colors"
+                >
+                  <Trash2 size={13} />
+                </button>
+              )}
+            </div>
+          </div>
+        ))}
+
+        {showPartnerForm && onAddPartner && (
+          <PartnerForm
+            onAdd={(p) => {
+              onAddPartner(p)
+              setShowPartnerForm(false)
+            }}
+            onCancel={() => setShowPartnerForm(false)}
+          />
+        )}
+      </div>
+    </div>
+  )
+}
+
+/* ─── Event Image Upload ─── */
+
+function EventImageUpload({ image, onImageChange }: { image: string; onImageChange: (v: string) => void }) {
+  const [hover, setHover] = useState(false)
+
+  return (
+    <label
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+      className={`w-[88px] h-[88px] rounded-[10px] shrink-0 cursor-pointer relative overflow-hidden flex items-center justify-center transition-all border ${
+        image
+          ? 'bg-brand-terracotta border-brand-terracotta/25'
+          : 'bg-gradient-to-br from-brand-terracotta/10 via-[#E8D5CC] to-brand-terracotta/10 border-ui-border'
+      }`}
+    >
+      <input
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={(e) => {
+          const file = e.target.files?.[0]
+          if (file) onImageChange(URL.createObjectURL(file))
+        }}
+      />
+      {image ? (
+        <>
+          <div className="text-[28px] font-extrabold text-white/90 tracking-tight">MC</div>
+          {hover && (
+            <div className="absolute inset-0 bg-black/45 flex items-center justify-center text-white text-[11px] font-semibold">
+              Change
+            </div>
+          )}
+        </>
+      ) : (
+        <div
+          className={`flex flex-col items-center gap-0.5 transition-colors ${hover ? 'text-brand-terracotta' : 'text-ui-tertiary'}`}
+        >
+          <ImagePlus size={22} />
+          <span className="text-[9px] font-semibold tracking-[0.02em]">Add image</span>
+        </div>
+      )}
+    </label>
+  )
+}

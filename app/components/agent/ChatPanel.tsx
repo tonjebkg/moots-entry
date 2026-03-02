@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
+import { usePathname } from 'next/navigation';
 import { Send, Sparkles, ChevronDown, ChevronUp } from 'lucide-react';
 import { useAgentContext } from './AgentContextProvider';
 import { AgentAvatar } from '@/app/components/ui/AgentAvatar';
@@ -27,7 +28,12 @@ const SUGGESTED_QUESTIONS = [
  * Always visible — input is always ready. Expands to show conversation history.
  */
 export function ChatPanel({ eventId }: ChatPanelProps) {
+  const pathname = usePathname();
   const { chatOpen, setChatOpen } = useAgentContext();
+
+  // Hide floating chat on Context tab — that tab has its own Moots Intelligence panel
+  const isContextTab = pathname?.includes('/context');
+  if (isContextTab) return null;
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [streaming, setStreaming] = useState(false);
