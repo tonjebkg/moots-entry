@@ -303,7 +303,7 @@ export default function ContextPage() {
 
   return (
     <div className="-mx-8 -my-8 -mb-36">
-      <div className="grid grid-cols-2 h-[calc(100vh-210px)]">
+      <div className="grid grid-cols-2 h-[calc(100vh-270px)]">
         {/* Left Panel — Event Context */}
         <div className="border-r border-ui-border overflow-hidden bg-white">
           <LeftPanel
