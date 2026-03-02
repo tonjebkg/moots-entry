@@ -38,6 +38,7 @@ export default function ContextPage() {
     hostingCompany: '',
     dressCode: '',
     description: '',
+    eventGoal: '',
     image: '',
     isPrivate: false,
   })
@@ -116,6 +117,7 @@ export default function ContextPage() {
             hostingCompany: event.hosting_company || event.hosts?.[0]?.name || '',
             dressCode: event.dress_code || '',
             description: event.description || '',
+            eventGoal: event.event_goal || '',
             image: event.image_url || '',
             isPrivate: event.is_private || false,
           })

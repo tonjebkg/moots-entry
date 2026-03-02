@@ -21,10 +21,10 @@ export function EventTabNavigation({ eventId }: EventTabNavigationProps) {
 
   const tabs: TabDef[] = [
     { key: 'overview', label: 'Overview', href: `/dashboard/${eventId}/overview`, phase: null },
-    { key: 'context', label: 'Context', href: `/dashboard/${eventId}/context`, phase: null },
-    { key: 'objectives', label: 'Objectives', href: `/dashboard/${eventId}/objectives`, phase: 'PRE-EVENT' },
+    { key: 'context', label: 'Context', href: `/dashboard/${eventId}/context`, phase: 'PRE-EVENT' },
+    { key: 'objectives', label: 'Targeting', href: `/dashboard/${eventId}/objectives`, phase: 'PRE-EVENT' },
     { key: 'guest-intelligence', label: 'Guest Intelligence', href: `/dashboard/${eventId}/guest-intelligence`, phase: 'PRE-EVENT' },
-    { key: 'campaigns', label: 'Campaigns', href: `/dashboard/${eventId}/campaigns`, phase: 'PRE-EVENT' },
+    { key: 'campaigns', label: 'Invitations', href: `/dashboard/${eventId}/campaigns`, phase: 'PRE-EVENT' },
     { key: 'briefings', label: 'Briefings', href: `/dashboard/${eventId}/briefings`, phase: 'PRE-EVENT' },
     { key: 'day-of', label: 'Check-in & Seating', href: `/dashboard/${eventId}/day-of`, phase: 'EVENT DAY' },
     { key: 'follow-up', label: 'Follow-Up', href: `/dashboard/${eventId}/follow-up`, phase: 'POST-EVENT' },

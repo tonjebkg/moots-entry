@@ -77,6 +77,7 @@ export interface EventDetailsData {
   hostingCompany: string
   dressCode: string
   description: string
+  eventGoal: string
   image: string
   isPrivate: boolean
 }
@@ -383,6 +384,17 @@ export function EventDetailsCard({
           value={eventData.description}
           onSave={(v) => onUpdate('description', v)}
           placeholder="Describe the event..."
+          multiline
+        />
+      </div>
+
+      {/* Event Goal */}
+      <div>
+        <div className="text-[13px] font-medium text-ui-tertiary mb-0.5">Event Goal</div>
+        <EditableField
+          value={eventData.eventGoal}
+          onSave={(v) => onUpdate('eventGoal', v)}
+          placeholder="e.g. Strengthen LP relationships and surface co-investment opportunities"
           multiline
         />
       </div>
