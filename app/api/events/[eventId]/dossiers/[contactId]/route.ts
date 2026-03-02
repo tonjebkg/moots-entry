@@ -76,7 +76,7 @@ export const GET = withErrorHandling(async (request: NextRequest, context: any) 
     title: contact.title,
     photo_url: contact.photo_url,
     linkedin_url: contact.linkedin_url,
-    email: contact.emails?.[0] || null,
+    email: contact.emails?.[0]?.email || contact.emails?.[0] || null,
     ai_summary: contact.ai_summary,
     tags: contact.tags || [],
     source: contact.source,

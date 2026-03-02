@@ -172,7 +172,7 @@ export const GET = withErrorHandling(async (_request: NextRequest, { params }: R
       type: 'awaiting_rsvp',
       count: awaitingRsvp,
       label: 'invited guests haven\'t responded',
-      action: 'View in Campaigns',
+      action: 'View in Invitations',
     })
   }
 

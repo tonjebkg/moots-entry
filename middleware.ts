@@ -68,13 +68,14 @@ export function middleware(request: NextRequest) {
     /^\/api\/events\/\d+\/follow-up$/.test(pathname) ||
     /^\/api\/events\/\d+\/analytics$/.test(pathname) ||
     /^\/api\/events\/\d+\/checkin/.test(pathname) ||
+    /^\/api\/events\/\d+\/dossiers/.test(pathname) ||
     /^\/api\/events\/\d+\/seating/.test(pathname) ||
     /^\/api\/events\/\d+\/context/.test(pathname) || // Context tab (activities, generate, chat)
     /^\/api\/events\/\d+\/documents/.test(pathname) || // Context tab documents
     /^\/api\/events\/\d+\/links$/.test(pathname) || // Context tab links
     /^\/api\/events\/\d+\/generated-context$/.test(pathname) || // Context tab generated context
     /^\/api\/events\/\d+\/details$/.test(pathname) || // Context tab inline edit
-    /^\/api\/contacts$/.test(pathname) ||
+    /^\/api\/contacts(\/|$)/.test(pathname) ||
     /^\/api\/events$/.test(pathname) || // Events list (for People page import modal)
     /^\/api\/rsvp\//.test(pathname) ||
     /^\/api\/join\//.test(pathname) ||
@@ -150,8 +151,8 @@ export function middleware(request: NextRequest) {
       return addSecurityHeaders(response);
     }
 
-    // Contacts API — read-only
-    if (method === 'GET' && /^\/api\/contacts$/.test(pathname)) {
+    // Contacts API — read-only (list + individual detail)
+    if (method === 'GET' && /^\/api\/contacts(\/|$)/.test(pathname)) {
       const response = NextResponse.next();
       return addSecurityHeaders(response);
     }

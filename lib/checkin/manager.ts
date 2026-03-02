@@ -140,7 +140,7 @@ export async function onboardWalkIn(params: WalkInParams): Promise<EventCheckin>
         ${phonesJson}::jsonb,
         ${params.company !== 'N/A' ? params.company : null},
         ${params.linkedinUrl || null},
-        'WALK_IN'::contact_source,
+        'MANUAL'::contact_source,
         ${'Walk-in at event #' + params.eventId},
         ${dedupKey}
       )

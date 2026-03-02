@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { withErrorHandling } from '@/lib/with-error-handling';
-import { requireAuth, requireRole } from '@/lib/auth';
+import { requireAuth, requireRole, tryAuthOrWorkspaceFallback } from '@/lib/auth';
 import { validateRequest } from '@/lib/validate-request';
 import { getDb } from '@/lib/db';
 import { logAction } from '@/lib/audit-log';
@@ -15,15 +15,14 @@ type RouteParams = { params: Promise<{ contactId: string }> };
  * GET /api/contacts/[contactId] — Get contact detail with scores across events
  */
 export const GET = withErrorHandling(async (request: NextRequest, { params }: RouteParams) => {
-  const auth = await requireAuth();
-  requireRole(auth, 'OWNER', 'ADMIN', 'TEAM_MEMBER');
+  const { workspaceId } = await tryAuthOrWorkspaceFallback();
 
   const { contactId } = await params;
   const db = getDb();
 
   const contact = await db`
     SELECT * FROM people_contacts
-    WHERE id = ${contactId} AND workspace_id = ${auth.workspace.id}
+    WHERE id = ${contactId} AND workspace_id = ${workspaceId}
     LIMIT 1
   `;
 
@@ -37,7 +36,7 @@ export const GET = withErrorHandling(async (request: NextRequest, { params }: Ro
     FROM guest_scores gs
     JOIN events e ON e.id = gs.event_id
     WHERE gs.contact_id = ${contactId}
-      AND gs.workspace_id = ${auth.workspace.id}
+      AND gs.workspace_id = ${workspaceId}
     ORDER BY gs.scored_at DESC
   `;
 
