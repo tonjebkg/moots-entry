@@ -124,9 +124,9 @@ export default function ContextPage() {
           if (event.sponsors?.length) {
             setPartners(event.sponsors.map((s: any, i: number) => ({
               id: `sponsor-${i}`,
-              companyName: s.name || s.company_name || '',
-              role: s.role || 'Sponsor',
-              tier: s.tier || 'Gold',
+              companyName: s.name || s.title || s.company_name || '',
+              role: s.role || s.subtitle || 'Sponsor',
+              tier: s.tier || 'Primary',
             })))
           }
         }
