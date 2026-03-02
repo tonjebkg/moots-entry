@@ -103,9 +103,7 @@ export function DashboardHeader({ activeNav, rightSlot, userName, teamMembers = 
           >
             <Settings size={18} />
           </Link>
-          {teamMembers.length > 0 ? (
-            <CollaboratorAvatarStack members={teamMembers} />
-          ) : userName ? (
+          {userName ? (
             <AvatarInitials name={userName} size={32} />
           ) : null}
         </div>

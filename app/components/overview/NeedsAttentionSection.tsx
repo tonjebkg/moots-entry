@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { AlertCircle, Users, Sparkles, Brain, Target, AlertTriangle, Mail, Send, UserCheck } from 'lucide-react'
+import { AlertCircle, Users, Sparkles, Target, AlertTriangle, Mail, UserCheck } from 'lucide-react'
 
 interface AttentionItem {
   type: string
@@ -41,14 +41,10 @@ const ITEM_CONFIG: Record<string, { icon: React.ElementType; href: (eventId: str
     href: (id) => `/dashboard/${id}/guest-intelligence?filter=high_uninvited`,
     defaultAction: 'Invite',
   },
-  unscored_contacts: {
-    icon: Brain,
-    href: (id) => `/dashboard/${id}/guest-intelligence?action=score`,
-    defaultAction: 'Score them now',
-  },
+  // unscored_contacts removed — scoring is automatic
   no_objectives: {
     icon: Target,
-    href: (id) => `/dashboard/${id}/objectives`,
+    href: (id) => `/dashboard/${id}/targeting`,
     defaultAction: 'Set Up',
   },
 }

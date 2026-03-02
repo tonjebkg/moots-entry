@@ -2,7 +2,7 @@ import { redirect } from 'next/navigation'
 
 type Props = { params: Promise<{ eventId: string }> }
 
-export default async function ObjectivesRedirect({ params }: Props) {
+export default async function InvitationsRedirect({ params }: Props) {
   const { eventId } = await params
-  redirect(`/dashboard/${eventId}/targeting`)
+  redirect(`/dashboard/${eventId}/campaigns`)
 }

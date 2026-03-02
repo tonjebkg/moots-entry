@@ -966,11 +966,11 @@ export default function GuestIntelligencePage() {
             )}
           </div>
           <Link
-            href={`/dashboard/${eventId}/objectives`}
+            href={`/dashboard/${eventId}/targeting`}
             className="flex items-center gap-1.5 px-3 py-2 border border-ui-border rounded-lg text-sm font-medium text-ui-secondary hover:bg-brand-cream transition-colors"
           >
             <Settings size={14} />
-            Objectives
+            Targeting
           </Link>
           <button
             onClick={triggerScoring}
@@ -1866,7 +1866,7 @@ export default function GuestIntelligencePage() {
                     <Link href="/dashboard/people" className="px-4 py-2 border border-ui-border rounded-lg text-sm font-medium text-ui-secondary hover:bg-brand-cream">
                       Go to People
                     </Link>
-                    <Link href={`/dashboard/${eventId}/objectives`} className="px-5 py-2.5 bg-brand-terracotta text-white text-sm font-semibold rounded-pill hover:bg-brand-terracotta/90 shadow-cta">
+                    <Link href={`/dashboard/${eventId}/targeting`} className="px-5 py-2.5 bg-brand-terracotta text-white text-sm font-semibold rounded-pill hover:bg-brand-terracotta/90 shadow-cta">
                       Set Targeting
                     </Link>
                   </div>

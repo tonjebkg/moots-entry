@@ -42,7 +42,6 @@ export const GET = withErrorHandling(async (_request: NextRequest, { params }: R
     funnelStats,
     pendingReviewResult,
     highScoreNotInvitedResult,
-    unscoredResult,
     awaitingRsvpResult,
     objectiveCount,
     recentActivity,
@@ -80,15 +79,6 @@ export const GET = withErrorHandling(async (_request: NextRequest, { params }: R
       WHERE gs.event_id = ${eventIdNum}
         AND gs.relevance_score >= 70
         AND ci.id IS NULL
-    `.catch(() => [{ count: 0 }]),
-
-    // Unscored contacts
-    db`
-      SELECT COUNT(DISTINCT c.id)::int AS count
-      FROM people_contacts c
-      LEFT JOIN guest_scores gs ON gs.contact_id = c.id AND gs.event_id = ${eventIdNum}
-      WHERE c.workspace_id = ${wsId}
-        AND gs.id IS NULL
     `.catch(() => [{ count: 0 }]),
 
     // Awaiting RSVP: invitations sent (INVITED) with no response
@@ -205,15 +195,7 @@ export const GET = withErrorHandling(async (_request: NextRequest, { params }: R
     })
   }
 
-  const unscoredCount = Number(unscoredResult[0]?.count) || 0
-  if (unscoredCount > 0 && Number(objectives.count) > 0) {
-    needsAttention.push({
-      type: 'unscored_contacts',
-      count: unscoredCount,
-      label: `contacts are waiting to be scored. I'll match them against your targeting criteria — takes about 2 minutes.`,
-      action: 'Score them now',
-    })
-  }
+  // Unscored contacts are handled automatically by background scoring — not shown in Needs Attention
 
   // Activity feed
   const activity = recentActivity.map((r: any) => ({

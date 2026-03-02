@@ -70,6 +70,8 @@ export function middleware(request: NextRequest) {
     /^\/api\/events\/\d+\/checkin/.test(pathname) ||
     /^\/api\/events\/\d+\/dossiers/.test(pathname) ||
     /^\/api\/events\/\d+\/seating/.test(pathname) ||
+    /^\/api\/events\/\d+\/team-members/.test(pathname) || // Team members (event-level, uses fallback auth)
+    /^\/api\/events\/\d+\/team-assignments/.test(pathname) || // Team assignments (read uses fallback auth)
     /^\/api\/events\/\d+\/context/.test(pathname) || // Context tab (activities, generate, chat)
     /^\/api\/events\/\d+\/documents/.test(pathname) || // Context tab documents
     /^\/api\/events\/\d+\/links$/.test(pathname) || // Context tab links

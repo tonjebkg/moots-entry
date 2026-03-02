@@ -30,7 +30,7 @@ export interface CheckinDashboardHandle {
 
 type CheckinStatus = 'CHECKED_IN' | 'NOT_ARRIVED' | 'WALK_IN' | 'NO_SHOW'
 type StatusFilter = 'all' | 'not_arrived' | 'checked_in' | 'walk_ins'
-type SortColumn = 'name' | 'company' | 'time' | 'table'
+type SortColumn = 'name' | 'company' | 'title' | 'role' | 'priority' | 'tags' | 'assigned_to' | 'status' | 'time' | 'table'
 
 interface CheckinRow {
   id: string
@@ -61,7 +61,8 @@ interface WorkspaceMember {
 // ─── Constants ──────────────────────────────────────────────────────────
 
 const ROLE_LABELS: Record<string, string> = {
-  TEAM_MEMBER: 'Team Member', PARTNER: 'Partner', CO_HOST: 'Co-host', SPEAKER: 'Speaker', TALENT: 'Talent',
+  TEAM_MEMBER: 'Team', PARTNER: 'Partner', CO_HOST: 'Co-host', SPEAKER: 'Speaker', TALENT: 'Talent',
+  LP: 'LP', GP: 'GP', ADVISOR: 'Advisor',
 }
 
 const PRIORITY_LABELS: Record<string, string> = {
@@ -182,13 +183,7 @@ export const CheckinDashboard = forwardRef<CheckinDashboardHandle, CheckinDashbo
 
   const fetchWorkspaceMembers = useCallback(async () => {
     try {
-      const sessionRes = await fetch('/api/auth/session')
-      if (!sessionRes.ok) return
-      const sess = await sessionRes.json()
-      const workspaceId = sess.workspace?.id
-      if (!workspaceId) return
-
-      const res = await fetch(`/api/workspaces/${workspaceId}/members`)
+      const res = await fetch(`/api/events/${eventId}/team-members`)
       if (res.ok) {
         const data = await res.json()
         setWorkspaceMembers(data.members || [])
@@ -196,7 +191,7 @@ export const CheckinDashboard = forwardRef<CheckinDashboardHandle, CheckinDashbo
     } catch (err) {
       console.error('Failed to fetch workspace members:', err)
     }
-  }, [])
+  }, [eventId])
 
   useEffect(() => {
     fetchMetrics()
@@ -278,6 +273,9 @@ export const CheckinDashboard = forwardRef<CheckinDashboardHandle, CheckinDashbo
     return result
   }, [rows, statusFilter, searchQuery])
 
+  const PRIORITY_ORDER: Record<string, number> = { VIP: 0, TIER_1: 1, TIER_2: 2, TIER_3: 3, WAITLIST: 4 }
+  const STATUS_ORDER: Record<string, number> = { CHECKED_IN: 0, WALK_IN: 1, NOT_ARRIVED: 2, NO_SHOW: 3 }
+
   const sortedRows = useMemo(() => {
     const sorted = [...filteredRows]
     const dir = sortDirection === 'asc' ? 1 : -1
@@ -298,6 +296,28 @@ export const CheckinDashboard = forwardRef<CheckinDashboardHandle, CheckinDashbo
           return dir * a.full_name.localeCompare(b.full_name)
         case 'company':
           return dir * (a.company || '').localeCompare(b.company || '')
+        case 'title':
+          return dir * (a.title || '').localeCompare(b.title || '')
+        case 'role':
+          return dir * (a.guest_role || '').localeCompare(b.guest_role || '')
+        case 'priority': {
+          const aP = PRIORITY_ORDER[a.guest_priority || ''] ?? 99
+          const bP = PRIORITY_ORDER[b.guest_priority || ''] ?? 99
+          return dir * (aP - bP)
+        }
+        case 'tags':
+          return dir * (a.tags[0] || '').localeCompare(b.tags[0] || '')
+        case 'assigned_to': {
+          // Unassigned ("—") always at the bottom
+          if (!a.assigned_team_member && b.assigned_team_member) return 1
+          if (a.assigned_team_member && !b.assigned_team_member) return -1
+          return dir * (a.assigned_team_member || '').localeCompare(b.assigned_team_member || '')
+        }
+        case 'status': {
+          const aS = STATUS_ORDER[a.status] ?? 99
+          const bS = STATUS_ORDER[b.status] ?? 99
+          return dir * (aS - bS)
+        }
         case 'table':
           return dir * ((a.table_assignment ?? 0) - (b.table_assignment ?? 0))
         default:
@@ -744,12 +764,43 @@ export const CheckinDashboard = forwardRef<CheckinDashboardHandle, CheckinDashbo
                     </span>
                   </th>
                 ))}
-                <th className="px-4 py-3 text-left font-semibold text-brand-charcoal">Title</th>
-                <th className="px-4 py-3 text-left font-semibold text-brand-charcoal" style={{ minWidth: 130 }}>Role</th>
-                <th className="px-4 py-3 text-left font-semibold text-brand-charcoal" style={{ minWidth: 90 }}>Priority</th>
-                <th className="px-4 py-3 text-left font-semibold text-brand-charcoal">Tags</th>
-                <th className="px-4 py-3 text-left font-semibold text-brand-charcoal">Assigned To</th>
-                <th className="px-4 py-3 text-left font-semibold text-brand-charcoal">Status</th>
+                {([
+                  { key: 'title' as const, label: 'Title' },
+                  { key: 'role' as const, label: 'Role', minWidth: 130 },
+                  { key: 'priority' as const, label: 'Priority', minWidth: 90 },
+                ] as const).map(col => (
+                  <th
+                    key={col.key}
+                    onClick={() => handleSort(col.key)}
+                    className="px-4 py-3 text-left font-semibold text-brand-charcoal cursor-pointer select-none hover:bg-brand-cream/80 transition-colors"
+                    style={'minWidth' in col ? { minWidth: col.minWidth } : undefined}
+                  >
+                    <span className="inline-flex items-center gap-1">
+                      {col.label}
+                      {sortColumn === col.key && (
+                        <span className="text-brand-terracotta text-sm">{sortDirection === 'asc' ? '▲' : '▼'}</span>
+                      )}
+                    </span>
+                  </th>
+                ))}
+                {([
+                  { key: 'tags' as const, label: 'Tags' },
+                  { key: 'assigned_to' as const, label: 'Assigned To' },
+                  { key: 'status' as const, label: 'Status' },
+                ] as const).map(col => (
+                  <th
+                    key={col.key}
+                    onClick={() => handleSort(col.key)}
+                    className="px-4 py-3 text-left font-semibold text-brand-charcoal cursor-pointer select-none hover:bg-brand-cream/80 transition-colors"
+                  >
+                    <span className="inline-flex items-center gap-1">
+                      {col.label}
+                      {sortColumn === col.key && (
+                        <span className="text-brand-terracotta text-sm">{sortDirection === 'asc' ? '▲' : '▼'}</span>
+                      )}
+                    </span>
+                  </th>
+                ))}
                 {showTableColumn && (
                   <th
                     onClick={() => handleSort('table')}

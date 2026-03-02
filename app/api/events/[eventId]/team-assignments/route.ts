@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { withErrorHandling } from '@/lib/with-error-handling';
-import { requireAuth, requireRole } from '@/lib/auth';
+import { requireAuth, requireRole, tryAuthOrEventFallback } from '@/lib/auth';
 import { validateRequest } from '@/lib/validate-request';
 import { logAction } from '@/lib/audit-log';
 import { getDb } from '@/lib/db';
@@ -12,21 +12,22 @@ export const runtime = 'nodejs';
  * GET /api/events/[eventId]/team-assignments — List team assignments
  */
 export const GET = withErrorHandling(async (request: NextRequest, context: any) => {
-  const auth = await requireAuth();
   const { eventId } = await context.params;
   const eventIdNum = parseInt(eventId, 10);
+  const { workspaceId } = await tryAuthOrEventFallback(eventIdNum);
   const db = getDb();
 
   const assignments = await db`
     SELECT gta.*,
       u.full_name AS assigned_to_name,
       u.email AS assigned_to_email,
-      pc.full_name AS contact_name
+      pc.full_name AS contact_name,
+      pc.company AS contact_company
     FROM guest_team_assignments gta
     JOIN users u ON u.id = gta.assigned_to
     JOIN people_contacts pc ON pc.id = gta.contact_id
     WHERE gta.event_id = ${eventIdNum}
-      AND gta.workspace_id = ${auth.workspace.id}
+      AND gta.workspace_id = ${workspaceId}
     ORDER BY pc.full_name
   `;
 

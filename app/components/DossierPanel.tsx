@@ -223,6 +223,29 @@ export function DossierPanel({ eventId, contactId, onClose }: DossierPanelProps)
               </div>
             </div>
 
+            {/* Team Assignments — positioned immediately after Event Journey */}
+            {dossier.team_assignments.length > 0 && (
+              <div className="bg-white rounded-card shadow-card p-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <Users className="w-4 h-4 text-[#2F4F3F]" />
+                  <h4 className="text-sm font-semibold text-brand-charcoal">Team Assignment</h4>
+                </div>
+                <div className="space-y-2">
+                  {dossier.team_assignments.map((a) => (
+                    <div key={a.id} className="flex items-center gap-3 py-1">
+                      <div className="w-7 h-7 rounded-full bg-[#2F4F3F] flex items-center justify-center text-white text-xs font-semibold shrink-0">
+                        {(a.assigned_to_name || '?').charAt(0).toUpperCase()}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-medium text-brand-charcoal">{a.assigned_to_name || a.assigned_to_email}</div>
+                        <div className="text-xs text-ui-tertiary">{a.role}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Tags */}
             {dossier.tags.length > 0 && (
               <div className="flex flex-wrap gap-1.5">
@@ -291,28 +314,6 @@ export function DossierPanel({ eventId, contactId, onClose }: DossierPanelProps)
                         <div className="text-sm font-medium text-brand-charcoal">{obj.objective_text}</div>
                         <div className="text-xs text-ui-tertiary mt-0.5">{obj.explanation}</div>
                       </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Team Assignments */}
-            {dossier.team_assignments.length > 0 && (
-              <div className="bg-white rounded-card shadow-card p-4">
-                <div className="flex items-center gap-2 mb-3">
-                  <Users className="w-4 h-4 text-[#2F4F3F]" />
-                  <h4 className="text-sm font-semibold text-brand-charcoal">Team Assignments</h4>
-                </div>
-                <div className="space-y-2">
-                  {dossier.team_assignments.map((a) => (
-                    <div key={a.id} className="flex items-center justify-between py-1">
-                      <div className="text-sm text-ui-secondary">
-                        {a.assigned_to_name || a.assigned_to_email}
-                      </div>
-                      <span className="text-xs font-medium text-ui-tertiary bg-brand-cream px-2 py-0.5 rounded">
-                        {a.role}
-                      </span>
                     </div>
                   ))}
                 </div>
