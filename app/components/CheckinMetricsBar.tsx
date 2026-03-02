@@ -17,7 +17,7 @@ export function CheckinMetricsBar({ metrics, onFilter, activeFilter }: CheckinMe
       icon: Users,
       color: 'bg-blue-50 text-blue-700 border-blue-200',
       iconColor: 'text-blue-500',
-      filterKey: 'expected',
+      filterKey: 'all',
     },
     {
       label: 'Present',
@@ -58,9 +58,9 @@ export function CheckinMetricsBar({ metrics, onFilter, activeFilter }: CheckinMe
         {cards.map((card) => (
           <button
             key={card.label}
-            onClick={() => card.filterKey && onFilter?.(activeFilter === card.filterKey ? '' : card.filterKey)}
+            onClick={() => onFilter?.(card.filterKey)}
             className={`border rounded-lg p-3 text-left transition-all ${card.color} ${
-              card.filterKey && onFilter ? 'cursor-pointer hover:shadow-md' : ''
+              onFilter ? 'cursor-pointer hover:shadow-md' : ''
             } ${activeFilter === card.filterKey ? 'ring-2 ring-offset-1 ring-brand-terracotta' : ''}`}
           >
             <div className="flex items-center gap-2 mb-2">

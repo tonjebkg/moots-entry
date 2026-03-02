@@ -117,6 +117,53 @@ export async function onboardWalkIn(params: WalkInParams): Promise<EventCheckin>
 }
 
 /**
+ * Undo a check-in. Deletes event_checkins record and resets campaign_invitations if applicable.
+ * Walk-in check-ins cannot be undone (they have no invitation backing).
+ */
+export async function undoCheckIn(params: {
+  eventId: number;
+  workspaceId: string;
+  checkinId: string;
+}): Promise<{ deleted: boolean; fullName: string }> {
+  const db = getDb();
+  const { eventId, workspaceId, checkinId } = params;
+
+  // Fetch the checkin record first
+  const records = await db`
+    SELECT id, contact_id, invitation_id, source, full_name
+    FROM event_checkins
+    WHERE id = ${checkinId} AND event_id = ${eventId} AND workspace_id = ${workspaceId}
+  `;
+
+  if (records.length === 0) {
+    return { deleted: false, fullName: '' };
+  }
+
+  const record = records[0];
+
+  if (record.source === 'WALK_IN') {
+    throw new Error('Walk-in check-ins cannot be undone');
+  }
+
+  // Delete the checkin record
+  await db`
+    DELETE FROM event_checkins
+    WHERE id = ${checkinId} AND event_id = ${eventId} AND workspace_id = ${workspaceId}
+  `;
+
+  // Reset invitation checked_in flag if applicable
+  if (record.invitation_id) {
+    await db`
+      UPDATE campaign_invitations
+      SET checked_in = FALSE, checked_in_at = NULL
+      WHERE id = ${record.invitation_id}
+    `;
+  }
+
+  return { deleted: true, fullName: record.full_name };
+}
+
+/**
  * Get check-in metrics and recent check-ins for an event.
  */
 export async function getCheckinMetrics(

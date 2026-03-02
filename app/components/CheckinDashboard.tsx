@@ -1,9 +1,9 @@
 'use client'
 
-import React, { useEffect, useState, useMemo, useCallback } from 'react'
+import React, { useEffect, useState, useMemo, useCallback, forwardRef, useImperativeHandle } from 'react'
 import {
-  Search, UserPlus, RefreshCw, AlertCircle, CheckCircle, ChevronDown,
-  MoreHorizontal, ExternalLink, X, Users
+  Search, AlertCircle, CheckCircle, ChevronDown,
+  MoreHorizontal, X, Users, Undo2
 } from 'lucide-react'
 import { CheckinMetricsBar } from './CheckinMetricsBar'
 import { WalkInForm } from './WalkInForm'
@@ -20,6 +20,12 @@ interface CheckinDashboardProps {
   eventId: string
   seatingFormat: 'STANDING' | 'SEATED' | 'MIXED'
   tables: { number: number; seats: number }[]
+}
+
+export interface CheckinDashboardHandle {
+  refresh: () => void
+  openWalkIn: () => void
+  openDoorLink: () => void
 }
 
 type CheckinStatus = 'CHECKED_IN' | 'NOT_ARRIVED' | 'WALK_IN' | 'NO_SHOW'
@@ -64,7 +70,8 @@ const PRIORITY_LABELS: Record<string, string> = {
 
 // ─── Component ──────────────────────────────────────────────────────────
 
-export function CheckinDashboard({ eventId, seatingFormat, tables }: CheckinDashboardProps) {
+export const CheckinDashboard = forwardRef<CheckinDashboardHandle, CheckinDashboardProps>(
+  function CheckinDashboard({ eventId, seatingFormat, tables }, ref) {
   // Data
   const [metrics, setMetrics] = useState<CheckinMetrics | null>(null)
   const [loading, setLoading] = useState(true)
@@ -87,8 +94,15 @@ export function CheckinDashboard({ eventId, seatingFormat, tables }: CheckinDash
   const [bulkAssignOpen, setBulkAssignOpen] = useState(false)
   const [bulkTableOpen, setBulkTableOpen] = useState(false)
 
+  // Inline column dropdowns (Fix 2)
+  const [inlineAssignId, setInlineAssignId] = useState<string | null>(null)
+
+  // Undo check-in confirm (Fix 3)
+  const [undoConfirmId, setUndoConfirmId] = useState<string | null>(null)
+  const [undoingIds, setUndoingIds] = useState<Set<string>>(new Set())
+
   // Column visibility
-  const [showTableColumn, setShowTableColumn] = useState(seatingFormat !== 'STANDING')
+  const [showTableColumn] = useState(seatingFormat !== 'STANDING')
 
   // Modals
   const [showWalkIn, setShowWalkIn] = useState(false)
@@ -104,7 +118,7 @@ export function CheckinDashboard({ eventId, seatingFormat, tables }: CheckinDash
   // No-show tracking (local state since API may not track this)
   const [noShowIds, setNoShowIds] = useState<Set<string>>(new Set())
 
-  // ─── Data Fetching ──────────────────────────────────────────────────
+  // ─── Imperative Handle (Fix 1) ─────────────────────────────────────
 
   const fetchMetrics = useCallback(async () => {
     try {
@@ -118,6 +132,14 @@ export function CheckinDashboard({ eventId, seatingFormat, tables }: CheckinDash
       setLoading(false)
     }
   }, [eventId])
+
+  useImperativeHandle(ref, () => ({
+    refresh: fetchMetrics,
+    openWalkIn: () => setShowWalkIn(true),
+    openDoorLink: () => setShowDoorLink(true),
+  }), [fetchMetrics])
+
+  // ─── Data Fetching ──────────────────────────────────────────────────
 
   const fetchWorkspaceMembers = useCallback(async () => {
     try {
@@ -257,6 +279,12 @@ export function CheckinDashboard({ eventId, seatingFormat, tables }: CheckinDash
     return { all, notArrived, checkedIn, walkIns }
   }, [rows])
 
+  // ─── Selection Helpers (Fix 5) ────────────────────────────────────
+
+  const selectedRows = useMemo(() => sortedRows.filter(r => selectedIds.has(r.id)), [sortedRows, selectedIds])
+  const hasNotArrivedSelected = selectedRows.some(r => r.status === 'NOT_ARRIVED')
+  const hasCheckedInSelected = selectedRows.some(r => r.status === 'CHECKED_IN')
+
   // ─── Actions ────────────────────────────────────────────────────
 
   function handleSort(col: SortColumn) {
@@ -266,6 +294,12 @@ export function CheckinDashboard({ eventId, seatingFormat, tables }: CheckinDash
       setSortColumn(col)
       setSortDirection(col === 'name' ? 'asc' : 'desc')
     }
+  }
+
+  // Fix 6: Clear selection when switching filter tabs
+  function handleFilterChange(filter: StatusFilter) {
+    setStatusFilter(filter)
+    setSelectedIds(new Set())
   }
 
   function toggleSelect(id: string) {
@@ -316,10 +350,47 @@ export function CheckinDashboard({ eventId, seatingFormat, tables }: CheckinDash
     }
   }
 
+  // Fix 3: Undo check-in
+  async function handleUndoCheckIn(row: CheckinRow) {
+    if (row.status !== 'CHECKED_IN') return
+    setUndoConfirmId(null)
+    setUndoingIds(prev => new Set(prev).add(row.id))
+    try {
+      const res = await fetch(`/api/events/${eventId}/checkin`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ checkin_id: row.id }),
+      })
+      if (res.ok) {
+        await fetchMetrics()
+      } else {
+        const data = await res.json()
+        setError(data.error || 'Undo failed')
+      }
+    } catch {
+      setError('Undo check-in failed')
+    } finally {
+      setUndoingIds(prev => {
+        const next = new Set(prev)
+        next.delete(row.id)
+        return next
+      })
+    }
+  }
+
   async function handleBulkCheckIn() {
     const toCheckIn = sortedRows.filter(r => selectedIds.has(r.id) && r.status === 'NOT_ARRIVED')
     for (const row of toCheckIn) {
       await handleCheckInRow(row)
+    }
+    setSelectedIds(new Set())
+  }
+
+  // Fix 5: Bulk undo check-in
+  async function handleBulkUndoCheckIn() {
+    const toUndo = sortedRows.filter(r => selectedIds.has(r.id) && r.status === 'CHECKED_IN')
+    for (const row of toUndo) {
+      await handleUndoCheckIn(row)
     }
     setSelectedIds(new Set())
   }
@@ -330,13 +401,11 @@ export function CheckinDashboard({ eventId, seatingFormat, tables }: CheckinDash
   }
 
   async function handleAssignTeamMember(rowId: string, memberName: string) {
-    // Find the row's contact_id
     const row = rows.find(r => r.id === rowId)
     if (!row?.contact_id) return
     setRowAssignDropdown(null)
+    setInlineAssignId(null)
     setActionMenuId(null)
-    // Optimistic local update — the API for team assignment is already built
-    // For now, just refresh metrics after assignment
     try {
       const member = workspaceMembers.find(m => m.user_full_name === memberName)
       if (!member) return
@@ -419,31 +488,6 @@ export function CheckinDashboard({ eventId, seatingFormat, tables }: CheckinDash
 
   return (
     <div className="space-y-4">
-      {/* Action bar */}
-      <div className="flex items-center justify-end gap-3">
-        <button
-          onClick={fetchMetrics}
-          className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-ui-tertiary hover:text-brand-charcoal border border-ui-border rounded-lg transition-colors"
-        >
-          <RefreshCw className="w-4 h-4" />
-          Refresh
-        </button>
-        <button
-          onClick={() => setShowWalkIn(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-brand-terracotta hover:bg-brand-terracotta/90 text-white text-sm font-semibold rounded-full transition-colors"
-        >
-          <UserPlus className="w-4 h-4" />
-          Add Walk-in
-        </button>
-        <button
-          onClick={() => setShowDoorLink(true)}
-          className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-ui-tertiary hover:text-brand-charcoal border border-ui-border rounded-lg transition-colors"
-        >
-          <ExternalLink className="w-4 h-4" />
-          Staff Check-in Link
-        </button>
-      </div>
-
       {/* Error / Success toasts */}
       {error && (
         <div className="flex items-center gap-3 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
@@ -460,16 +504,16 @@ export function CheckinDashboard({ eventId, seatingFormat, tables }: CheckinDash
         </div>
       )}
 
-      {/* Metrics Bar */}
+      {/* Metrics Bar (Fix 8: stat cards as filter shortcuts) */}
       {metrics && (
         <CheckinMetricsBar
           metrics={metrics}
-          onFilter={(f) => setStatusFilter(f === statusFilter ? 'all' : f as StatusFilter)}
+          onFilter={(f) => handleFilterChange(f as StatusFilter || 'all')}
           activeFilter={statusFilter === 'all' ? '' : statusFilter}
         />
       )}
 
-      {/* Filter tabs + Search */}
+      {/* Filter tabs + Search (Fix 6: clear selection on tab switch) */}
       <div className="flex items-center justify-between gap-4">
         <div className="flex gap-1 bg-brand-cream rounded-lg p-1">
           {([
@@ -480,7 +524,7 @@ export function CheckinDashboard({ eventId, seatingFormat, tables }: CheckinDash
           ]).map(tab => (
             <button
               key={tab.key}
-              onClick={() => setStatusFilter(tab.key)}
+              onClick={() => handleFilterChange(tab.key)}
               className={`px-3 py-1.5 text-[13px] font-semibold rounded-md transition-colors ${
                 statusFilter === tab.key
                   ? 'bg-white text-brand-charcoal shadow-sm'
@@ -504,21 +548,34 @@ export function CheckinDashboard({ eventId, seatingFormat, tables }: CheckinDash
         </div>
       </div>
 
-      {/* Bulk action bar */}
+      {/* Bulk action bar (Fix 5: context-appropriate actions + empty state + undo) */}
       {selectedIds.size > 0 && (
         <div className="flex items-center gap-3 bg-white border border-ui-border shadow-sm rounded-lg px-4 py-3 sticky top-[123px] z-30">
           <span className="text-[13px] font-semibold text-brand-charcoal">
             {selectedIds.size} selected
           </span>
 
-          {/* Check In Selected */}
-          <button
-            onClick={handleBulkCheckIn}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-[13px] font-semibold rounded-full transition-colors"
-          >
-            <CheckCircle size={13} />
-            Check In Selected
-          </button>
+          {/* Check In Selected — show when any NOT_ARRIVED selected */}
+          {hasNotArrivedSelected && (
+            <button
+              onClick={handleBulkCheckIn}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-[13px] font-semibold rounded-full transition-colors"
+            >
+              <CheckCircle size={13} />
+              Check In Selected
+            </button>
+          )}
+
+          {/* Undo Check-in — show when any CHECKED_IN selected */}
+          {hasCheckedInSelected && (
+            <button
+              onClick={handleBulkUndoCheckIn}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white text-[13px] font-semibold rounded-full transition-colors"
+            >
+              <Undo2 size={13} />
+              Undo Check-in
+            </button>
+          )}
 
           {/* Assign to Team */}
           <div className="relative">
@@ -534,16 +591,22 @@ export function CheckinDashboard({ eventId, seatingFormat, tables }: CheckinDash
               <>
                 <div className="fixed inset-0 z-10" onClick={() => setBulkAssignOpen(false)} />
                 <div className="absolute left-0 top-full mt-1 w-56 bg-white border border-ui-border rounded-lg shadow-lg z-20 py-1 max-h-48 overflow-y-auto">
-                  {workspaceMembers.map(m => (
-                    <button
-                      key={m.user_id}
-                      onClick={() => handleBulkAssignTeamMember(m.user_id)}
-                      className="w-full flex items-center gap-2 px-3 py-2 text-[13px] text-brand-charcoal hover:bg-brand-cream transition-colors"
-                    >
-                      <AvatarInitials name={m.user_full_name || '?'} size={20} />
-                      <span className="font-medium">{m.user_full_name}</span>
-                    </button>
-                  ))}
+                  {workspaceMembers.length === 0 ? (
+                    <div className="px-3 py-3 text-[13px] text-ui-tertiary text-center">
+                      No team members added yet
+                    </div>
+                  ) : (
+                    workspaceMembers.map(m => (
+                      <button
+                        key={m.user_id}
+                        onClick={() => handleBulkAssignTeamMember(m.user_id)}
+                        className="w-full flex items-center gap-2 px-3 py-2 text-[13px] text-brand-charcoal hover:bg-brand-cream transition-colors"
+                      >
+                        <AvatarInitials name={m.user_full_name || '?'} size={20} />
+                        <span className="font-medium">{m.user_full_name}</span>
+                      </button>
+                    ))
+                  )}
                 </div>
               </>
             )}
@@ -716,10 +779,42 @@ export function CheckinDashboard({ eventId, seatingFormat, tables }: CheckinDash
                       </div>
                     </td>
 
-                    {/* Assigned To */}
-                    <td className="px-4 py-3 text-ui-secondary">{row.assigned_team_member || '—'}</td>
+                    {/* Assigned To (Fix 2: inline-clickable) */}
+                    <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                      <div className="relative">
+                        <button
+                          onClick={() => setInlineAssignId(inlineAssignId === row.id ? null : row.id)}
+                          className="text-ui-secondary hover:text-brand-terracotta hover:underline transition-colors cursor-pointer"
+                        >
+                          {row.assigned_team_member || '—'}
+                        </button>
+                        {inlineAssignId === row.id && (
+                          <>
+                            <div className="fixed inset-0 z-10" onClick={() => setInlineAssignId(null)} />
+                            <div className="absolute left-0 top-full mt-1 w-52 bg-white border border-ui-border rounded-lg shadow-lg z-20 py-1 max-h-48 overflow-y-auto">
+                              {workspaceMembers.length === 0 ? (
+                                <div className="px-3 py-3 text-[13px] text-ui-tertiary text-center">
+                                  No team members added yet
+                                </div>
+                              ) : (
+                                workspaceMembers.map(m => (
+                                  <button
+                                    key={m.user_id}
+                                    onClick={() => handleAssignTeamMember(row.id, m.user_full_name)}
+                                    className="w-full flex items-center gap-2 px-3 py-2 text-[13px] text-brand-charcoal hover:bg-brand-cream transition-colors"
+                                  >
+                                    <AvatarInitials name={m.user_full_name || '?'} size={20} />
+                                    <span className="font-medium">{m.user_full_name}</span>
+                                  </button>
+                                ))
+                              )}
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    </td>
 
-                    {/* Status badge (clickable for NOT_ARRIVED) */}
+                    {/* Status badge (Fix 3: clickable for check-in/undo) */}
                     <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                       {row.status === 'NOT_ARRIVED' ? (
                         <button
@@ -730,9 +825,37 @@ export function CheckinDashboard({ eventId, seatingFormat, tables }: CheckinDash
                           {checkingInIds.has(row.id) ? 'Checking in...' : 'Not Arrived'}
                         </button>
                       ) : row.status === 'CHECKED_IN' ? (
-                        <span className="inline-flex px-2.5 py-1 text-xs font-semibold rounded-full bg-emerald-50 text-[#2D6A4F] border border-emerald-200">
-                          Checked In
-                        </span>
+                        <div className="relative">
+                          <button
+                            onClick={() => setUndoConfirmId(undoConfirmId === row.id ? null : row.id)}
+                            disabled={undoingIds.has(row.id)}
+                            className="inline-flex px-2.5 py-1 text-xs font-semibold rounded-full bg-emerald-50 text-[#2D6A4F] border border-emerald-200 hover:bg-emerald-100 transition-colors cursor-pointer disabled:opacity-50"
+                          >
+                            {undoingIds.has(row.id) ? 'Undoing...' : 'Checked In'}
+                          </button>
+                          {undoConfirmId === row.id && (
+                            <>
+                              <div className="fixed inset-0 z-10" onClick={() => setUndoConfirmId(null)} />
+                              <div className="absolute left-0 top-full mt-1 w-44 bg-white border border-ui-border rounded-lg shadow-lg z-20 p-3">
+                                <p className="text-[13px] text-brand-charcoal font-medium mb-2">Undo check-in?</p>
+                                <div className="flex gap-2">
+                                  <button
+                                    onClick={() => handleUndoCheckIn(row)}
+                                    className="flex-1 px-2.5 py-1.5 text-xs font-semibold bg-amber-500 hover:bg-amber-600 text-white rounded-md transition-colors"
+                                  >
+                                    Yes
+                                  </button>
+                                  <button
+                                    onClick={() => setUndoConfirmId(null)}
+                                    className="flex-1 px-2.5 py-1.5 text-xs font-semibold border border-ui-border text-brand-charcoal rounded-md hover:bg-brand-cream transition-colors"
+                                  >
+                                    No
+                                  </button>
+                                </div>
+                              </div>
+                            </>
+                          )}
+                        </div>
                       ) : row.status === 'WALK_IN' ? (
                         <span className="inline-flex px-2.5 py-1 text-xs font-semibold rounded-full bg-amber-50 text-[#B05C3B] border border-amber-200">
                           Walk-in
@@ -756,7 +879,7 @@ export function CheckinDashboard({ eventId, seatingFormat, tables }: CheckinDash
                       {row.checked_in_at ? formatUSTime(new Date(row.checked_in_at)) : '—'}
                     </td>
 
-                    {/* Three-dot menu */}
+                    {/* Three-dot menu (Fix 4: no Change Table when no seating — already done) */}
                     <td className="px-3 py-3" onClick={(e) => e.stopPropagation()}>
                       <div className="relative">
                         <button
@@ -789,21 +912,27 @@ export function CheckinDashboard({ eventId, seatingFormat, tables }: CheckinDash
                                 </button>
                                 {rowAssignDropdown === row.id && (
                                   <div className="absolute left-full top-0 ml-1 w-52 bg-white border border-ui-border rounded-lg shadow-lg z-30 py-1 max-h-48 overflow-y-auto">
-                                    {workspaceMembers.map(m => (
-                                      <button
-                                        key={m.user_id}
-                                        onClick={() => handleAssignTeamMember(row.id, m.user_full_name)}
-                                        className="w-full flex items-center gap-2 px-3 py-2 text-[13px] text-brand-charcoal hover:bg-brand-cream transition-colors"
-                                      >
-                                        <AvatarInitials name={m.user_full_name || '?'} size={20} />
-                                        <span className="font-medium">{m.user_full_name}</span>
-                                      </button>
-                                    ))}
+                                    {workspaceMembers.length === 0 ? (
+                                      <div className="px-3 py-3 text-[13px] text-ui-tertiary text-center">
+                                        No team members added yet
+                                      </div>
+                                    ) : (
+                                      workspaceMembers.map(m => (
+                                        <button
+                                          key={m.user_id}
+                                          onClick={() => handleAssignTeamMember(row.id, m.user_full_name)}
+                                          className="w-full flex items-center gap-2 px-3 py-2 text-[13px] text-brand-charcoal hover:bg-brand-cream transition-colors"
+                                        >
+                                          <AvatarInitials name={m.user_full_name || '?'} size={20} />
+                                          <span className="font-medium">{m.user_full_name}</span>
+                                        </button>
+                                      ))
+                                    )}
                                   </div>
                                 )}
                               </div>
 
-                              {/* Change Table */}
+                              {/* Change Table — Fix 4: only show when seating enabled */}
                               {seatingEnabled && (
                                 <div className="relative">
                                   <button
@@ -884,4 +1013,4 @@ export function CheckinDashboard({ eventId, seatingFormat, tables }: CheckinDash
       )}
     </div>
   )
-}
+})

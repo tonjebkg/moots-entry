@@ -1,9 +1,10 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { useParams } from 'next/navigation'
-import { Sparkles, RotateCw, UserCheck, Grid3X3, ArrowLeftRight, Info, Settings, Plus, Trash2, Save } from 'lucide-react'
+import { Sparkles, RotateCw, UserCheck, Grid3X3, ArrowLeftRight, Info, Settings, Plus, Trash2, Save, RefreshCw, UserPlus, ExternalLink } from 'lucide-react'
 import { CheckinDashboard } from '@/app/components/CheckinDashboard'
+import type { CheckinDashboardHandle } from '@/app/components/CheckinDashboard'
 import { SeatingChart } from '@/app/components/SeatingChart'
 import { SeatingAssignPanel } from '@/app/components/SeatingAssignPanel'
 import { IntroductionPairings } from '@/app/components/IntroductionPairings'
@@ -87,6 +88,9 @@ export default function DayOfPage() {
 
   // Move analysis toast
   const [moveAnalysis, setMoveAnalysis] = useState<{ text: string; suggestion: string | null } | null>(null)
+
+  // Checkin dashboard ref (Fix 1: buttons in header)
+  const checkinRef = useRef<CheckinDashboardHandle>(null)
 
   const fetchSeatingData = useCallback(async () => {
     try {
@@ -316,9 +320,34 @@ export default function DayOfPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-start justify-between">
+      {/* Header (Fix 1: action buttons inline with Event Day) */}
+      <div className="flex items-center justify-between">
         <h1 className="font-display text-2xl font-bold text-brand-charcoal tracking-tight">Event Day</h1>
+        {activeTab === 'checkin' && (
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => checkinRef.current?.refresh()}
+              className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-ui-tertiary hover:text-brand-charcoal border border-ui-border rounded-lg transition-colors"
+            >
+              <RefreshCw className="w-4 h-4" />
+              Refresh
+            </button>
+            <button
+              onClick={() => checkinRef.current?.openWalkIn()}
+              className="flex items-center gap-2 px-4 py-2 bg-brand-terracotta hover:bg-brand-terracotta/90 text-white text-sm font-semibold rounded-full transition-colors"
+            >
+              <UserPlus className="w-4 h-4" />
+              Add Walk-in
+            </button>
+            <button
+              onClick={() => checkinRef.current?.openDoorLink()}
+              className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-brand-terracotta border-2 border-brand-terracotta rounded-full hover:bg-brand-terracotta/5 transition-colors"
+            >
+              <ExternalLink className="w-4 h-4" />
+              Staff Check-in Link
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Sub-tab Toggle */}
@@ -411,6 +440,7 @@ export default function DayOfPage() {
       {/* Check-in Content */}
       {activeTab === 'checkin' && (
         <CheckinDashboard
+          ref={checkinRef}
           eventId={eventId}
           seatingFormat={seatingFormat}
           tables={tables}
