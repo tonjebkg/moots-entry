@@ -155,7 +155,7 @@ export default function CampaignsPage() {
             onClick={() => setShowCreateForm(true)}
             className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
           >
-            + New Campaign
+            + New Invitation Campaign
           </button>
           <button
             onClick={() => router.push(`/dashboard/events/${eventId}/setup`)}
@@ -169,7 +169,7 @@ export default function CampaignsPage() {
         {campaigns.length === 0 ? (
           <div className="bg-white rounded-lg shadow p-12 text-center">
             <div className="text-gray-400 text-5xl mb-4">📋</div>
-            <h3 className="text-xl font-semibold text-gray-900 mb-2">No campaigns yet</h3>
+            <h3 className="text-xl font-semibold text-gray-900 mb-2">No invitation campaigns yet</h3>
             <p className="text-gray-600 mb-6">
               Create your first invitation campaign to start curating your guest list
             </p>
@@ -177,7 +177,7 @@ export default function CampaignsPage() {
               onClick={() => setShowCreateForm(true)}
               className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
             >
-              Create Campaign
+              Create Invitation Campaign
             </button>
           </div>
         ) : (

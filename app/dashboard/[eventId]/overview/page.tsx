@@ -136,15 +136,12 @@ export default function OverviewPage() {
 
       {/* 3. Activity Feeds — side by side */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="max-h-[600px] overflow-y-auto">
-          <AgentActivityFeed activities={agentActivity} />
-        </div>
-        <div className="max-h-[600px] overflow-y-auto">
-          <ActivityFeed
-            activities={activity}
-            onContactClick={(contactId) => setDossierContactId(contactId)}
-          />
-        </div>
+        <AgentActivityFeed activities={agentActivity} maxHeight={544} />
+        <ActivityFeed
+          activities={activity}
+          onContactClick={(contactId) => setDossierContactId(contactId)}
+          maxHeight={544}
+        />
       </div>
 
       {/* Dossier Panel */}

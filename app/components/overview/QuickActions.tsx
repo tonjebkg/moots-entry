@@ -20,7 +20,7 @@ export function QuickActions({
 }: QuickActionsProps) {
   const actions: { label: string; icon: React.ElementType; href: string; show: boolean }[] = [
     {
-      label: 'Set Objectives',
+      label: 'Set Targeting',
       icon: Target,
       href: `/dashboard/${eventId}/objectives`,
       show: !hasObjectives,

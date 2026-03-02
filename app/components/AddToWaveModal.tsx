@@ -71,7 +71,7 @@ export function AddToWaveModal({ eventId, contactIds, onClose, onSuccess }: AddT
 
   async function handleSubmit() {
     if (!selectedCampaignId) {
-      setError('Please select a campaign')
+      setError('Please select an invitation campaign')
       return
     }
 
@@ -154,11 +154,11 @@ export function AddToWaveModal({ eventId, contactIds, onClose, onSuccess }: AddT
           {loading ? (
             <div className="flex items-center gap-2 text-sm text-ui-tertiary">
               <Loader2 size={14} className="animate-spin" />
-              Loading campaigns...
+              Loading invitation campaigns...
             </div>
           ) : campaigns.length === 0 ? (
             <div className="bg-brand-cream border border-ui-border rounded-lg p-4 text-center">
-              <p className="text-sm text-ui-secondary mb-2">No campaigns found yet.</p>
+              <p className="text-sm text-ui-secondary mb-2">No invitation campaigns found yet.</p>
               <Link
                 href={`/dashboard/${eventId}/campaigns`}
                 className="text-sm font-semibold text-brand-terracotta hover:underline"
@@ -169,7 +169,7 @@ export function AddToWaveModal({ eventId, contactIds, onClose, onSuccess }: AddT
             </div>
           ) : (
             <div>
-              <label className="block text-sm font-medium text-brand-charcoal mb-1.5">Campaign</label>
+              <label className="block text-sm font-medium text-brand-charcoal mb-1.5">Invitation Campaign</label>
               <select
                 value={selectedCampaignId}
                 onChange={(e) => setSelectedCampaignId(e.target.value)}

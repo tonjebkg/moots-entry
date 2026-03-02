@@ -516,7 +516,7 @@ export function CreateEventWizard({ onClose, onSuccess }: CreateEventWizardProps
           {currentStep === 'objectives' && (
             <div className="space-y-5">
               <div>
-                <h3 className="font-display text-lg font-semibold text-brand-charcoal mb-1">Event Objectives</h3>
+                <h3 className="font-display text-lg font-semibold text-brand-charcoal mb-1">Target Audience</h3>
                 <p className="text-sm text-ui-tertiary">
                   What kind of guests matter for this event? The AI will score contacts against these criteria.
                 </p>
@@ -615,7 +615,7 @@ export function CreateEventWizard({ onClose, onSuccess }: CreateEventWizardProps
                 className="flex items-center gap-1.5 px-3 py-2 border border-dashed border-ui-border rounded-lg text-sm font-medium text-ui-tertiary hover:border-brand-terracotta hover:text-brand-terracotta transition-colors"
               >
                 <Plus size={16} />
-                Add Objective
+                Add Criteria
               </button>
             </div>
           )}

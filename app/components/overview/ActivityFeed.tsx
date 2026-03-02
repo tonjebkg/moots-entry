@@ -15,6 +15,7 @@ interface ActivityItem {
 interface ActivityFeedProps {
   activities: ActivityItem[]
   onContactClick?: (contactId: string) => void
+  maxHeight?: number
 }
 
 function timeAgo(timestamp: string): string {
@@ -32,12 +33,12 @@ function timeAgo(timestamp: string): string {
   return formatUSDateShort(date)
 }
 
-export function ActivityFeed({ activities, onContactClick }: ActivityFeedProps) {
+export function ActivityFeed({ activities, onContactClick, maxHeight }: ActivityFeedProps) {
   if (activities.length === 0) {
     return (
       <div className="bg-white rounded-card shadow-card p-8 text-center">
         <Sparkles size={28} className="mx-auto mb-2 text-brand-terracotta opacity-60" />
-        <p className="text-[15px] text-ui-secondary">I&apos;m ready to start working on your event. Set objectives and I&apos;ll begin analyzing your guest pool.</p>
+        <p className="text-[15px] text-ui-secondary">I&apos;m ready to start working on your event. Set targeting criteria and I&apos;ll begin analyzing your guest pool.</p>
       </div>
     )
   }
@@ -47,7 +48,7 @@ export function ActivityFeed({ activities, onContactClick }: ActivityFeedProps) 
       <div className="px-5 py-4 border-b border-ui-border">
         <h3 className="text-xl font-semibold text-brand-charcoal">Guest Activity</h3>
       </div>
-      <div className="divide-y divide-ui-border">
+      <div className="divide-y divide-ui-border overflow-y-auto" style={maxHeight ? { maxHeight } : undefined}>
         {activities.map((activity, idx) => {
           const isAgent = activity.actor === 'Moots' || activity.actor === 'System' || activity.actor === 'system'
           return (

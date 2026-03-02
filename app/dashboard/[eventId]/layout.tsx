@@ -3,8 +3,9 @@ import Image from 'next/image'
 import { ChevronLeft } from 'lucide-react'
 import { EventTabNavigation } from '@/app/components/EventTabNavigation'
 import { EventHeaderActions } from '@/app/components/EventHeaderActions'
-import { CollaboratorAvatarStack } from '@/app/components/CollaboratorAvatarStack'
 import { DashboardHeader } from '@/app/components/DashboardHeader'
+import { EventScrollProvider } from '@/app/components/EventScrollContext'
+import { EventHeaderObserver } from '@/app/components/StickyEventHeader'
 import { AgentContextProvider } from '@/app/components/agent/AgentContextProvider'
 import { ChatPanel } from '@/app/components/agent/ChatPanel'
 import { getDb } from '@/lib/db'
@@ -233,86 +234,93 @@ export default async function EventLayout({ children, params }: LayoutProps) {
   }
 
   return (
-    <div className="min-h-screen bg-brand-cream">
-      <DashboardHeader activeNav="events" userName={session?.user?.full_name || undefined} />
+    <EventScrollProvider>
+      <div className="min-h-screen bg-brand-cream">
+        <DashboardHeader
+          activeNav="events"
+          userName={session?.user?.full_name || undefined}
+          teamMembers={members}
+          eventInfo={{
+            title: event.title,
+            location: formatLocation(event.location),
+            date: formatDate(event.start_date),
+            eventId,
+          }}
+        />
 
-      {/* Content with top padding for fixed header */}
-      <div className="pt-[73px]">
-        {/* Event Header */}
-        <div className="border-b border-ui-border bg-white">
-          <div className="px-8 py-6">
-            <div className="flex items-start justify-between gap-8">
-              <div className="flex items-start gap-6 flex-1 min-w-0">
-                {/* Event Image */}
-                {event.image_url ? (
-                  <div className="shrink-0">
-                    <Image
-                      src={event.image_url}
-                      alt={event.title}
-                      width={80}
-                      height={80}
-                      className="w-20 h-20 rounded-card object-cover border border-ui-border"
-                      unoptimized
-                    />
-                  </div>
-                ) : (
-                  <div className="w-20 h-20 shrink-0 rounded-card bg-gradient-to-br from-brand-terracotta/80 to-brand-forest flex items-center justify-center">
-                    <span className="font-display text-white/60 text-2xl font-bold">
-                      {event.title.charAt(0)}
-                    </span>
-                  </div>
-                )}
+        {/* Content with top padding for fixed header */}
+        <div className="pt-[67px]">
+          {/* Event Header — scrolls away, observed by EventHeaderObserver */}
+          <EventHeaderObserver>
+            <div className="border-b border-ui-border bg-white">
+              <div className="px-8 py-6">
+                <div className="flex items-start justify-between gap-8">
+                  <div className="flex items-start gap-6 flex-1 min-w-0">
+                    {/* Event Image */}
+                    {event.image_url ? (
+                      <div className="shrink-0">
+                        <Image
+                          src={event.image_url}
+                          alt={event.title}
+                          width={80}
+                          height={80}
+                          className="w-20 h-20 rounded-card object-cover border border-ui-border"
+                          unoptimized
+                        />
+                      </div>
+                    ) : (
+                      <div className="w-20 h-20 shrink-0 rounded-card bg-gradient-to-br from-brand-terracotta/80 to-brand-forest flex items-center justify-center">
+                        <span className="font-display text-white/60 text-2xl font-bold">
+                          {event.title.charAt(0)}
+                        </span>
+                      </div>
+                    )}
 
-                {/* Event Info */}
-                <div className="flex-1 min-w-0">
-                  <Link
-                    href="/dashboard"
-                    className="inline-flex items-center gap-1.5 text-sm text-ui-tertiary hover:text-brand-terracotta transition-colors mb-3 font-medium"
-                  >
-                    <ChevronLeft size={16} />
-                    <span>Events</span>
-                  </Link>
-                  <h1 className="font-display text-2xl font-bold text-brand-charcoal mb-2 tracking-tight">
-                    {event.title}
-                  </h1>
-                  <p className="text-sm text-ui-secondary">
-                    {formatLocation(event.location)} · {formatDate(event.start_date)}
-                  </p>
+                    {/* Event Info */}
+                    <div className="flex-1 min-w-0">
+                      <Link
+                        href="/dashboard"
+                        className="inline-flex items-center gap-1.5 text-sm text-ui-tertiary hover:text-brand-terracotta transition-colors mb-3 font-medium"
+                      >
+                        <ChevronLeft size={16} />
+                        <span>Events</span>
+                      </Link>
+                      <h1 className="font-display text-2xl font-bold text-brand-charcoal mb-2 tracking-tight">
+                        {event.title}
+                      </h1>
+                      <p className="text-sm text-ui-secondary">
+                        {formatLocation(event.location)} · {formatDate(event.start_date)}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Right Side: Capacity + Edit Button */}
+                  <EventHeaderActions
+                    eventId={eventId}
+                    capacityFilled={capacity.seats_filled}
+                    totalCapacity={capacity.total_capacity}
+                  />
                 </div>
               </div>
+            </div>
+          </EventHeaderObserver>
 
-              {/* Collaborators */}
-              {members.length > 0 && (
-                <div className="shrink-0 self-center">
-                  <CollaboratorAvatarStack members={members} />
-                </div>
-              )}
-
-              {/* Right Side: Capacity + Edit Button */}
-              <EventHeaderActions
-                eventId={eventId}
-                capacityFilled={capacity.seats_filled}
-                totalCapacity={capacity.total_capacity}
-              />
+          {/* Tab Navigation — sticky below the fixed nav */}
+          <div className="sticky top-[67px] z-40 bg-white border-b border-ui-border">
+            <div className="px-8">
+              <EventTabNavigation eventId={eventId} />
             </div>
           </div>
-        </div>
 
-        {/* Tab Navigation */}
-        <div className="border-b border-ui-border bg-white">
-          <div className="px-8">
-            <EventTabNavigation eventId={eventId} />
-          </div>
+          {/* Tab Content - Full Width */}
+          <AgentContextProvider>
+            <div className="px-8 py-8 pb-36">
+              {children}
+            </div>
+            <ChatPanel eventId={eventId} />
+          </AgentContextProvider>
         </div>
-
-        {/* Tab Content - Full Width */}
-        <AgentContextProvider>
-          <div className="px-8 py-8 pb-36">
-            {children}
-          </div>
-          <ChatPanel eventId={eventId} />
-        </AgentContextProvider>
       </div>
-    </div>
+    </EventScrollProvider>
   )
 }

@@ -210,12 +210,12 @@ export default function AnalyticsPage() {
       {metrics.campaign_summary.length > 0 && (
         <div className="bg-white rounded-card shadow-card overflow-hidden">
           <div className="p-4 border-b border-ui-border">
-            <h3 className="font-semibold text-brand-charcoal">Campaign Performance</h3>
+            <h3 className="font-semibold text-brand-charcoal">Invitation Campaign Performance</h3>
           </div>
           <table className="w-full text-sm">
             <thead className="bg-brand-cream border-b border-ui-border">
               <tr>
-                <th className="px-4 py-3 text-left font-semibold text-brand-charcoal">Campaign</th>
+                <th className="px-4 py-3 text-left font-semibold text-brand-charcoal">Invitation Campaign</th>
                 <th className="px-4 py-3 text-right font-semibold text-brand-charcoal">Invited</th>
                 <th className="px-4 py-3 text-right font-semibold text-brand-charcoal">Accepted</th>
                 <th className="px-4 py-3 text-right font-semibold text-brand-charcoal">Declined</th>

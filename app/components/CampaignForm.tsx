@@ -30,7 +30,7 @@ export function CampaignForm({ eventId, onSuccess, onCancel, initialData }: Camp
     e.preventDefault();
 
     if (!name.trim()) {
-      setError('Campaign name is required');
+      setError('Invitation campaign name is required');
       return;
     }
 
@@ -73,7 +73,7 @@ export function CampaignForm({ eventId, onSuccess, onCancel, initialData }: Camp
       <div className="bg-white rounded-lg shadow-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between p-6 border-b border-ui-border">
           <h2 className="text-xl font-semibold text-brand-charcoal tracking-tight">
-            {isEditing ? 'Edit Campaign' : 'Create New Campaign'}
+            {isEditing ? 'Edit Invitation Campaign' : 'Create New Invitation Campaign'}
           </h2>
           <button
             onClick={onCancel}
@@ -96,7 +96,7 @@ export function CampaignForm({ eventId, onSuccess, onCancel, initialData }: Camp
             {/* Campaign Name */}
             <div>
               <label className="block text-sm font-semibold text-brand-charcoal mb-2">
-                Campaign Name <span className="text-red-600">*</span>
+                Invitation Campaign Name <span className="text-red-600">*</span>
               </label>
               <input
                 type="text"
@@ -177,7 +177,7 @@ export function CampaignForm({ eventId, onSuccess, onCancel, initialData }: Camp
                 ) : (
                   <>
                     <Save size={16} />
-                    {isEditing ? 'Update Campaign' : 'Create Campaign'}
+                    {isEditing ? 'Update Campaign' : 'Create Invitation Campaign'}
                   </>
                 )}
               </button>

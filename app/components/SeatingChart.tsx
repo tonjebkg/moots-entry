@@ -221,7 +221,7 @@ export function SeatingChart({ tables, onRemoveGuest, onGuestClick, onMoveGuest 
     return (
       <div className="text-center py-12">
         <Users size={32} className="mx-auto mb-3 text-brand-terracotta opacity-60" />
-        <p className="text-sm text-ui-secondary max-w-md mx-auto">Set up your seating format and I&apos;ll propose table arrangements optimized for your event objectives and guest dynamics.</p>
+        <p className="text-sm text-ui-secondary max-w-md mx-auto">Set up your seating format and I&apos;ll propose table arrangements optimized for your targeting criteria and guest dynamics.</p>
       </div>
     );
   }

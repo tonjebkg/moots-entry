@@ -219,7 +219,7 @@ export function IntroductionPairings({ pairings, onGenerate, generating, onGuest
       {pairings.length === 0 ? (
         <div className="text-center py-8 bg-white border border-ui-border rounded-lg">
           <ArrowLeftRight size={28} className="mx-auto mb-3 text-brand-terracotta opacity-60" />
-          <p className="text-sm text-ui-secondary max-w-md mx-auto">Once guests are confirmed, I&apos;ll identify who should meet based on shared interests, complementary backgrounds, and your event objectives.</p>
+          <p className="text-sm text-ui-secondary max-w-md mx-auto">Once guests are confirmed, I&apos;ll identify who should meet based on shared interests, complementary backgrounds, and your targeting criteria.</p>
         </div>
       ) : (
         <div className="space-y-3">

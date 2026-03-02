@@ -146,7 +146,7 @@ export const POST = withErrorHandling(async (request: NextRequest, { params }: R
 
   if (parseInt(objectiveCount[0].count) === 0) {
     return NextResponse.json(
-      { error: 'No objectives defined. Define event objectives before scoring.' },
+      { error: 'No targeting criteria defined. Define targeting criteria before scoring.' },
       { status: 400 }
     );
   }

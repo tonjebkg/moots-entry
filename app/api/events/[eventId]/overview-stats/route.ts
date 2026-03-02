@@ -200,8 +200,8 @@ export const GET = withErrorHandling(async (_request: NextRequest, { params }: R
     needsAttention.push({
       type: 'no_objectives',
       count: 1,
-      label: 'I need event objectives to start scoring guests. Define what matters for this event.',
-      action: 'Set Objectives',
+      label: 'I need targeting criteria to start scoring guests. Define what matters for this event.',
+      action: 'Set Targeting',
     })
   }
 
@@ -210,7 +210,7 @@ export const GET = withErrorHandling(async (_request: NextRequest, { params }: R
     needsAttention.push({
       type: 'unscored_contacts',
       count: unscoredCount,
-      label: `contacts are waiting to be scored. I'll match them against your objectives — takes about 2 minutes.`,
+      label: `contacts are waiting to be scored. I'll match them against your targeting criteria — takes about 2 minutes.`,
       action: 'Score them now',
     })
   }

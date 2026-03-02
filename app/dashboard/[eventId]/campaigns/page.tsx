@@ -120,7 +120,7 @@ export default function CampaignsTabPage() {
           className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-brand-terracotta hover:bg-brand-terracotta/90 active:bg-brand-terracotta/90 text-white text-sm font-semibold rounded-pill shadow-cta transition-all"
         >
           <Plus size={16} />
-          New Campaign
+          New Invitation Campaign
         </button>
 
         <div className="space-y-2">
@@ -130,7 +130,7 @@ export default function CampaignsTabPage() {
                 <Sparkles className="text-brand-terracotta" size={20} />
               </div>
               <p className="text-sm text-ui-secondary leading-relaxed max-w-md mx-auto">
-                I&apos;m ready to build your first invitation campaign. Once you have scored contacts, I can suggest a campaign starting with your top-rated matches.
+                I&apos;m ready to build your first invitation campaign. Once you have scored contacts, I can suggest one starting with your top-rated matches.
               </p>
             </div>
           ) : (
@@ -196,10 +196,10 @@ export default function CampaignsTabPage() {
                 <ChevronRight className="text-ui-tertiary" size={32} />
               </div>
               <h3 className="text-xl font-bold font-display text-brand-charcoal mb-2 tracking-tight">
-                Select a campaign
+                Select an invitation campaign
               </h3>
               <p className="text-sm text-ui-tertiary leading-relaxed">
-                Choose a campaign from the list to view details and manage guest invitations.
+                Choose an invitation campaign to view details, track responses, and manage outreach.
               </p>
             </div>
           </div>

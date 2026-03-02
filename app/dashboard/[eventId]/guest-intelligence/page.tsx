@@ -296,10 +296,10 @@ function ContactRow({
             </div>
           )}
 
-          {/* Objective breakdown (for scored contacts) */}
+          {/* Criteria breakdown (for scored contacts) */}
           {contact.matched_objectives && contact.matched_objectives.length > 0 && (
             <div>
-              <h4 className="text-[13px] font-semibold text-ui-tertiary uppercase tracking-wider mb-2">Objective Breakdown</h4>
+              <h4 className="text-[13px] font-semibold text-ui-tertiary uppercase tracking-wider mb-2">Criteria Breakdown</h4>
               <div className="space-y-1.5">
                 {contact.matched_objectives.map((mo: any, i: number) => (
                   <div key={i} className="flex items-center gap-2">
@@ -1070,7 +1070,7 @@ export default function GuestIntelligencePage() {
               <Sparkles size={16} className="text-brand-terracotta shrink-0" />
               <p className="text-sm text-brand-charcoal">
                 <span className="font-semibold">{stats.qualified_count - stats.selected_count} AI-qualified contacts</span>{' '}
-                scoring 60+ haven&apos;t been added to a campaign yet.{' '}
+                scoring 60+ haven&apos;t been added to an invitation campaign yet.{' '}
                 <button onClick={() => applyUrlFilter('qualified')} className="text-brand-terracotta font-semibold hover:underline">
                   View them →
                 </button>
@@ -1183,7 +1183,7 @@ export default function GuestIntelligencePage() {
 
           {/* Bulk Action Bar */}
           {selectedIds.size > 0 && (
-            <div className="flex items-center gap-3 bg-brand-terracotta/5 border border-brand-terracotta/20 rounded-lg px-4 py-3 sticky top-[73px] z-30">
+            <div className="flex items-center gap-3 bg-white border border-ui-border shadow-sm rounded-lg px-4 py-3 sticky top-[123px] z-30">
               <span className="text-sm font-medium text-brand-charcoal">
                 {selectedIds.size} contact{selectedIds.size > 1 ? 's' : ''} selected
               </span>
@@ -1736,10 +1736,10 @@ export default function GuestIntelligencePage() {
                                     </div>
                                   )}
 
-                                  {/* Objective breakdown */}
+                                  {/* Criteria breakdown */}
                                   {c.matched_objectives && c.matched_objectives.length > 0 && (
                                     <div>
-                                      <h4 className="text-[13px] font-semibold text-ui-tertiary uppercase tracking-wider mb-2">Objective Breakdown</h4>
+                                      <h4 className="text-[13px] font-semibold text-ui-tertiary uppercase tracking-wider mb-2">Criteria Breakdown</h4>
                                       <div className="space-y-1.5">
                                         {c.matched_objectives.map((mo: any, i: number) => (
                                           <div key={i} className="flex items-center gap-2">
@@ -1857,7 +1857,7 @@ export default function GuestIntelligencePage() {
                 </h3>
                 <p className="text-sm text-ui-tertiary mb-4">
                   {contacts.length === 0
-                    ? 'Add contacts to your People Database, then define event objectives to start scoring.'
+                    ? 'Add contacts to your People Database, then define targeting criteria to start scoring.'
                     : 'Try adjusting your search or filters.'}
                 </p>
                 {contacts.length === 0 && (
@@ -1866,7 +1866,7 @@ export default function GuestIntelligencePage() {
                       Go to People
                     </Link>
                     <Link href={`/dashboard/${eventId}/objectives`} className="px-5 py-2.5 bg-brand-terracotta text-white text-sm font-semibold rounded-pill hover:bg-brand-terracotta/90 shadow-cta">
-                      Set Objectives
+                      Set Targeting
                     </Link>
                   </div>
                 )}
@@ -2343,10 +2343,10 @@ export default function GuestIntelligencePage() {
                                         </div>
                                       )}
 
-                                      {/* Objective breakdown */}
+                                      {/* Criteria breakdown */}
                                       {c.matched_objectives && c.matched_objectives.length > 0 && (
                                         <div>
-                                          <h4 className="text-[13px] font-semibold text-ui-tertiary uppercase tracking-wider mb-2">Objective Breakdown</h4>
+                                          <h4 className="text-[13px] font-semibold text-ui-tertiary uppercase tracking-wider mb-2">Criteria Breakdown</h4>
                                           <div className="space-y-1.5">
                                             {c.matched_objectives.map((mo: any, i: number) => (
                                               <div key={i} className="flex items-center gap-2">

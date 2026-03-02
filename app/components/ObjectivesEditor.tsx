@@ -169,14 +169,14 @@ export function ObjectivesEditor({ eventId, objectives: initial, onSave, hasScor
 
   return (
     <div className="space-y-4">
-      {/* Add Objective — at the top */}
+      {/* Add Criteria — at the top */}
       <div className="flex items-center gap-3">
         <button
           onClick={addObjective}
           className="flex items-center gap-1.5 px-4 py-2.5 border border-brand-forest text-brand-forest rounded-pill text-[15px] font-semibold hover:bg-brand-forest hover:text-white transition-colors"
         >
           <Plus size={16} />
-          Add Objective
+          Add Criteria
         </button>
         {savedIndex !== null && (
           <span className="flex items-center gap-1.5 text-sm text-emerald-600 font-medium animate-fade-in">
@@ -213,7 +213,7 @@ export function ObjectivesEditor({ eventId, objectives: initial, onSave, hasScor
                     className="w-full px-3 py-2.5 text-base border border-ui-border rounded-lg focus:outline-none focus:border-brand-terracotta focus:ring-1 focus:ring-brand-terracotta resize-none placeholder:text-ui-tertiary/60"
                   />
                   <p className="text-sm text-ui-secondary mt-1.5">
-                    Describe who you want at this event in plain language. Moots handles the scoring.
+                    Describe your ideal guest in plain language. Moots scores everyone against this.
                   </p>
                   {obj.ai_interpretation && (
                     <div className="mt-3 p-3 bg-brand-cream rounded-lg border border-brand-forest/10">

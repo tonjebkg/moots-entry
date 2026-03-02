@@ -43,7 +43,7 @@ export function AgentThinking({ steps, intervalMs = 3000, className = '' }: Agen
 /** Pre-defined step sets for common operations */
 export const THINKING_STEPS = {
   scoring: (contactCount?: number) => [
-    'Reviewing your event objectives...',
+    'Reviewing your targeting criteria...',
     `Scanning ${contactCount ?? 'your'} contacts...`,
     'Matching profiles against criteria...',
     'Cross-referencing industries and seniority...',

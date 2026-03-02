@@ -279,7 +279,7 @@ export function DossierPanel({ eventId, contactId, onClose }: DossierPanelProps)
               <div className="bg-white rounded-card shadow-card p-4">
                 <div className="flex items-center gap-2 mb-3">
                   <Target className="w-4 h-4 text-[#2F4F3F]" />
-                  <h4 className="text-sm font-semibold text-brand-charcoal">Objective Match</h4>
+                  <h4 className="text-sm font-semibold text-brand-charcoal">Criteria Match</h4>
                 </div>
                 <div className="space-y-3">
                   {dossier.matched_objectives.map((obj, i) => (

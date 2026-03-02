@@ -16,6 +16,7 @@ const SUGGESTION_NAV: Record<string, { tab: string; label: string }> = {
 
 interface AgentActivityFeedProps {
   activities: AgentActivityEntry[];
+  maxHeight?: number;
 }
 
 const TYPE_LABELS: Record<string, string> = {
@@ -53,7 +54,7 @@ function timeAgo(timestamp: string): string {
   return `${Math.floor(diffDays / 7)}w ago`;
 }
 
-export function AgentActivityFeed({ activities }: AgentActivityFeedProps) {
+export function AgentActivityFeed({ activities, maxHeight }: AgentActivityFeedProps) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const { eventId } = useParams<{ eventId: string }>();
   const router = useRouter();
@@ -63,7 +64,7 @@ export function AgentActivityFeed({ activities }: AgentActivityFeedProps) {
       <div className="bg-white rounded-card shadow-card p-8 text-center">
         <Sparkles size={28} className="mx-auto mb-2 text-brand-terracotta opacity-60" />
         <p className="text-[15px] text-ui-secondary">
-          I&apos;m ready to start working on your event. Set objectives and I&apos;ll begin analyzing your guest pool.
+          I&apos;m ready to start working on your event. Set targeting criteria and I&apos;ll begin analyzing your guest pool.
         </p>
       </div>
     );
@@ -75,7 +76,7 @@ export function AgentActivityFeed({ activities }: AgentActivityFeedProps) {
         <AgentAvatar size="sm" />
         <h3 className="text-xl font-semibold text-brand-charcoal">AI Agent Activity</h3>
       </div>
-      <div className="divide-y divide-ui-border">
+      <div className="divide-y divide-ui-border overflow-y-auto" style={maxHeight ? { maxHeight } : undefined}>
         {activities.map(activity => {
           const isExpanded = expandedId === activity.id;
           const colorClass = TYPE_COLORS[activity.activity_type] || TYPE_COLORS.observation;

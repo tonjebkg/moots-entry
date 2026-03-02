@@ -131,7 +131,7 @@ export function ScoreCard({
           {/* Objective Scores */}
           {matchedObjectives && matchedObjectives.length > 0 && (
             <div>
-              <h4 className="text-xs font-semibold text-ui-tertiary uppercase tracking-wider mb-2">Objective Breakdown</h4>
+              <h4 className="text-xs font-semibold text-ui-tertiary uppercase tracking-wider mb-2">Criteria Breakdown</h4>
               <div className="space-y-2">
                 {matchedObjectives.map((mo, i) => (
                   <div key={i} className="flex items-start gap-3">

@@ -113,7 +113,7 @@ export async function GET(request: NextRequest) {
           workspaceId: workspace_id,
           type: 'observation',
           headline: `${highScorerCount} high-scoring contact${highScorerCount > 1 ? 's' : ''} haven't been invited yet`,
-          detail: `I found ${highScorerCount} contacts scoring 75+ who haven't received invitations. These are strong matches for your event objectives.`,
+          detail: `I found ${highScorerCount} contacts scoring 75+ who haven't received invitations. These are strong matches for your targeting criteria.`,
           metadata: { suggestion_type: 'uninvited_high_scorers', count: highScorerCount },
         });
         totalSuggestions++;

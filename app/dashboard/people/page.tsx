@@ -187,7 +187,7 @@ export default function PeoplePage() {
 
           {/* Bulk Actions Bar */}
           {selectedIds.size > 0 && (
-            <div className="flex items-center gap-3 p-3 bg-brand-terracotta/5 border border-brand-terracotta/20 rounded-lg">
+            <div className="flex items-center gap-3 p-3 bg-white border border-ui-border shadow-sm rounded-lg">
               <span className="text-sm font-medium text-brand-terracotta">
                 {selectedIds.size} selected
               </span>

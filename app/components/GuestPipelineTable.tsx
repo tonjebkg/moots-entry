@@ -250,7 +250,7 @@ export function GuestPipelineTable({
 
       {/* Bulk Actions */}
       {selectedIds.size > 0 && (
-        <div className="px-5 py-3 bg-blue-50 border-b border-blue-100 flex items-center justify-between">
+        <div className="px-5 py-3 bg-white border-b border-ui-border shadow-sm flex items-center justify-between">
           <span className="text-sm font-semibold text-brand-terracotta">
             {selectedIds.size} guest{selectedIds.size === 1 ? '' : 's'} selected
           </span>

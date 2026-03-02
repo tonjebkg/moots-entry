@@ -205,7 +205,7 @@ export async function processJobs(): Promise<{
           eventId: job.event_id,
           workspaceId: job.workspace_id,
           type: 'scoring',
-          headline: `Scored ${contactIds.length} contacts against your event objectives`,
+          headline: `Scored ${contactIds.length} contacts against your targeting criteria`,
           detail: `${qualified} qualify with a score of 60+. Top score: ${topScore}. ${contactIds.length - qualified} contacts scored below the threshold.`,
           metadata: { job_id: job.id, total_scored: contactIds.length, qualified, top_score: topScore },
         });

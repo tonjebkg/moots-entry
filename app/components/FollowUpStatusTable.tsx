@@ -27,7 +27,7 @@ export function FollowUpStatusTable({ followUps, onSend, onUpdateStatus }: Follo
         <Mail className="w-10 h-10 text-ui-tertiary opacity-50 mx-auto mb-3" />
         <h4 className="text-sm font-semibold text-brand-charcoal mb-1">No Follow-Ups Yet</h4>
         <p className="text-sm text-ui-tertiary max-w-md mx-auto">
-          I&apos;ll draft personalized follow-ups for each scored contact, referencing their profile and your event objectives. Use the form above to get started.
+          I&apos;ll draft personalized follow-ups for each scored contact, referencing their profile and your targeting criteria. Use the form above to get started.
         </p>
       </div>
     )

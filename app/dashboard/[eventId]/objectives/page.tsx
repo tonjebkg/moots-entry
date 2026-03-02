@@ -84,9 +84,9 @@ export default function ObjectivesPage() {
           <Target size={20} className="text-brand-forest" />
         </div>
         <div>
-          <h1 className="font-display text-xl font-bold text-brand-charcoal">Event Objectives</h1>
+          <h1 className="font-display text-xl font-bold text-brand-charcoal">Target Audience</h1>
           <p className="text-[15px] text-ui-tertiary">
-            Define what makes a guest ideal for this event. The AI scoring engine uses these objectives.
+            Define your ideal guest profile. The AI scores every contact against these criteria.
           </p>
         </div>
       </div>
@@ -95,10 +95,10 @@ export default function ObjectivesPage() {
         <div className="flex items-start gap-3 p-4 bg-emerald-50 border border-emerald-200 rounded-lg mb-4 animate-fade-in">
           <CheckCircle2 size={18} className="text-emerald-600 shrink-0 mt-0.5" />
           <div>
-            <p className="text-base font-medium text-emerald-800">Objectives saved</p>
+            <p className="text-base font-medium text-emerald-800">Targeting criteria saved</p>
             <p className="text-base text-emerald-700 mt-0.5">
               {scoringTriggered
-                ? 'AI scoring has been triggered automatically — contacts are being re-scored against your updated objectives.'
+                ? 'AI scoring has been triggered automatically — contacts are being re-scored against your updated criteria.'
                 : 'These will power AI scoring for all contacts in your pool.'}
             </p>
           </div>
@@ -109,7 +109,7 @@ export default function ObjectivesPage() {
         <div className="flex items-center gap-3 p-4 bg-brand-cream border border-brand-terracotta/20 rounded-lg mb-4 animate-fade-in">
           <Sparkles size={16} className="text-brand-terracotta shrink-0 animate-pulse" />
           <p className="text-base font-medium text-brand-charcoal">
-            Scoring contacts against your updated objectives...
+            Scoring contacts against your updated criteria...
           </p>
         </div>
       )}
