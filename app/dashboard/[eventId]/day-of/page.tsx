@@ -127,11 +127,10 @@ export default function DayOfPage() {
     }
   }, [eventId])
 
+  // Fetch seating data eagerly on mount (needed by checkin tab for table column)
   useEffect(() => {
-    if (activeTab === 'seating' || activeTab === 'introductions') {
-      fetchSeatingData()
-    }
-  }, [activeTab, fetchSeatingData])
+    fetchSeatingData()
+  }, [fetchSeatingData])
 
   // Seating data transforms
   const tableData = tables.map(t => ({
@@ -319,12 +318,7 @@ export default function DayOfPage() {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-start justify-between">
-        <div>
-          <h1 className="font-display text-2xl font-bold text-brand-charcoal tracking-tight mb-1">Event Day</h1>
-          <p className="text-sm text-ui-secondary">
-            Manage check-in, seating arrangements, and introduction pairings
-          </p>
-        </div>
+        <h1 className="font-display text-2xl font-bold text-brand-charcoal tracking-tight">Event Day</h1>
       </div>
 
       {/* Sub-tab Toggle */}
@@ -416,7 +410,11 @@ export default function DayOfPage() {
 
       {/* Check-in Content */}
       {activeTab === 'checkin' && (
-        <CheckinDashboard eventId={eventId} />
+        <CheckinDashboard
+          eventId={eventId}
+          seatingFormat={seatingFormat}
+          tables={tables}
+        />
       )}
 
       {/* Seating Content */}

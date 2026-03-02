@@ -53,13 +53,13 @@ export function CheckinMetricsBar({ metrics, onFilter, activeFilter }: CheckinMe
   const gaugeWidth = Math.min(100, gaugePercent)
 
   return (
-    <div className="space-y-4">
-      <div className="grid grid-cols-4 gap-4">
+    <div className="space-y-3">
+      <div className="grid grid-cols-4 gap-3">
         {cards.map((card) => (
           <button
             key={card.label}
             onClick={() => card.filterKey && onFilter?.(activeFilter === card.filterKey ? '' : card.filterKey)}
-            className={`border rounded-lg p-4 text-left transition-all ${card.color} ${
+            className={`border rounded-lg p-3 text-left transition-all ${card.color} ${
               card.filterKey && onFilter ? 'cursor-pointer hover:shadow-md' : ''
             } ${activeFilter === card.filterKey ? 'ring-2 ring-offset-1 ring-brand-terracotta' : ''}`}
           >
@@ -73,7 +73,7 @@ export function CheckinMetricsBar({ metrics, onFilter, activeFilter }: CheckinMe
       </div>
 
       {/* Capacity gauge */}
-      <div className="bg-white border border-ui-border rounded-lg p-4">
+      <div className="bg-white border border-ui-border rounded-lg p-3">
         <div className="flex items-center justify-between mb-2">
           <span className="text-sm font-medium text-ui-secondary">Capacity</span>
           <span className={`text-sm font-semibold ${isOverCapacity ? 'text-red-600' : 'text-brand-charcoal'}`}>
