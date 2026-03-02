@@ -16,7 +16,7 @@ interface EventInfo {
   title: string
   start_date: string | null
   end_date: string | null
-  location: string | null
+  location: { venue_name?: string; city?: string; state_province?: string; country?: string; street_address?: string } | string | null
   seating_format: string | null
   tables_config: { number: number; seats: number }[] | null
 }
@@ -88,6 +88,13 @@ export default function DoorViewPage() {
 
   // Bulk select (laptop only)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+
+  function formatLocation(loc: EventInfo['location']): string | null {
+    if (!loc) return null
+    if (typeof loc === 'string') return loc
+    const parts = [loc.venue_name, loc.city].filter(Boolean)
+    return parts.length > 0 ? parts.join(', ') : null
+  }
 
   const apiBase = `/api/door/${token}`
 
@@ -513,10 +520,10 @@ export default function DoorViewPage() {
                   {formatUSDateShort(new Date(event.start_date))}
                 </span>
               )}
-              {event.location && (
+              {formatLocation(event.location) && (
                 <span className="flex items-center gap-1 truncate">
                   <MapPin size={13} />
-                  <span className="truncate">{event.location}</span>
+                  <span className="truncate">{formatLocation(event.location)}</span>
                 </span>
               )}
             </div>
@@ -822,10 +829,10 @@ export default function DoorViewPage() {
                   {formatUSDateShort(new Date(event.start_date))}
                 </span>
               )}
-              {event.location && (
+              {formatLocation(event.location) && (
                 <span className="flex items-center gap-1">
                   <MapPin size={14} />
-                  {event.location}
+                  {formatLocation(event.location)}
                 </span>
               )}
             </div>
