@@ -28,11 +28,13 @@ export const POST = withErrorHandling(async (request: NextRequest, context: any)
   const checkin = await onboardWalkIn({
     eventId: validated.event_id,
     workspaceId: validated.workspace_id,
-    fullName: validation.data.full_name,
+    firstName: validation.data.first_name,
+    lastName: validation.data.last_name,
     email: validation.data.email,
-    company: validation.data.company,
-    title: validation.data.title,
     phone: validation.data.phone,
+    company: validation.data.company,
+    linkedinUrl: validation.data.linkedin_url,
+    attachedToContactId: validation.data.attached_to_contact_id,
     checkedInBy: validated.created_by,
     notes: validation.data.notes,
   });
@@ -44,7 +46,7 @@ export const POST = withErrorHandling(async (request: NextRequest, context: any)
     action: 'checkin.door_walk_in',
     entityType: 'event_checkin',
     entityId: checkin.id,
-    metadata: { token_id: validated.token_id, full_name: validation.data.full_name },
+    metadata: { token_id: validated.token_id, full_name: `${validation.data.first_name} ${validation.data.last_name}` },
   });
 
   return NextResponse.json(checkin, { status: 201 });

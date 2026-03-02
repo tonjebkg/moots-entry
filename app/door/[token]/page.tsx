@@ -83,8 +83,12 @@ export default function DoorViewPage() {
 
   // Walk-in
   const [showWalkIn, setShowWalkIn] = useState(false)
-  const [walkInForm, setWalkInForm] = useState({ full_name: '', email: '', company: '', title: '', phone: '' })
+  const [walkInForm, setWalkInForm] = useState({ first_name: '', last_name: '', email: '', phone: '', company: '', linkedin_url: '' })
   const [walkInSubmitting, setWalkInSubmitting] = useState(false)
+
+  // Plus-one state: last checked-in guest info for "Add Plus One" flow
+  const [lastCheckedInGuest, setLastCheckedInGuest] = useState<{ name: string; contactId: string } | null>(null)
+  const [walkInAttachedTo, setWalkInAttachedTo] = useState<{ contactId: string; name: string } | null>(null)
 
   // Bulk select (laptop only)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
@@ -203,12 +207,16 @@ export default function DoorViewPage() {
       })
       if (res.ok || res.status === 409) {
         const row = rows.find(r => r.id === rowId)
+        const fbType = res.status === 409 ? 'already' : 'success'
         setScanFeedback({
-          type: res.status === 409 ? 'already' : 'success',
+          type: fbType,
           guest_name: row?.full_name,
           company: row?.company || undefined,
           table_assignment: row?.table_assignment,
         })
+        if (fbType === 'success' && row?.full_name && row?.contact_id) {
+          setLastCheckedInGuest({ name: row.full_name, contactId: row.contact_id })
+        }
         await fetchData()
       }
     } catch {
@@ -252,6 +260,9 @@ export default function DoorViewPage() {
           company: result.company,
           table_assignment: result.table_assignment,
         })
+        if (result.guest_name && result.contact_id) {
+          setLastCheckedInGuest({ name: result.guest_name, contactId: result.contact_id })
+        }
         await fetchData()
       } else if (result.status === 'already_checked_in') {
         setScanFeedback({
@@ -275,21 +286,29 @@ export default function DoorViewPage() {
     e.preventDefault()
     setWalkInSubmitting(true)
     try {
+      const fullName = `${walkInForm.first_name} ${walkInForm.last_name}`.trim()
       const res = await fetch(`${apiBase}/walk-in`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          full_name: walkInForm.full_name,
-          email: walkInForm.email || null,
-          company: walkInForm.company || null,
-          title: walkInForm.title || null,
-          phone: walkInForm.phone || null,
+          first_name: walkInForm.first_name,
+          last_name: walkInForm.last_name,
+          email: walkInForm.email,
+          phone: walkInForm.phone,
+          company: walkInForm.company,
+          linkedin_url: walkInForm.linkedin_url || null,
+          attached_to_contact_id: walkInAttachedTo?.contactId || undefined,
         }),
       })
       if (res.ok) {
-        setScanFeedback({ type: 'success', guest_name: walkInForm.full_name, company: walkInForm.company || undefined })
+        const data = await res.json()
+        setScanFeedback({ type: 'success', guest_name: fullName, company: walkInForm.company || undefined })
+        if (data.contact_id) {
+          setLastCheckedInGuest({ name: fullName, contactId: data.contact_id })
+        }
         setShowWalkIn(false)
-        setWalkInForm({ full_name: '', email: '', company: '', title: '', phone: '' })
+        setWalkInAttachedTo(null)
+        setWalkInForm({ first_name: '', last_name: '', email: '', phone: '', company: '', linkedin_url: '' })
         await fetchData()
       } else {
         const data = await res.json()
@@ -430,6 +449,18 @@ export default function DoorViewPage() {
                 Table {scanFeedback.table_assignment}
               </div>
             )}
+            {lastCheckedInGuest && (
+              <button
+                onClick={() => {
+                  setScanFeedback(null)
+                  setWalkInAttachedTo({ contactId: lastCheckedInGuest.contactId, name: lastCheckedInGuest.name })
+                  setShowWalkIn(true)
+                }}
+                className="pointer-events-auto mt-3 px-4 py-1.5 bg-white/20 hover:bg-white/30 rounded-full text-sm font-medium transition-colors"
+              >
+                + Add Plus One
+              </button>
+            )}
           </>
         )}
         {scanFeedback.type === 'already' && (
@@ -554,62 +585,62 @@ export default function DoorViewPage() {
         <div className="flex items-center justify-between px-6 py-4 border-b border-ui-border">
           <div className="flex items-center gap-2">
             <UserPlus className="w-5 h-5 text-brand-terracotta" />
-            <h3 className="text-lg font-semibold text-brand-charcoal">Walk-in Registration</h3>
+            <h3 className="text-lg font-semibold text-brand-charcoal">
+              {walkInAttachedTo ? `Plus One for ${walkInAttachedTo.name}` : 'Walk-in Registration'}
+            </h3>
           </div>
-          <button onClick={() => setShowWalkIn(false)} className="p-1 hover:bg-brand-cream rounded-lg transition-colors">
+          <button onClick={() => { setShowWalkIn(false); setWalkInAttachedTo(null) }} className="p-1 hover:bg-brand-cream rounded-lg transition-colors">
             <X className="w-5 h-5 text-ui-tertiary" />
           </button>
         </div>
 
         <form onSubmit={handleWalkInSubmit} className="p-6 space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-brand-charcoal mb-1">Full Name *</label>
-            <input
-              type="text"
-              required
-              value={walkInForm.full_name}
-              onChange={(e) => setWalkInForm({ ...walkInForm, full_name: e.target.value })}
-              className="w-full px-3 py-2.5 border border-ui-border rounded-lg text-sm focus:outline-none focus:border-brand-terracotta focus:ring-1 focus:ring-brand-terracotta"
-              placeholder="Jane Smith"
-              autoFocus
-            />
-          </div>
+          {/* First Name + Last Name */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-brand-charcoal mb-1">Company</label>
+              <label className="block text-sm font-medium text-brand-charcoal mb-1">First Name *</label>
               <input
                 type="text"
-                value={walkInForm.company}
-                onChange={(e) => setWalkInForm({ ...walkInForm, company: e.target.value })}
+                required
+                autoFocus
+                value={walkInForm.first_name}
+                onChange={(e) => setWalkInForm({ ...walkInForm, first_name: e.target.value })}
                 className="w-full px-3 py-2.5 border border-ui-border rounded-lg text-sm focus:outline-none focus:border-brand-terracotta focus:ring-1 focus:ring-brand-terracotta"
-                placeholder="Acme Inc"
+                placeholder="Jane"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-brand-charcoal mb-1">Title</label>
+              <label className="block text-sm font-medium text-brand-charcoal mb-1">Last Name *</label>
               <input
                 type="text"
-                value={walkInForm.title}
-                onChange={(e) => setWalkInForm({ ...walkInForm, title: e.target.value })}
+                required
+                value={walkInForm.last_name}
+                onChange={(e) => setWalkInForm({ ...walkInForm, last_name: e.target.value })}
                 className="w-full px-3 py-2.5 border border-ui-border rounded-lg text-sm focus:outline-none focus:border-brand-terracotta focus:ring-1 focus:ring-brand-terracotta"
-                placeholder="VP Engineering"
+                placeholder="Smith"
               />
             </div>
           </div>
+
+          {/* Email */}
           <div>
-            <label className="block text-sm font-medium text-brand-charcoal mb-1">Email</label>
+            <label className="block text-sm font-medium text-brand-charcoal mb-1">Email *</label>
             <input
               type="email"
+              required
               value={walkInForm.email}
               onChange={(e) => setWalkInForm({ ...walkInForm, email: e.target.value })}
               className="w-full px-3 py-2.5 border border-ui-border rounded-lg text-sm focus:outline-none focus:border-brand-terracotta focus:ring-1 focus:ring-brand-terracotta"
               placeholder="jane@company.com"
             />
           </div>
+
+          {/* Phone */}
           <div>
-            <label className="block text-sm font-medium text-brand-charcoal mb-1">Phone</label>
+            <label className="block text-sm font-medium text-brand-charcoal mb-1">Phone Number *</label>
             <input
               type="tel"
+              required
               value={walkInForm.phone}
               onChange={(e) => setWalkInForm({ ...walkInForm, phone: e.target.value })}
               className="w-full px-3 py-2.5 border border-ui-border rounded-lg text-sm focus:outline-none focus:border-brand-terracotta focus:ring-1 focus:ring-brand-terracotta"
@@ -617,17 +648,60 @@ export default function DoorViewPage() {
             />
           </div>
 
+          {/* Company with N/A skip */}
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <label className="block text-sm font-medium text-brand-charcoal">Company *</label>
+              <button
+                type="button"
+                onClick={() => setWalkInForm({ ...walkInForm, company: 'N/A' })}
+                className="text-xs text-ui-tertiary hover:text-brand-terracotta transition-colors"
+              >
+                Skip (N/A)
+              </button>
+            </div>
+            <input
+              type="text"
+              required
+              value={walkInForm.company}
+              onChange={(e) => setWalkInForm({ ...walkInForm, company: e.target.value })}
+              className="w-full px-3 py-2.5 border border-ui-border rounded-lg text-sm focus:outline-none focus:border-brand-terracotta focus:ring-1 focus:ring-brand-terracotta"
+              placeholder="Acme Inc"
+            />
+          </div>
+
+          {/* LinkedIn URL */}
+          <div>
+            <label className="block text-sm font-medium text-brand-charcoal mb-1">LinkedIn URL</label>
+            <input
+              type="url"
+              value={walkInForm.linkedin_url}
+              onChange={(e) => setWalkInForm({ ...walkInForm, linkedin_url: e.target.value })}
+              className="w-full px-3 py-2.5 border border-ui-border rounded-lg text-sm focus:outline-none focus:border-brand-terracotta focus:ring-1 focus:ring-brand-terracotta"
+              placeholder="https://linkedin.com/in/janesmith"
+            />
+            <p className="text-[11px] text-ui-tertiary mt-1">We&apos;ll use this to complete their profile</p>
+          </div>
+
+          {/* Guest of indicator (when plus-one) */}
+          {walkInAttachedTo && (
+            <div className="flex items-center gap-2 px-3 py-2 bg-brand-cream border border-ui-border rounded-lg">
+              <span className="text-xs font-medium text-ui-tertiary">Guest of:</span>
+              <span className="text-sm font-medium text-brand-charcoal">{walkInAttachedTo.name}</span>
+            </div>
+          )}
+
           <div className="flex justify-end gap-3 pt-2">
             <button
               type="button"
-              onClick={() => setShowWalkIn(false)}
+              onClick={() => { setShowWalkIn(false); setWalkInAttachedTo(null) }}
               className="px-4 py-2.5 text-sm font-medium text-ui-tertiary hover:text-brand-charcoal transition-colors"
             >
               Cancel
             </button>
             <button
               type="submit"
-              disabled={walkInSubmitting || !walkInForm.full_name}
+              disabled={walkInSubmitting || !walkInForm.first_name || !walkInForm.last_name || !walkInForm.email || !walkInForm.phone || !walkInForm.company}
               className="px-6 py-2.5 bg-brand-terracotta hover:bg-brand-terracotta/90 text-white text-sm font-semibold rounded-lg transition-colors disabled:opacity-50"
             >
               {walkInSubmitting ? 'Adding...' : 'Add & Check In'}

@@ -14,6 +14,11 @@ vi.mock('@/lib/audit-log', () => ({
   logAction: vi.fn(),
 }));
 
+vi.mock('@/lib/contacts/dedup', () => ({
+  computeDedupKey: vi.fn().mockReturnValue('walkin@test.com:walk-in guest'),
+  findDuplicates: vi.fn().mockResolvedValue([]),
+}));
+
 import { checkInGuest, onboardWalkIn, getCheckinMetrics } from '../manager';
 
 describe('checkInGuest', () => {
@@ -76,19 +81,34 @@ describe('checkInGuest', () => {
 describe('onboardWalkIn', () => {
   beforeEach(() => {
     mockDb.mockReset();
-    mockDb.mockResolvedValue([{ id: 'checkin-walk', full_name: 'Walk In', source: 'WALK_IN' }]);
+    let callCount = 0;
+    mockDb.mockImplementation((..._args: any[]) => {
+      callCount++;
+      if (callCount === 1) {
+        // INSERT into people_contacts
+        return [{ id: 'contact-new' }];
+      }
+      if (callCount === 2) {
+        // INSERT into event_checkins
+        return [{ id: 'checkin-walk', full_name: 'Walk-in Guest', source: 'WALK_IN', contact_id: 'contact-new' }];
+      }
+      return [];
+    });
   });
 
-  it('creates a walk-in check-in record', async () => {
+  it('creates a contact and walk-in check-in record', async () => {
     const result = await onboardWalkIn({
       eventId: 1,
       workspaceId: 'ws-1',
-      fullName: 'Walk-in Guest',
+      firstName: 'Walk-in',
+      lastName: 'Guest',
       email: 'walkin@test.com',
+      phone: '+1 555 000 0000',
+      company: 'Acme Inc',
       checkedInBy: 'user-1',
     });
 
-    expect(result).toMatchObject({ id: 'checkin-walk' });
+    expect(result).toMatchObject({ id: 'checkin-walk', contact_id: 'contact-new' });
     expect(mockDb).toHaveBeenCalled();
   });
 });

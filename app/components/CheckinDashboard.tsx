@@ -109,8 +109,9 @@ export const CheckinDashboard = forwardRef<CheckinDashboardHandle, CheckinDashbo
   const [showDoorLink, setShowDoorLink] = useState(false)
   const [dossierContactId, setDossierContactId] = useState<string | null>(null)
 
-  // Toasts
-  const [lastCheckedIn, setLastCheckedIn] = useState<string | null>(null)
+  // Plus-one toast
+  const [lastCheckedIn, setLastCheckedIn] = useState<{ name: string; contactId: string } | null>(null)
+  const [plusOneMode, setPlusOneMode] = useState(false)
 
   // In-progress actions
   const [checkingInIds, setCheckingInIds] = useState<Set<string>>(new Set())
@@ -332,8 +333,10 @@ export const CheckinDashboard = forwardRef<CheckinDashboardHandle, CheckinDashbo
         }),
       })
       if (res.ok || res.status === 409) {
-        setLastCheckedIn(row.full_name)
-        setTimeout(() => setLastCheckedIn(null), 3000)
+        if (res.ok && row.contact_id) {
+          setLastCheckedIn({ name: row.full_name, contactId: row.contact_id })
+          setTimeout(() => setLastCheckedIn(null), 5000)
+        }
         await fetchMetrics()
       } else {
         const data = await res.json()
@@ -500,7 +503,23 @@ export const CheckinDashboard = forwardRef<CheckinDashboardHandle, CheckinDashbo
       {lastCheckedIn && (
         <div className="flex items-center gap-2 p-3 bg-emerald-50 border border-emerald-200 rounded-lg text-sm text-emerald-700">
           <CheckCircle className="w-4 h-4 shrink-0" />
-          {lastCheckedIn} checked in successfully
+          <span className="flex-1">{lastCheckedIn.name} checked in</span>
+          <button
+            onClick={() => {
+              setPlusOneMode(true)
+              setShowWalkIn(true)
+              setLastCheckedIn(null)
+            }}
+            className="px-2.5 py-1 text-xs font-semibold bg-emerald-600 text-white rounded-full hover:bg-emerald-700 transition-colors"
+          >
+            + Add Plus One
+          </button>
+          <button
+            onClick={() => setLastCheckedIn(null)}
+            className="text-emerald-500 hover:text-emerald-800 font-medium"
+          >
+            <X size={14} />
+          </button>
         </div>
       )}
 
@@ -984,14 +1003,17 @@ export const CheckinDashboard = forwardRef<CheckinDashboardHandle, CheckinDashbo
       {showWalkIn && (
         <WalkInForm
           eventId={eventId}
-          onClose={() => setShowWalkIn(false)}
-          onSuccess={() => {
+          onClose={() => { setShowWalkIn(false); setPlusOneMode(false) }}
+          onSuccess={(checkin) => {
             setShowWalkIn(false)
+            setPlusOneMode(false)
+            setLastCheckedIn({ name: checkin.full_name, contactId: checkin.contact_id })
+            setTimeout(() => setLastCheckedIn(null), 5000)
             fetchMetrics()
           }}
           tables={tables}
           seatingEnabled={seatingEnabled}
-          workspaceMembers={workspaceMembers}
+          attachedToGuest={plusOneMode && lastCheckedIn ? { contactId: lastCheckedIn.contactId, name: lastCheckedIn.name } : undefined}
         />
       )}
 

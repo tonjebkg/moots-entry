@@ -25,11 +25,13 @@ export const POST = withErrorHandling(async (request: NextRequest, context: any)
   const checkin = await onboardWalkIn({
     eventId: eventIdNum,
     workspaceId: auth.workspace.id,
-    fullName: validation.data.full_name,
+    firstName: validation.data.first_name,
+    lastName: validation.data.last_name,
     email: validation.data.email,
-    company: validation.data.company,
-    title: validation.data.title,
     phone: validation.data.phone,
+    company: validation.data.company,
+    linkedinUrl: validation.data.linkedin_url,
+    attachedToContactId: validation.data.attached_to_contact_id,
     checkedInBy: auth.user.id,
     notes: validation.data.notes,
   });
@@ -41,17 +43,15 @@ export const POST = withErrorHandling(async (request: NextRequest, context: any)
     action: 'checkin.walk_in_onboarded',
     entityType: 'event_checkin',
     entityId: checkin.id,
-    newValue: { event_id: eventIdNum, full_name: validation.data.full_name },
+    newValue: { event_id: eventIdNum, full_name: `${validation.data.first_name} ${validation.data.last_name}` },
   });
 
-  // Send welcome email if email provided
-  if (validation.data.email) {
-    sendWalkInWelcomeEmail({
-      to: validation.data.email,
-      recipientName: validation.data.full_name,
-      eventTitle: `Event #${eventId}`,
-    }).catch(() => {}); // Fire and forget
-  }
+  // Send welcome email
+  sendWalkInWelcomeEmail({
+    to: validation.data.email,
+    recipientName: `${validation.data.first_name} ${validation.data.last_name}`,
+    eventTitle: `Event #${eventId}`,
+  }).catch(() => {}); // Fire and forget
 
   return NextResponse.json(checkin, { status: 201 });
 });

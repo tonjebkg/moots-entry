@@ -72,6 +72,7 @@ const SOURCE_LABELS: Record<string, { label: string; color: string }> = {
   EVENT_IMPORT: { label: 'Import', color: 'bg-gray-100 text-gray-700 border-gray-200' },
   MANUAL: { label: 'Manual', color: 'bg-gray-100 text-gray-700 border-gray-200' },
   ENRICHMENT: { label: 'Enriched', color: 'bg-teal-50 text-teal-700 border-teal-200' },
+  WALK_IN: { label: 'Walk-in', color: 'bg-orange-50 text-orange-700 border-orange-200' },
 }
 
 const EVENT_STATUS_LABELS: Record<string, { label: string; color: string }> = {

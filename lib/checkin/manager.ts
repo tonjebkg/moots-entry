@@ -1,5 +1,6 @@
 import { getDb } from '@/lib/db';
 import { logAction } from '@/lib/audit-log';
+import { computeDedupKey, findDuplicates } from '@/lib/contacts/dedup';
 import type { CheckinMetrics, EventCheckin, NotArrivedGuest } from '@/types/phase3';
 
 interface CheckInParams {
@@ -84,36 +85,102 @@ export async function checkInGuest(params: CheckInParams): Promise<EventCheckin>
 interface WalkInParams {
   eventId: number;
   workspaceId: string;
-  fullName: string;
-  email?: string | null;
-  company?: string | null;
-  title?: string | null;
-  phone?: string | null;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  company: string;
+  linkedinUrl?: string | null;
+  attachedToContactId?: string | null;
   checkedInBy: string;
   notes?: string | null;
 }
 
 /**
- * Onboard a walk-in guest. Creates checkin record with WALK_IN source.
+ * Onboard a walk-in guest.
+ * 1. Dedup against existing contacts
+ * 2. Create people_contacts record (or link to existing)
+ * 3. Create event_checkins record with contact_id
+ * 4. Queue enrichment (fire-and-forget)
  */
 export async function onboardWalkIn(params: WalkInParams): Promise<EventCheckin> {
   const db = getDb();
+  const fullName = `${params.firstName} ${params.lastName}`.trim();
 
+  // ─── Step 1: Dedup check ────────────────────────────────────────
+  const emails = [{ email: params.email.toLowerCase().trim(), primary: true }];
+  const phones = [{ number: params.phone, primary: true }];
+  const dedupKey = computeDedupKey(fullName, emails);
+
+  let contactId: string | null = null;
+
+  if (dedupKey) {
+    const existing = await findDuplicates(params.workspaceId, dedupKey);
+    if (existing.length > 0) {
+      contactId = existing[0].id;
+    }
+  }
+
+  // ─── Step 2: Create contact if no match ─────────────────────────
+  if (!contactId) {
+    const emailsJson = JSON.stringify(emails);
+    const phonesJson = JSON.stringify(phones);
+
+    const contact = await db`
+      INSERT INTO people_contacts (
+        workspace_id, full_name, first_name, last_name,
+        emails, phones, company, linkedin_url,
+        source, source_detail, dedup_key
+      ) VALUES (
+        ${params.workspaceId},
+        ${fullName},
+        ${params.firstName},
+        ${params.lastName},
+        ${emailsJson}::jsonb,
+        ${phonesJson}::jsonb,
+        ${params.company !== 'N/A' ? params.company : null},
+        ${params.linkedinUrl || null},
+        'WALK_IN'::contact_source,
+        ${'Walk-in at event #' + params.eventId},
+        ${dedupKey}
+      )
+      RETURNING id
+    `;
+    contactId = contact[0].id;
+  }
+
+  // ─── Step 3: Create checkin record ──────────────────────────────
   const result = await db`
     INSERT INTO event_checkins (
-      event_id, workspace_id,
-      full_name, email, company, title, phone,
+      event_id, workspace_id, contact_id,
+      full_name, email, company, phone,
       source, checked_in_by, notes
     ) VALUES (
-      ${params.eventId}, ${params.workspaceId},
-      ${params.fullName}, ${params.email || null}, ${params.company || null},
-      ${params.title || null}, ${params.phone || null},
+      ${params.eventId}, ${params.workspaceId}, ${contactId},
+      ${fullName}, ${params.email}, ${params.company},
+      ${params.phone},
       'WALK_IN'::checkin_source, ${params.checkedInBy}, ${params.notes || null}
     )
     RETURNING *
   `;
 
-  return result[0] as EventCheckin;
+  // ─── Step 4: Queue enrichment (fire-and-forget) ─────────────────
+  if (contactId && (params.linkedinUrl || params.email)) {
+    try {
+      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.VERCEL_URL
+        ? `https://${process.env.VERCEL_URL}`
+        : 'http://localhost:3000';
+      fetch(`${baseUrl}/api/contacts/enrich`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ contact_id: contactId }),
+      }).catch(() => {}); // Fire and forget
+    } catch {
+      // Non-critical
+    }
+  }
+
+  return { ...result[0], contact_id: contactId } as EventCheckin;
 }
 
 /**
