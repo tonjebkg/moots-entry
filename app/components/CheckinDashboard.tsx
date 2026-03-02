@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useState, useMemo, useCallback, forwardRef, useImperativeHandle } from 'react'
+import React, { useEffect, useState, useMemo, useCallback, useRef, forwardRef, useImperativeHandle } from 'react'
 import {
   Search, AlertCircle, CheckCircle, ChevronDown,
   MoreHorizontal, X, Users, Undo2
@@ -97,6 +97,13 @@ export const CheckinDashboard = forwardRef<CheckinDashboardHandle, CheckinDashbo
   // Inline column dropdowns (Fix 2)
   const [inlineAssignId, setInlineAssignId] = useState<string | null>(null)
 
+  // Fixed-position dropdown coords (avoid clip from overflow-hidden)
+  const [menuPos, setMenuPos] = useState<{ top: number; left: number; flip: boolean } | null>(null)
+  const [inlineAssignPos, setInlineAssignPos] = useState<{ top: number; left: number; flip: boolean } | null>(null)
+  const [subMenuPos, setSubMenuPos] = useState<{ top: number; left: number; flip: boolean } | null>(null)
+  const actionBtnRef = useRef<HTMLButtonElement | null>(null)
+  const inlineAssignBtnRef = useRef<HTMLButtonElement | null>(null)
+
   // Undo check-in confirm (Fix 3)
   const [undoConfirmId, setUndoConfirmId] = useState<string | null>(null)
   const [undoingIds, setUndoingIds] = useState<Set<string>>(new Set())
@@ -118,6 +125,37 @@ export const CheckinDashboard = forwardRef<CheckinDashboardHandle, CheckinDashbo
 
   // No-show tracking (local state since API may not track this)
   const [noShowIds, setNoShowIds] = useState<Set<string>>(new Set())
+
+  // ─── Fixed-position dropdown helper ────────────────────────────────
+  const calcDropdownPos = useCallback((
+    trigger: HTMLElement,
+    dropdownHeight: number,
+    align: 'left' | 'right' = 'left',
+    dropdownWidth = 208
+  ) => {
+    const rect = trigger.getBoundingClientRect()
+    const flip = rect.bottom + dropdownHeight + 4 > window.innerHeight
+    return {
+      top: flip ? rect.top - dropdownHeight - 4 : rect.bottom + 4,
+      left: align === 'right' ? rect.right - dropdownWidth : rect.left,
+      flip,
+    }
+  }, [])
+
+  const calcSubMenuPos = useCallback((
+    parentItem: HTMLElement,
+    subHeight: number,
+    subWidth = 208
+  ) => {
+    const rect = parentItem.getBoundingClientRect()
+    const flipH = rect.right + subWidth + 4 > window.innerWidth
+    const flipV = rect.top + subHeight > window.innerHeight
+    return {
+      top: flipV ? Math.max(8, window.innerHeight - subHeight - 8) : rect.top,
+      left: flipH ? rect.left - subWidth - 4 : rect.right + 4,
+      flip: flipV,
+    }
+  }, [])
 
   // ─── Imperative Handle (Fix 1) ─────────────────────────────────────
 
@@ -401,6 +439,7 @@ export const CheckinDashboard = forwardRef<CheckinDashboardHandle, CheckinDashbo
   function handleMarkNoShow(rowId: string) {
     setNoShowIds(prev => new Set(prev).add(rowId))
     setActionMenuId(null)
+    setMenuPos(null)
   }
 
   async function handleAssignTeamMember(rowId: string, memberName: string) {
@@ -408,7 +447,10 @@ export const CheckinDashboard = forwardRef<CheckinDashboardHandle, CheckinDashbo
     if (!row?.contact_id) return
     setRowAssignDropdown(null)
     setInlineAssignId(null)
+    setInlineAssignPos(null)
     setActionMenuId(null)
+    setMenuPos(null)
+    setSubMenuPos(null)
     try {
       const member = workspaceMembers.find(m => m.user_full_name === memberName)
       if (!member) return
@@ -446,6 +488,8 @@ export const CheckinDashboard = forwardRef<CheckinDashboardHandle, CheckinDashbo
     if (!row?.contact_id) return
     setRowTableDropdown(null)
     setActionMenuId(null)
+    setMenuPos(null)
+    setSubMenuPos(null)
     try {
       await fetch(`/api/events/${eventId}/seating`, {
         method: 'POST',
@@ -631,8 +675,8 @@ export const CheckinDashboard = forwardRef<CheckinDashboardHandle, CheckinDashbo
             )}
           </div>
 
-          {/* Change Table (if seating enabled) */}
-          {seatingEnabled && showTableColumn && (
+          {/* Change Table (if seating enabled and tables exist) */}
+          {seatingEnabled && showTableColumn && tables.length > 0 && (
             <div className="relative">
               <button
                 onClick={() => setBulkTableOpen(!bulkTableOpen)}
@@ -802,15 +846,23 @@ export const CheckinDashboard = forwardRef<CheckinDashboardHandle, CheckinDashbo
                     <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                       <div className="relative">
                         <button
-                          onClick={() => setInlineAssignId(inlineAssignId === row.id ? null : row.id)}
+                          onClick={(e) => {
+                            if (inlineAssignId === row.id) { setInlineAssignId(null); setInlineAssignPos(null); return }
+                            const pos = calcDropdownPos(e.currentTarget, 200, 'left', 208)
+                            setInlineAssignPos(pos)
+                            setInlineAssignId(row.id)
+                          }}
                           className="text-ui-secondary hover:text-brand-terracotta hover:underline transition-colors cursor-pointer"
                         >
                           {row.assigned_team_member || '—'}
                         </button>
-                        {inlineAssignId === row.id && (
+                        {inlineAssignId === row.id && inlineAssignPos && (
                           <>
-                            <div className="fixed inset-0 z-10" onClick={() => setInlineAssignId(null)} />
-                            <div className="absolute left-0 top-full mt-1 w-52 bg-white border border-ui-border rounded-lg shadow-lg z-20 py-1 max-h-48 overflow-y-auto">
+                            <div className="fixed inset-0 z-[60]" onClick={() => { setInlineAssignId(null); setInlineAssignPos(null) }} />
+                            <div
+                              className="fixed w-52 bg-white border border-ui-border rounded-lg shadow-lg z-[61] py-1 max-h-48 overflow-y-auto"
+                              style={{ top: inlineAssignPos.top, left: inlineAssignPos.left }}
+                            >
                               {workspaceMembers.length === 0 ? (
                                 <div className="px-3 py-3 text-[13px] text-ui-tertiary text-center">
                                   No team members added yet
@@ -898,19 +950,30 @@ export const CheckinDashboard = forwardRef<CheckinDashboardHandle, CheckinDashbo
                       {row.checked_in_at ? formatUSTime(new Date(row.checked_in_at)) : '—'}
                     </td>
 
-                    {/* Three-dot menu (Fix 4: no Change Table when no seating — already done) */}
+                    {/* Three-dot menu — fixed positioning to avoid overflow clip */}
                     <td className="px-3 py-3" onClick={(e) => e.stopPropagation()}>
                       <div className="relative">
                         <button
-                          onClick={() => setActionMenuId(actionMenuId === row.id ? null : row.id)}
+                          onClick={(e) => {
+                            if (actionMenuId === row.id) { setActionMenuId(null); setMenuPos(null); return }
+                            const pos = calcDropdownPos(e.currentTarget, 160, 'right', 208)
+                            setMenuPos(pos)
+                            setActionMenuId(row.id)
+                            setRowAssignDropdown(null)
+                            setRowTableDropdown(null)
+                            setSubMenuPos(null)
+                          }}
                           className="p-1 rounded hover:bg-brand-cream transition-colors"
                         >
                           <MoreHorizontal size={16} className="text-ui-tertiary" />
                         </button>
-                        {actionMenuId === row.id && (
+                        {actionMenuId === row.id && menuPos && (
                           <>
-                            <div className="fixed inset-0 z-10" onClick={() => { setActionMenuId(null); setRowAssignDropdown(null); setRowTableDropdown(null) }} />
-                            <div className="absolute right-0 top-full mt-1 w-52 bg-white border border-ui-border rounded-lg shadow-lg z-20 py-1">
+                            <div className="fixed inset-0 z-[60]" onClick={() => { setActionMenuId(null); setMenuPos(null); setRowAssignDropdown(null); setRowTableDropdown(null); setSubMenuPos(null) }} />
+                            <div
+                              className="fixed w-52 bg-white border border-ui-border rounded-lg shadow-lg z-[61] py-1"
+                              style={{ top: menuPos.top, left: menuPos.left }}
+                            >
                               {row.status === 'NOT_ARRIVED' && (
                                 <button
                                   onClick={() => handleMarkNoShow(row.id)}
@@ -921,48 +984,64 @@ export const CheckinDashboard = forwardRef<CheckinDashboardHandle, CheckinDashbo
                               )}
 
                               {/* Assign to Team Member */}
-                              <div className="relative">
-                                <button
-                                  onClick={() => setRowAssignDropdown(rowAssignDropdown === row.id ? null : row.id)}
-                                  className="w-full text-left px-3 py-2 text-[13px] text-brand-charcoal hover:bg-brand-cream transition-colors flex items-center justify-between"
+                              <button
+                                onClick={(e) => {
+                                  if (rowAssignDropdown === row.id) { setRowAssignDropdown(null); setSubMenuPos(null); return }
+                                  const pos = calcSubMenuPos(e.currentTarget, 200, 208)
+                                  setSubMenuPos(pos)
+                                  setRowAssignDropdown(row.id)
+                                  setRowTableDropdown(null)
+                                }}
+                                className="w-full text-left px-3 py-2 text-[13px] text-brand-charcoal hover:bg-brand-cream transition-colors flex items-center justify-between"
+                              >
+                                Assign to Team Member
+                                <ChevronDown size={10} className="text-ui-tertiary" />
+                              </button>
+                              {rowAssignDropdown === row.id && subMenuPos && (
+                                <div
+                                  className="fixed w-52 bg-white border border-ui-border rounded-lg shadow-lg z-[62] py-1 max-h-48 overflow-y-auto"
+                                  style={{ top: subMenuPos.top, left: subMenuPos.left }}
                                 >
-                                  Assign to Team Member
-                                  <ChevronDown size={10} className="text-ui-tertiary" />
-                                </button>
-                                {rowAssignDropdown === row.id && (
-                                  <div className="absolute left-full top-0 ml-1 w-52 bg-white border border-ui-border rounded-lg shadow-lg z-30 py-1 max-h-48 overflow-y-auto">
-                                    {workspaceMembers.length === 0 ? (
-                                      <div className="px-3 py-3 text-[13px] text-ui-tertiary text-center">
-                                        No team members added yet
-                                      </div>
-                                    ) : (
-                                      workspaceMembers.map(m => (
-                                        <button
-                                          key={m.user_id}
-                                          onClick={() => handleAssignTeamMember(row.id, m.user_full_name)}
-                                          className="w-full flex items-center gap-2 px-3 py-2 text-[13px] text-brand-charcoal hover:bg-brand-cream transition-colors"
-                                        >
-                                          <AvatarInitials name={m.user_full_name || '?'} size={20} />
-                                          <span className="font-medium">{m.user_full_name}</span>
-                                        </button>
-                                      ))
-                                    )}
-                                  </div>
-                                )}
-                              </div>
+                                  {workspaceMembers.length === 0 ? (
+                                    <div className="px-3 py-3 text-[13px] text-ui-tertiary text-center">
+                                      No team members added yet
+                                    </div>
+                                  ) : (
+                                    workspaceMembers.map(m => (
+                                      <button
+                                        key={m.user_id}
+                                        onClick={() => handleAssignTeamMember(row.id, m.user_full_name)}
+                                        className="w-full flex items-center gap-2 px-3 py-2 text-[13px] text-brand-charcoal hover:bg-brand-cream transition-colors"
+                                      >
+                                        <AvatarInitials name={m.user_full_name || '?'} size={20} />
+                                        <span className="font-medium">{m.user_full_name}</span>
+                                      </button>
+                                    ))
+                                  )}
+                                </div>
+                              )}
 
-                              {/* Change Table — Fix 4: only show when seating enabled */}
-                              {seatingEnabled && (
-                                <div className="relative">
+                              {/* Change Table — only show when seating enabled AND tables exist */}
+                              {seatingEnabled && tables.length > 0 && (
+                                <>
                                   <button
-                                    onClick={() => setRowTableDropdown(rowTableDropdown === row.id ? null : row.id)}
+                                    onClick={(e) => {
+                                      if (rowTableDropdown === row.id) { setRowTableDropdown(null); setSubMenuPos(null); return }
+                                      const pos = calcSubMenuPos(e.currentTarget, 200, 176)
+                                      setSubMenuPos(pos)
+                                      setRowTableDropdown(row.id)
+                                      setRowAssignDropdown(null)
+                                    }}
                                     className="w-full text-left px-3 py-2 text-[13px] text-brand-charcoal hover:bg-brand-cream transition-colors flex items-center justify-between"
                                   >
                                     Change Table
                                     <ChevronDown size={10} className="text-ui-tertiary" />
                                   </button>
-                                  {rowTableDropdown === row.id && (
-                                    <div className="absolute left-full top-0 ml-1 w-44 bg-white border border-ui-border rounded-lg shadow-lg z-30 py-1 max-h-48 overflow-y-auto">
+                                  {rowTableDropdown === row.id && subMenuPos && (
+                                    <div
+                                      className="fixed w-44 bg-white border border-ui-border rounded-lg shadow-lg z-[62] py-1 max-h-48 overflow-y-auto"
+                                      style={{ top: subMenuPos.top, left: subMenuPos.left }}
+                                    >
                                       {tables.map(t => (
                                         <button
                                           key={t.number}
@@ -974,13 +1053,13 @@ export const CheckinDashboard = forwardRef<CheckinDashboardHandle, CheckinDashbo
                                       ))}
                                     </div>
                                   )}
-                                </div>
+                                </>
                               )}
 
                               {/* View Profile */}
                               {row.contact_id && (
                                 <button
-                                  onClick={() => { setDossierContactId(row.contact_id!); setActionMenuId(null) }}
+                                  onClick={() => { setDossierContactId(row.contact_id!); setActionMenuId(null); setMenuPos(null) }}
                                   className="w-full text-left px-3 py-2 text-[13px] text-brand-charcoal hover:bg-brand-cream transition-colors"
                                 >
                                   View Profile
