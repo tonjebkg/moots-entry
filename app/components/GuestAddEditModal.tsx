@@ -159,286 +159,173 @@ export function GuestAddEditModal({ campaignId, guestId, onSuccess, onCancel }: 
     }
   }
 
+  const inputClass = "w-full px-3 py-2 bg-white border border-ui-border rounded-lg text-sm text-brand-charcoal placeholder-ui-tertiary focus:outline-none focus:border-brand-terracotta focus:ring-1 focus:ring-brand-terracotta transition-colors"
+
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-6">
-      <div className="bg-white rounded-lg shadow-lg w-full max-w-md">
-        <div className="flex items-center justify-between p-6 border-b border-ui-border">
-          <h2 className="text-xl font-semibold text-brand-charcoal tracking-tight">
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-card shadow-2xl w-full max-w-md flex flex-col max-h-[calc(100vh-2rem)]">
+        {/* Header — sticky */}
+        <div className="flex items-center justify-between px-5 py-3.5 border-b border-ui-border shrink-0">
+          <h2 className="text-lg font-semibold font-display text-brand-charcoal">
             {guestId ? 'Edit Guest' : 'Add Guest'}
           </h2>
           <button
             onClick={onCancel}
-            className="text-ui-tertiary hover:text-brand-charcoal transition-colors"
+            className="p-1 hover:bg-brand-cream rounded-lg text-ui-tertiary hover:text-brand-charcoal transition-colors"
           >
-            <X size={20} />
+            <X size={18} />
           </button>
         </div>
 
-        <div className="p-6">
+        {/* Scrollable body */}
+        <div className="overflow-y-auto flex-1 min-h-0 px-5 py-4">
           {error && (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4 text-red-700 text-sm">
+            <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-3 text-red-700 text-sm">
               {error}
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {/* First Name */}
-            <div>
-              <label className="block text-sm font-semibold text-brand-charcoal mb-2">
-                First Name <span className="text-red-600">*</span>
-              </label>
-              <input
-                type="text"
-                value={formData.first_name}
-                onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
-                className="w-full px-3 py-2 bg-white border border-ui-border rounded-lg text-brand-charcoal placeholder-ui-tertiary focus:outline-none focus:border-brand-terracotta focus:ring-1 focus:ring-brand-terracotta transition-colors"
-                placeholder="John"
-                required
-              />
+          <form id="guest-form" onSubmit={handleSubmit} className="space-y-3">
+            {/* First Name + Last Name — side by side */}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-sm font-medium text-brand-charcoal mb-1">
+                  First Name <span className="text-red-600">*</span>
+                </label>
+                <input type="text" value={formData.first_name} onChange={(e) => setFormData({ ...formData, first_name: e.target.value })} className={inputClass} placeholder="John" required />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-brand-charcoal mb-1">
+                  Last Name <span className="text-red-600">*</span>
+                </label>
+                <input type="text" value={formData.last_name} onChange={(e) => setFormData({ ...formData, last_name: e.target.value })} className={inputClass} placeholder="Doe" required />
+              </div>
             </div>
 
-            {/* Last Name */}
-            <div>
-              <label className="block text-sm font-semibold text-brand-charcoal mb-2">
-                Last Name <span className="text-red-600">*</span>
-              </label>
-              <input
-                type="text"
-                value={formData.last_name}
-                onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
-                className="w-full px-3 py-2 bg-white border border-ui-border rounded-lg text-brand-charcoal placeholder-ui-tertiary focus:outline-none focus:border-brand-terracotta focus:ring-1 focus:ring-brand-terracotta transition-colors"
-                placeholder="Doe"
-                required
-              />
+            {/* Email + Phone — side by side */}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-sm font-medium text-brand-charcoal mb-1">
+                  Email <span className="text-red-600">*</span>
+                </label>
+                <input type="email" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} className={inputClass} placeholder="john@example.com" required />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-brand-charcoal mb-1">Phone</label>
+                <input type="tel" value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} className={inputClass} placeholder="+1 (555) 123-4567" />
+              </div>
             </div>
 
-            {/* Company */}
-            <div>
-              <label className="block text-sm font-semibold text-brand-charcoal mb-2">
-                Company <span className="text-red-600">*</span>
-              </label>
-              <input
-                type="text"
-                value={formData.company}
-                onChange={(e) => setFormData({ ...formData, company: e.target.value })}
-                className="w-full px-3 py-2 bg-white border border-ui-border rounded-lg text-brand-charcoal placeholder-ui-tertiary focus:outline-none focus:border-brand-terracotta focus:ring-1 focus:ring-brand-terracotta transition-colors"
-                placeholder="Acme Corporation"
-                required
-              />
-            </div>
-
-            {/* Title */}
-            <div>
-              <label className="block text-sm font-semibold text-brand-charcoal mb-2">
-                Title
-              </label>
-              <input
-                type="text"
-                value={formData.title}
-                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                className="w-full px-3 py-2 bg-white border border-ui-border rounded-lg text-brand-charcoal placeholder-ui-tertiary focus:outline-none focus:border-brand-terracotta focus:ring-1 focus:ring-brand-terracotta transition-colors"
-                placeholder="CEO"
-              />
+            {/* Company + Title — side by side */}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-sm font-medium text-brand-charcoal mb-1">
+                  Company <span className="text-red-600">*</span>
+                </label>
+                <input type="text" value={formData.company} onChange={(e) => setFormData({ ...formData, company: e.target.value })} className={inputClass} placeholder="Acme Corp" required />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-brand-charcoal mb-1">Title</label>
+                <input type="text" value={formData.title} onChange={(e) => setFormData({ ...formData, title: e.target.value })} className={inputClass} placeholder="CEO" />
+              </div>
             </div>
 
             {/* LinkedIn URL */}
             <div>
-              <label className="block text-sm font-semibold text-brand-charcoal mb-2">
-                LinkedIn Profile
-              </label>
-              <input
-                type="url"
-                value={formData.linkedin_url}
-                onChange={(e) => setFormData({ ...formData, linkedin_url: e.target.value })}
-                className="w-full px-3 py-2 bg-white border border-ui-border rounded-lg text-brand-charcoal placeholder-ui-tertiary focus:outline-none focus:border-brand-terracotta focus:ring-1 focus:ring-brand-terracotta transition-colors"
-                placeholder="https://linkedin.com/in/johndoe"
-              />
+              <label className="block text-sm font-medium text-brand-charcoal mb-1">LinkedIn</label>
+              <input type="url" value={formData.linkedin_url} onChange={(e) => setFormData({ ...formData, linkedin_url: e.target.value })} className={inputClass} placeholder="https://linkedin.com/in/johndoe" />
             </div>
 
-            {/* Email */}
-            <div>
-              <label className="block text-sm font-semibold text-brand-charcoal mb-2">
-                Email <span className="text-red-600">*</span>
-              </label>
-              <input
-                type="email"
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                className="w-full px-3 py-2 bg-white border border-ui-border rounded-lg text-brand-charcoal placeholder-ui-tertiary focus:outline-none focus:border-brand-terracotta focus:ring-1 focus:ring-brand-terracotta transition-colors"
-                placeholder="john@example.com"
-                required
-              />
+            {/* Event Context section */}
+            <div className="border-t border-ui-border pt-3 mt-1">
+              <h3 className="text-xs font-semibold text-ui-tertiary uppercase tracking-wider mb-2">Event Context</h3>
             </div>
 
-            {/* Phone */}
-            <div>
-              <label className="block text-sm font-semibold text-brand-charcoal mb-2">
-                Phone
-              </label>
-              <input
-                type="tel"
-                value={formData.phone}
-                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                className="w-full px-3 py-2 bg-white border border-ui-border rounded-lg text-brand-charcoal placeholder-ui-tertiary focus:outline-none focus:border-brand-terracotta focus:ring-1 focus:ring-brand-terracotta transition-colors"
-                placeholder="+1 (555) 123-4567"
-              />
-            </div>
-
-            {/* Divider */}
-            <div className="border-t border-ui-border pt-4">
-              <h3 className="text-sm font-semibold text-brand-charcoal mb-3">Event Context</h3>
-            </div>
-
-            {/* Tier */}
-            <div>
-              <label className="block text-sm font-semibold text-brand-charcoal mb-2">
-                Tier
-              </label>
-              <select
-                value={formData.tier}
-                onChange={(e) => setFormData({ ...formData, tier: e.target.value as GuestFormData['tier'] })}
-                className="w-full px-3 py-2 bg-white border border-ui-border rounded-lg text-brand-charcoal focus:outline-none focus:border-brand-terracotta focus:ring-1 focus:ring-brand-terracotta transition-colors"
-              >
-                <option value="TIER_1">Tier 1 (First Wave)</option>
-                <option value="TIER_2">Tier 2 (Second Wave)</option>
-                <option value="TIER_3">Tier 3 (Third Wave)</option>
-                <option value="WAITLIST">Waitlist</option>
-              </select>
-            </div>
-
-            {/* Priority */}
-            <div>
-              <label className="block text-sm font-semibold text-brand-charcoal mb-2">
-                Priority
-              </label>
-              <select
-                value={formData.priority}
-                onChange={(e) => setFormData({ ...formData, priority: e.target.value as GuestFormData['priority'] })}
-                className="w-full px-3 py-2 bg-white border border-ui-border rounded-lg text-brand-charcoal focus:outline-none focus:border-brand-terracotta focus:ring-1 focus:ring-brand-terracotta transition-colors"
-              >
-                <option value="VIP">VIP</option>
-                <option value="HIGH">High</option>
-                <option value="NORMAL">Normal</option>
-                <option value="LOW">Low</option>
-              </select>
-            </div>
-
-            {/* Expected Plus Ones */}
-            <div>
-              <label className="block text-sm font-semibold text-brand-charcoal mb-2">
-                Expected +1s
-              </label>
-              <div className="flex items-center gap-3">
-                <button
-                  type="button"
-                  onClick={() => setFormData({ ...formData, expected_plus_ones: Math.max(0, formData.expected_plus_ones - 1) })}
-                  className="w-10 h-10 flex items-center justify-center bg-white border border-ui-border rounded-lg text-brand-charcoal hover:border-brand-terracotta transition-colors"
-                >
-                  <Minus size={16} />
-                </button>
-                <span className="text-lg font-semibold text-brand-charcoal min-w-[3rem] text-center">
-                  {formData.expected_plus_ones}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => setFormData({ ...formData, expected_plus_ones: formData.expected_plus_ones + 1 })}
-                  className="w-10 h-10 flex items-center justify-center bg-white border border-ui-border rounded-lg text-brand-charcoal hover:border-brand-terracotta transition-colors"
-                >
-                  <Plus size={16} />
-                </button>
+            {/* Tier + Priority + Plus Ones — single row */}
+            <div className="grid grid-cols-3 gap-3">
+              <div>
+                <label className="block text-sm font-medium text-brand-charcoal mb-1">Tier</label>
+                <select value={formData.tier} onChange={(e) => setFormData({ ...formData, tier: e.target.value as GuestFormData['tier'] })} className={inputClass}>
+                  <option value="TIER_1">Tier 1</option>
+                  <option value="TIER_2">Tier 2</option>
+                  <option value="TIER_3">Tier 3</option>
+                  <option value="WAITLIST">Waitlist</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-brand-charcoal mb-1">Priority</label>
+                <select value={formData.priority} onChange={(e) => setFormData({ ...formData, priority: e.target.value as GuestFormData['priority'] })} className={inputClass}>
+                  <option value="VIP">VIP</option>
+                  <option value="HIGH">High</option>
+                  <option value="NORMAL">Normal</option>
+                  <option value="LOW">Low</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-brand-charcoal mb-1">+1s</label>
+                <div className="flex items-center gap-1.5">
+                  <button type="button" onClick={() => setFormData({ ...formData, expected_plus_ones: Math.max(0, formData.expected_plus_ones - 1) })} className="w-8 h-8 flex items-center justify-center bg-white border border-ui-border rounded-lg text-brand-charcoal hover:border-brand-terracotta transition-colors">
+                    <Minus size={14} />
+                  </button>
+                  <span className="text-sm font-semibold text-brand-charcoal min-w-[1.5rem] text-center">{formData.expected_plus_ones}</span>
+                  <button type="button" onClick={() => setFormData({ ...formData, expected_plus_ones: formData.expected_plus_ones + 1 })} className="w-8 h-8 flex items-center justify-center bg-white border border-ui-border rounded-lg text-brand-charcoal hover:border-brand-terracotta transition-colors">
+                    <Plus size={14} />
+                  </button>
+                </div>
               </div>
             </div>
 
-            {/* Divider */}
-            <div className="border-t border-ui-border pt-4">
-              <h3 className="text-sm font-semibold text-brand-charcoal mb-3">Curation Intelligence</h3>
-              <p className="text-xs text-ui-tertiary mb-4">Help your team understand why this guest matters</p>
-            </div>
-
-            {/* Introduction Source */}
+            {/* Introduced By */}
             <div>
-              <label className="block text-sm font-semibold text-brand-charcoal mb-2">
-                Introduced By
-              </label>
-              <input
-                type="text"
-                value={formData.introduction_source}
-                onChange={(e) => setFormData({ ...formData, introduction_source: e.target.value })}
-                className="w-full px-3 py-2 bg-white border border-ui-border rounded-lg text-brand-charcoal placeholder-ui-tertiary focus:outline-none focus:border-brand-terracotta focus:ring-1 focus:ring-brand-terracotta transition-colors"
-                placeholder="e.g., Sarah Chen (Partner)"
-              />
+              <label className="block text-sm font-medium text-brand-charcoal mb-1">Introduced By</label>
+              <input type="text" value={formData.introduction_source} onChange={(e) => setFormData({ ...formData, introduction_source: e.target.value })} className={inputClass} placeholder="e.g., Sarah Chen (Partner)" />
             </div>
 
             {/* Host Notes */}
             <div>
-              <label className="block text-sm font-semibold text-brand-charcoal mb-2">
-                Host Notes
-              </label>
-              <textarea
-                value={formData.host_notes}
-                onChange={(e) => setFormData({ ...formData, host_notes: e.target.value })}
-                className="w-full px-3 py-2 bg-white border border-ui-border rounded-lg text-brand-charcoal placeholder-ui-tertiary focus:outline-none focus:border-brand-terracotta focus:ring-1 focus:ring-brand-terracotta transition-colors"
-                placeholder="Why they matter for this event..."
-                rows={3}
-              />
-              <p className="text-xs text-ui-tertiary mt-1">e.g., &quot;Key LP relationship. CEO of portfolio company ($50M ARR).&quot;</p>
+              <label className="block text-sm font-medium text-brand-charcoal mb-1">Host Notes</label>
+              <textarea value={formData.host_notes} onChange={(e) => setFormData({ ...formData, host_notes: e.target.value })} className={inputClass} placeholder="Why they matter for this event..." rows={2} />
             </div>
 
             {/* Tags */}
             <div>
-              <label className="block text-sm font-semibold text-brand-charcoal mb-2">
-                Tags
-              </label>
-              <input
-                type="text"
-                value={formData.tags}
-                onChange={(e) => setFormData({ ...formData, tags: e.target.value })}
-                className="w-full px-3 py-2 bg-white border border-ui-border rounded-lg text-brand-charcoal placeholder-ui-tertiary focus:outline-none focus:border-brand-terracotta focus:ring-1 focus:ring-brand-terracotta transition-colors"
-                placeholder="Portfolio CEO, Key LP, Board Member"
-              />
-              <p className="text-xs text-ui-tertiary mt-1">Separate multiple tags with commas</p>
+              <label className="block text-sm font-medium text-brand-charcoal mb-1">Tags</label>
+              <input type="text" value={formData.tags} onChange={(e) => setFormData({ ...formData, tags: e.target.value })} className={inputClass} placeholder="Portfolio CEO, Key LP, Board Member" />
             </div>
 
             {/* Internal Notes */}
             <div>
-              <label className="block text-sm font-semibold text-brand-charcoal mb-2">
-                Internal Notes
-              </label>
-              <textarea
-                value={formData.internal_notes}
-                onChange={(e) => setFormData({ ...formData, internal_notes: e.target.value })}
-                className="w-full px-3 py-2 bg-white border border-ui-border rounded-lg text-brand-charcoal placeholder-ui-tertiary focus:outline-none focus:border-brand-terracotta focus:ring-1 focus:ring-brand-terracotta transition-colors"
-                placeholder="Operational notes (not shown to host)"
-                rows={2}
-              />
+              <label className="block text-sm font-medium text-brand-charcoal mb-1">Internal Notes</label>
+              <textarea value={formData.internal_notes} onChange={(e) => setFormData({ ...formData, internal_notes: e.target.value })} className={inputClass} placeholder="Operational notes (not shown to host)" rows={2} />
             </div>
+          </form>
+        </div>
 
-          {/* Actions */}
-          <div className="flex gap-2 pt-4">
-            <button
-              type="button"
-              onClick={onCancel}
-              className="flex-1 px-4 py-2 bg-white border border-ui-border rounded-lg text-ui-secondary hover:bg-brand-cream transition-colors font-medium"
-              disabled={loading}
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-brand-terracotta hover:bg-brand-terracotta/90 text-white rounded-lg transition-colors shadow-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
-              disabled={loading}
-            >
-              {loading ? (
-                'Saving...'
-              ) : (
-                <>
-                  <Save size={16} />
-                  {guestId ? 'Save Changes' : 'Add Guest'}
-                </>
-              )}
-            </button>
-          </div>
-        </form>
+        {/* Footer — sticky */}
+        <div className="flex items-center justify-end gap-3 px-5 py-3.5 border-t border-ui-border shrink-0">
+          <button
+            type="button"
+            onClick={onCancel}
+            className="px-4 py-2 border border-ui-border rounded-lg text-sm font-medium text-ui-secondary hover:bg-brand-cream transition-colors"
+            disabled={loading}
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            form="guest-form"
+            className="flex items-center gap-2 px-5 py-2 bg-brand-terracotta hover:bg-brand-terracotta/90 text-white text-sm font-semibold rounded-pill transition-colors shadow-cta disabled:opacity-50 disabled:cursor-not-allowed"
+            disabled={loading}
+          >
+            {loading ? (
+              'Saving...'
+            ) : (
+              <>
+                <Save size={14} />
+                {guestId ? 'Save Changes' : 'Add Guest'}
+              </>
+            )}
+          </button>
         </div>
       </div>
     </div>
