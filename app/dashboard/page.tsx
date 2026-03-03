@@ -48,6 +48,10 @@ type EventRow = {
   invited_count?: number
   confirmed_count?: number
   pending_count?: number
+  description?: string
+  hosting_company?: string
+  guest_names?: string
+  team_names?: string
   // Legacy fields
   name?: string
   city?: string | null
@@ -154,17 +158,35 @@ export default function DashboardPage() {
       return true
     })
     .filter(e => {
-      // Search filtering
+      // Search filtering — matches title, location fields, hosts, sponsors,
+      // date (month/year), event_url, description, hosting_company, guest names, team members
       if (!searchQuery.trim()) return true
       const term = searchQuery.toLowerCase()
-      const locationStr =
-        typeof e.location === 'object'
-          ? (e.location?.city ?? '')
-          : (e.location ?? e.city ?? '')
+
+      const loc = typeof e.location === 'object' ? e.location : null
+      const locationParts = loc
+        ? [loc?.venue_name, loc?.city, loc?.state_province, loc?.country]
+        : [e.location, e.city]
+      const locationStr = locationParts.filter(Boolean).join(' ').toLowerCase()
+
+      const hostNames = (e.hosts ?? []).map(h => h.name).join(' ').toLowerCase()
+      const sponsorNames = (e.sponsors ?? []).map(s => [s.title, s.subtitle].filter(Boolean).join(' ')).join(' ').toLowerCase()
+
+      const dateStr = e.start_date
+        ? new Date(e.start_date).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+        : ''
+
       return (
         (e.title ?? e.name ?? '').toLowerCase().includes(term) ||
-        locationStr.toLowerCase().includes(term) ||
-        (e.event_url ?? '').toLowerCase().includes(term)
+        locationStr.includes(term) ||
+        hostNames.includes(term) ||
+        sponsorNames.includes(term) ||
+        dateStr.toLowerCase().includes(term) ||
+        (e.event_url ?? '').toLowerCase().includes(term) ||
+        (e.description ?? '').toLowerCase().includes(term) ||
+        (e.hosting_company ?? '').toLowerCase().includes(term) ||
+        (e.guest_names ?? '').toLowerCase().includes(term) ||
+        (e.team_names ?? '').toLowerCase().includes(term)
       )
     })
     .sort((a, b) => {

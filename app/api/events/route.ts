@@ -20,9 +20,12 @@ export async function GET(_req: Request) {
             e.id, e.title, e.location::text as location_raw, e.start_date, e.end_date, e.timezone,
             e.image_url, e.event_url, e.hosts::text as hosts_raw, e.sponsors::text as sponsors_raw,
             e.is_private, e.approve_mode, e.status, e.total_capacity, e.created_at, e.updated_at,
+            e.description, e.hosting_company,
             COALESCE(ci.total_count, 0) AS invited_count,
             COALESCE(ci.accepted_count, 0) AS confirmed_count,
-            COALESCE(ci.pending_count, 0) AS pending_count
+            COALESCE(ci.pending_count, 0) AS pending_count,
+            COALESCE(gn.guest_names, '') AS guest_names,
+            COALESCE(tm.team_names, '') AS team_names
           FROM events e
           LEFT JOIN LATERAL (
             SELECT
@@ -31,6 +34,16 @@ export async function GET(_req: Request) {
               COUNT(*) FILTER (WHERE status IN ('CONSIDERING','INVITED'))::int AS pending_count
             FROM campaign_invitations WHERE event_id = e.id
           ) ci ON true
+          LEFT JOIN LATERAL (
+            SELECT string_agg(DISTINCT full_name, ', ') AS guest_names
+            FROM campaign_invitations WHERE event_id = e.id
+          ) gn ON true
+          LEFT JOIN LATERAL (
+            SELECT string_agg(DISTINCT u.full_name, ', ') AS team_names
+            FROM guest_team_assignments gta
+            JOIN users u ON u.id = gta.assigned_to
+            WHERE gta.event_id = e.id
+          ) tm ON true
           WHERE e.workspace_id = ${workspaceId} OR e.workspace_id IS NULL
           ORDER BY e.start_date DESC
         `
@@ -39,9 +52,12 @@ export async function GET(_req: Request) {
             e.id, e.title, e.location::text as location_raw, e.start_date, e.end_date, e.timezone,
             e.image_url, e.event_url, e.hosts::text as hosts_raw, e.sponsors::text as sponsors_raw,
             e.is_private, e.approve_mode, e.status, e.total_capacity, e.created_at, e.updated_at,
+            e.description, e.hosting_company,
             COALESCE(ci.total_count, 0) AS invited_count,
             COALESCE(ci.accepted_count, 0) AS confirmed_count,
-            COALESCE(ci.pending_count, 0) AS pending_count
+            COALESCE(ci.pending_count, 0) AS pending_count,
+            COALESCE(gn.guest_names, '') AS guest_names,
+            COALESCE(tm.team_names, '') AS team_names
           FROM events e
           LEFT JOIN LATERAL (
             SELECT
@@ -50,6 +66,16 @@ export async function GET(_req: Request) {
               COUNT(*) FILTER (WHERE status IN ('CONSIDERING','INVITED'))::int AS pending_count
             FROM campaign_invitations WHERE event_id = e.id
           ) ci ON true
+          LEFT JOIN LATERAL (
+            SELECT string_agg(DISTINCT full_name, ', ') AS guest_names
+            FROM campaign_invitations WHERE event_id = e.id
+          ) gn ON true
+          LEFT JOIN LATERAL (
+            SELECT string_agg(DISTINCT u.full_name, ', ') AS team_names
+            FROM guest_team_assignments gta
+            JOIN users u ON u.id = gta.assigned_to
+            WHERE gta.event_id = e.id
+          ) tm ON true
           ORDER BY e.start_date DESC
         `;
 
@@ -79,6 +105,10 @@ export async function GET(_req: Request) {
         invited_count: event.invited_count ?? 0,
         confirmed_count: event.confirmed_count ?? 0,
         pending_count: event.pending_count ?? 0,
+        description: event.description ?? '',
+        hosting_company: event.hosting_company ?? '',
+        guest_names: event.guest_names ?? '',
+        team_names: event.team_names ?? '',
 
         // legacy
         name: event.title,
