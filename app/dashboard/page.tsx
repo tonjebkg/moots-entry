@@ -3,10 +3,11 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
-import { CreateEventModal } from '@/app/components/CreateEventModal'
+import { CreateEventWizard } from '@/app/components/CreateEventWizard'
 import { DashboardHeader } from '@/app/components/DashboardHeader'
 import { GlobalChatPanel } from '@/app/components/agent/GlobalChatPanel'
-import { Calendar, MapPin, Users, Lock, Plus, Search, X, Mail, CheckCircle2, Clock, UserCheck } from 'lucide-react'
+import { Calendar, MapPin, Users, Lock, Plus, Search, X } from 'lucide-react'
+import { formatUSDate as formatUSDateFn, formatUSDateTime as formatUSDateTimeFn } from '@/lib/datetime'
 
 type ApproveMode = 'MANUAL' | 'AUTO'
 type EventStatus = 'DRAFT' | 'PUBLISHED' | 'COMPLETE' | 'CANCELLED'
@@ -44,36 +45,34 @@ type EventRow = {
   status?: EventStatus
   created_at?: string
   updated_at?: string
+  total_capacity?: number | null
+  invited_count?: number
+  confirmed_count?: number
+  pending_count?: number
+  description?: string
+  hosting_company?: string
+  guest_names?: string
+  team_names?: string
   // Legacy fields
   name?: string
   city?: string | null
   starts_at?: string
 }
 
-type TabFilter = 'upcoming' | 'past' | 'draft'
+type TabFilter = 'all' | 'upcoming' | 'past' | 'draft'
 
 function formatDate(iso: string): string {
   if (!iso) return ''
   const d = new Date(iso)
   if (isNaN(d.getTime())) return ''
-  return d.toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  })
+  return formatUSDateFn(d)
 }
 
 function formatDateTime(iso: string): string {
   if (!iso) return ''
   const d = new Date(iso)
   if (isNaN(d.getTime())) return ''
-  return d.toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-  })
+  return formatUSDateTimeFn(d)
 }
 
 function getStatusColor(status: EventStatus): string {
@@ -141,7 +140,9 @@ export default function DashboardPage() {
       const isPast = eventDate < now
 
       // Tab filtering
-      if (activeTab === 'draft') {
+      if (activeTab === 'all') {
+        return true
+      } else if (activeTab === 'draft') {
         return isDraft
       } else if (activeTab === 'past') {
         return !isDraft && isPast
@@ -158,17 +159,35 @@ export default function DashboardPage() {
       return true
     })
     .filter(e => {
-      // Search filtering
+      // Search filtering — matches title, location fields, hosts, sponsors,
+      // date (month/year), event_url, description, hosting_company, guest names, team members
       if (!searchQuery.trim()) return true
       const term = searchQuery.toLowerCase()
-      const locationStr =
-        typeof e.location === 'object'
-          ? (e.location?.city ?? '')
-          : (e.location ?? e.city ?? '')
+
+      const loc = typeof e.location === 'object' ? e.location : null
+      const locationParts = loc
+        ? [loc?.venue_name, loc?.city, loc?.state_province, loc?.country]
+        : [e.location, e.city]
+      const locationStr = locationParts.filter(Boolean).join(' ').toLowerCase()
+
+      const hostNames = (e.hosts ?? []).map(h => h.name).join(' ').toLowerCase()
+      const sponsorNames = (e.sponsors ?? []).map(s => [s.title, s.subtitle].filter(Boolean).join(' ')).join(' ').toLowerCase()
+
+      const dateStr = e.start_date
+        ? new Date(e.start_date).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+        : ''
+
       return (
         (e.title ?? e.name ?? '').toLowerCase().includes(term) ||
-        locationStr.toLowerCase().includes(term) ||
-        (e.event_url ?? '').toLowerCase().includes(term)
+        locationStr.includes(term) ||
+        hostNames.includes(term) ||
+        sponsorNames.includes(term) ||
+        dateStr.toLowerCase().includes(term) ||
+        (e.event_url ?? '').toLowerCase().includes(term) ||
+        (e.description ?? '').toLowerCase().includes(term) ||
+        (e.hosting_company ?? '').toLowerCase().includes(term) ||
+        (e.guest_names ?? '').toLowerCase().includes(term) ||
+        (e.team_names ?? '').toLowerCase().includes(term)
       )
     })
     .sort((a, b) => {
@@ -185,28 +204,24 @@ export default function DashboardPage() {
 
   if (loading) {
     return (
-      <main className="min-h-screen bg-brand-cream p-8">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-ui-tertiary text-sm font-medium">Loading events...</div>
-        </div>
+      <main className="min-h-screen bg-brand-cream px-8 py-8">
+        <div className="text-ui-tertiary text-sm font-medium">Loading events...</div>
       </main>
     )
   }
 
   if (error) {
     return (
-      <main className="min-h-screen bg-brand-cream p-8">
-        <div className="max-w-7xl mx-auto">
-          <div className="bg-white border border-red-200 rounded-lg p-6">
-            <h1 className="text-xl font-semibold text-red-700 mb-2">Error</h1>
-            <p className="text-ui-secondary mb-4">{error}</p>
-            <Link
-              href="/"
-              className="text-brand-terracotta hover:text-brand-terracotta/70 font-medium transition-colors"
-            >
-              Return home
-            </Link>
-          </div>
+      <main className="min-h-screen bg-brand-cream px-8 py-8">
+        <div className="bg-white border border-red-200 rounded-lg p-6">
+          <h1 className="text-xl font-semibold text-red-700 mb-2">Error</h1>
+          <p className="text-ui-secondary mb-4">{error}</p>
+          <Link
+            href="/"
+            className="text-brand-terracotta hover:text-brand-terracotta/70 font-medium transition-colors"
+          >
+            Return home
+          </Link>
         </div>
       </main>
     )
@@ -214,45 +229,59 @@ export default function DashboardPage() {
 
   return (
     <main className="min-h-screen bg-brand-cream">
-      {/* DashboardHeader */}
-      <DashboardHeader activeNav="events" rightSlot={<button onClick={() => setShowCreateModal(true)} className="flex items-center gap-2 px-5 py-2.5 bg-brand-terracotta hover:bg-brand-terracotta/90 text-white text-sm font-semibold rounded-pill transition-colors shadow-cta"><Plus size={16} />New Event</button>} />
+      <DashboardHeader activeNav="events" />
 
       {/* Main Content with top padding to account for fixed header */}
       <div className="pt-[73px]">
-        <div className="max-w-7xl mx-auto p-8 pb-32 space-y-6">
+        <div className="px-8 py-8 space-y-6">
 
-        {/* Tabs */}
-        <div className="flex items-center gap-1 border-b border-ui-border bg-white rounded-t-lg px-6">
-          {[
-            { key: 'upcoming' as TabFilter, label: 'Upcoming' },
-            { key: 'past' as TabFilter, label: 'Past' },
-            { key: 'draft' as TabFilter, label: 'Drafts' },
-          ].map(tab => (
-            <button
-              key={tab.key}
-              onClick={() => setActiveTab(tab.key)}
-              className={`
-                px-4 py-3 text-sm font-semibold border-b-2 transition-colors
-                ${activeTab === tab.key
-                  ? 'border-brand-terracotta text-brand-terracotta'
-                  : 'border-transparent text-ui-tertiary hover:text-brand-charcoal'
-                }
-              `}
-            >
-              {tab.label}
-            </button>
-          ))}
+        {/* Page Title + New Event Button */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="font-display text-2xl font-bold text-brand-charcoal">Events</h1>
+            <p className="text-sm text-ui-tertiary mt-1">
+              {events.length} event{events.length !== 1 ? 's' : ''} in your workspace
+            </p>
+          </div>
+          <button
+            onClick={() => setShowCreateModal(true)}
+            className="flex items-center gap-2 px-5 py-2.5 bg-brand-terracotta hover:bg-brand-terracotta/90 text-white text-sm font-semibold rounded-pill transition-colors shadow-cta"
+          >
+            <Plus size={16} />
+            New Event
+          </button>
         </div>
 
-        {/* Filters */}
-        <div className="flex gap-3">
-          <div className="flex-1 relative">
+        {/* Tabs (pill toggle) + Filters on same row */}
+        <div className="flex items-center gap-4">
+          <div className="flex gap-1 bg-brand-cream rounded-lg p-1">
+            {[
+              { key: 'all' as TabFilter, label: 'All' },
+              { key: 'upcoming' as TabFilter, label: 'Upcoming' },
+              { key: 'past' as TabFilter, label: 'Past' },
+              { key: 'draft' as TabFilter, label: 'Drafts' },
+            ].map(tab => (
+              <button
+                key={tab.key}
+                onClick={() => setActiveTab(tab.key)}
+                className={`px-4 py-2 text-sm font-semibold rounded-md transition-all ${
+                  activeTab === tab.key
+                    ? 'bg-white text-brand-charcoal shadow-sm'
+                    : 'text-ui-tertiary hover:text-brand-charcoal'
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+          <div className="flex-1" />
+          <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-ui-tertiary" size={16} />
             <input
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search by title, location, or URL..."
-              className="w-full pl-10 pr-3 py-2 bg-white border border-ui-border rounded-lg text-sm text-brand-charcoal placeholder-ui-tertiary focus:outline-none focus:border-brand-terracotta focus:ring-1 focus:ring-brand-terracotta transition-colors"
+              placeholder="Search events..."
+              className="w-64 pl-10 pr-3 py-2 bg-white border border-ui-border rounded-lg text-sm text-brand-charcoal placeholder-ui-tertiary focus:outline-none focus:border-brand-terracotta focus:ring-1 focus:ring-brand-terracotta transition-colors"
             />
           </div>
           <select
@@ -324,115 +353,74 @@ export default function DashboardPage() {
                   href={`/dashboard/${event.id}`}
                   className="bg-white border border-ui-border rounded-card shadow-card overflow-hidden hover:border-brand-terracotta hover:shadow-sm transition-all"
                 >
-                  <div className="p-6">
-                    <div className="flex gap-6">
+                  <div className="p-5">
+                    <div className="flex gap-5">
                       {/* Square Event Image */}
                       {event.image_url ? (
-                        <div className="w-40 h-40 shrink-0 bg-brand-cream rounded-lg overflow-hidden">
+                        <div className="w-28 h-28 shrink-0 bg-brand-cream rounded-lg overflow-hidden">
                           <Image
                             src={event.image_url}
                             alt={event.title ?? event.name ?? 'Event'}
-                            width={160}
-                            height={160}
+                            width={112}
+                            height={112}
                             className="w-full h-full object-cover"
                             unoptimized
                           />
                         </div>
                       ) : (
-                        <div className="w-40 h-40 shrink-0 bg-gradient-to-br from-brand-terracotta/80 to-brand-forest rounded-lg flex items-center justify-center">
-                          <Calendar className="text-white/30" size={48} />
+                        <div className="w-28 h-28 shrink-0 bg-gradient-to-br from-brand-terracotta/80 to-brand-forest rounded-lg flex items-center justify-center">
+                          <Calendar className="text-white/30" size={36} />
                         </div>
                       )}
 
                       {/* Event Content */}
-                      <div className="flex-1 space-y-4 min-w-0">
-                        {/* Status & Private Badge */}
-                        <div className="flex items-center justify-between gap-3">
-                          <span
-                            className={`inline-flex px-2 py-0.5 text-xs font-medium rounded ${getStatusColor(
-                              event.status ?? 'DRAFT'
-                            )}`}
-                          >
-                            {event.status ?? 'DRAFT'}
-                          </span>
-                          {event.is_private && (
-                            <span className="flex items-center gap-1 text-amber-600 text-xs font-medium" title="Private event">
-                              <Lock size={12} />
-                              Private
-                            </span>
-                          )}
-                        </div>
-
-                        {/* Event Title */}
-                        <h3 className="text-lg font-semibold text-brand-charcoal leading-tight">
-                          {event.title ?? event.name}
-                        </h3>
-
-                        {/* Event Details */}
+                      <div className="flex-1 min-w-0 flex flex-col justify-between">
                         <div className="space-y-2">
-                          <div className="flex items-start gap-2 text-sm text-ui-secondary">
-                            <Calendar className="shrink-0 mt-0.5" size={14} />
-                            <span>{formatDateTime(event.start_date ?? event.starts_at ?? '')}</span>
+                          {/* Status & Private Badge */}
+                          <div className="flex items-center gap-2">
+                            <span
+                              className={`inline-flex px-2 py-0.5 text-xs font-medium rounded ${getStatusColor(
+                                event.status ?? 'DRAFT'
+                              )}`}
+                            >
+                              {event.status ?? 'DRAFT'}
+                            </span>
+                            {event.is_private && (
+                              <span className="flex items-center gap-1 text-amber-600 text-xs font-medium" title="Private event">
+                                <Lock size={12} />
+                                Private
+                              </span>
+                            )}
                           </div>
-                          <div className="flex items-start gap-2 text-sm text-ui-secondary">
-                            <MapPin className="shrink-0 mt-0.5" size={14} />
-                            <span>{locationDisplay}</span>
+
+                          {/* Event Title */}
+                          <h3 className="text-lg font-semibold text-brand-charcoal leading-tight">
+                            {event.title ?? event.name}
+                          </h3>
+
+                          {/* Event Details */}
+                          <div className="flex items-center gap-4 text-sm text-ui-secondary">
+                            <span className="flex items-center gap-1.5">
+                              <Calendar className="shrink-0" size={13} />
+                              {formatDateTime(event.start_date ?? event.starts_at ?? '')}
+                            </span>
+                            <span className="flex items-center gap-1.5">
+                              <MapPin className="shrink-0" size={13} />
+                              {locationDisplay}
+                            </span>
                           </div>
                         </div>
 
-                        {/* Operational Metrics */}
-                        <div className="grid grid-cols-2 gap-3 pt-4 border-t border-ui-border">
-                          <div className="flex items-start gap-2">
-                            <div className="w-8 h-8 rounded bg-blue-50 flex items-center justify-center shrink-0">
-                              <Mail className="text-brand-terracotta" size={14} />
-                            </div>
-                            <div>
-                              <div className="text-xs font-semibold text-ui-tertiary uppercase mb-0.5">
-                                Invited
-                              </div>
-                              <div className="text-lg font-bold text-brand-terracotta">—</div>
-                            </div>
-                          </div>
-                          <div className="flex items-start gap-2">
-                            <div className="w-8 h-8 rounded bg-emerald-50 flex items-center justify-center shrink-0">
-                              <CheckCircle2 className="text-emerald-700" size={14} />
-                            </div>
-                            <div>
-                              <div className="text-xs font-semibold text-ui-tertiary uppercase mb-0.5">
-                                Confirmed
-                              </div>
-                              <div className="text-lg font-bold text-emerald-700">—</div>
-                            </div>
-                          </div>
-                          <div className="flex items-start gap-2">
-                            <div className="w-8 h-8 rounded bg-amber-50 flex items-center justify-center shrink-0">
-                              <Clock className="text-amber-700" size={14} />
-                            </div>
-                            <div>
-                              <div className="text-xs font-semibold text-ui-tertiary uppercase mb-0.5">
-                                Pending
-                              </div>
-                              <div className="text-lg font-bold text-amber-700">—</div>
-                            </div>
-                          </div>
-                          <div className="flex items-start gap-2">
-                            <div className="w-8 h-8 rounded bg-brand-cream flex items-center justify-center shrink-0">
-                              <Users className="text-ui-secondary" size={14} />
-                            </div>
-                            <div>
-                              <div className="text-xs font-semibold text-ui-tertiary uppercase mb-0.5">
-                                Capacity
-                              </div>
-                              <div className="text-lg font-bold text-ui-secondary">—</div>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* View Details Link */}
-                        <div className="pt-4 border-t border-ui-border">
-                          <div className="text-sm font-semibold text-brand-terracotta">
-                            Manage Event →
-                          </div>
+                        {/* Compact Inline Stats */}
+                        <div className="flex items-center gap-1 text-xs text-ui-tertiary pt-2">
+                          <span className="font-semibold text-brand-terracotta">{event.invited_count ?? 0}</span> invited
+                          <span className="mx-1">&middot;</span>
+                          <span className="font-semibold text-emerald-700">{event.confirmed_count ?? 0}</span> confirmed
+                          <span className="mx-1">&middot;</span>
+                          <span className="font-semibold text-amber-700">{event.pending_count ?? 0}</span> pending
+                          <span className="mx-1">&middot;</span>
+                          <Users size={12} className="inline shrink-0" />
+                          <span className="font-semibold text-ui-secondary">{event.total_capacity ?? '—'}</span> capacity
                         </div>
                       </div>
                     </div>
@@ -445,9 +433,9 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Create Event Modal */}
+      {/* Create Event Wizard */}
       {showCreateModal && (
-        <CreateEventModal
+        <CreateEventWizard
           onClose={() => setShowCreateModal(false)}
           onSuccess={() => {
             setShowCreateModal(false)
@@ -456,8 +444,6 @@ export default function DashboardPage() {
           }}
         />
       )}
-
-      {/* Global Moots Intelligence Chat */}
       <GlobalChatPanel page="events-list" />
     </main>
   )
