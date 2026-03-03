@@ -45,9 +45,10 @@ export function CheckinMetricsBar({ metrics, onFilter, activeFilter }: CheckinMe
     },
   ]
 
-  // Capacity gauge: checked_in / expected
-  const gaugePercent = metrics.total_expected > 0
-    ? Math.round((metrics.total_checked_in / metrics.total_expected) * 100)
+  // Capacity gauge: checked_in / total_capacity (venue capacity from event settings)
+  const capacityDenom = metrics.total_capacity > 0 ? metrics.total_capacity : metrics.total_expected
+  const gaugePercent = capacityDenom > 0
+    ? Math.round((metrics.total_checked_in / capacityDenom) * 100)
     : 0
   const isOverCapacity = gaugePercent > 100
   const gaugeWidth = Math.min(100, gaugePercent)
@@ -77,8 +78,9 @@ export function CheckinMetricsBar({ metrics, onFilter, activeFilter }: CheckinMe
         <div className="flex items-center justify-between mb-2">
           <span className="text-sm font-medium text-ui-secondary">Capacity</span>
           <span className={`text-sm font-semibold ${isOverCapacity ? 'text-red-600' : 'text-brand-charcoal'}`}>
-            {metrics.total_checked_in} / {metrics.total_expected || '—'}
+            {metrics.total_checked_in} / {capacityDenom || '—'}
             {gaugePercent > 0 && ` (${gaugePercent}%)`}
+            {isOverCapacity && capacityDenom > 0 && ` — ${metrics.total_checked_in - capacityDenom} over`}
           </span>
         </div>
         <div className="h-3 bg-brand-cream rounded-full overflow-hidden">

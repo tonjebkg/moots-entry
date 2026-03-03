@@ -146,12 +146,12 @@ export const GET = withErrorHandling(async (_request: NextRequest, { params }: R
     })
   }
 
-  // Over capacity warning
-  if (totalCapacity > 0 && Number(funnel.selected) > totalCapacity) {
+  // Over capacity warning — use confirmed (ACCEPTED) count, not selected
+  if (totalCapacity > 0 && Number(funnel.confirmed) > totalCapacity) {
     needsAttention.push({
       type: 'over_capacity',
-      count: Number(funnel.selected) - totalCapacity,
-      label: `over event capacity (${funnel.selected} selected for ${totalCapacity} seats)`,
+      count: Number(funnel.confirmed) - totalCapacity,
+      label: `guests over capacity (${funnel.confirmed} confirmed for ${totalCapacity} seats)`,
       action: 'Manage Invitations',
     })
   }

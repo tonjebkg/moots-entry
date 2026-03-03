@@ -156,6 +156,12 @@ export function middleware(request: NextRequest) {
       return addSecurityHeaders(response);
     }
 
+    // Campaigns API — campaign detail, invitations, uploads
+    if (/^\/api\/campaigns(\/|$)/.test(pathname)) {
+      const response = NextResponse.next();
+      return addSecurityHeaders(response);
+    }
+
     // Contacts API — read-only (list + individual detail)
     if (method === 'GET' && /^\/api\/contacts(\/|$)/.test(pathname)) {
       const response = NextResponse.next();

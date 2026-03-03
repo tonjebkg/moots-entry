@@ -77,6 +77,7 @@ export function CampaignDetailPanel({ campaignId, eventId, onRefresh }: Campaign
     tier?: 'TIER_1' | 'TIER_2' | 'TIER_3'
   }>({})
   const [uploading, setUploading] = useState(false)
+  const [fetchError, setFetchError] = useState<string | null>(null)
   const [showAddGuestModal, setShowAddGuestModal] = useState(false)
   const [editingGuestId, setEditingGuestId] = useState<string | null>(null)
   const [selectedGuest, setSelectedGuest] = useState<GuestProfile | null>(null)
@@ -89,27 +90,33 @@ export function CampaignDetailPanel({ campaignId, eventId, onRefresh }: Campaign
   async function fetchData() {
     try {
       setLoading(true)
+      setCampaign(null)
+      setFetchError(null)
 
       const campaignRes = await fetch(`/api/campaigns/${campaignId}`)
-      if (campaignRes.ok) {
-        const data = await campaignRes.json()
-        setCampaign(data.campaign)
+      if (!campaignRes.ok) {
+        const errData = await campaignRes.json().catch(() => ({}))
+        setFetchError(errData.error || `Failed to load campaign (${campaignRes.status})`)
+        return
+      }
+      const data = await campaignRes.json()
+      setCampaign(data.campaign)
 
-        const capacityRes = await fetch(`/api/events/${data.campaign.event_id}/capacity-status`)
-        if (capacityRes.ok) {
-          const capacityData = await capacityRes.json()
-          setCapacity(capacityData)
-        }
+      const capacityRes = await fetch(`/api/events/${data.campaign.event_id}/capacity-status`)
+      if (capacityRes.ok) {
+        const capacityData = await capacityRes.json()
+        setCapacity(capacityData)
       }
 
       const invitationsRes = await fetch(`/api/campaigns/${campaignId}/invitations`)
       if (invitationsRes.ok) {
-        const data = await invitationsRes.json()
-        setInvitations(data.invitations)
-        setCounts(data.counts)
+        const invData = await invitationsRes.json()
+        setInvitations(invData.invitations)
+        setCounts(invData.counts)
       }
     } catch (err) {
       console.error('Failed to fetch campaign data:', err)
+      setFetchError('Network error — please check your connection')
     } finally {
       setLoading(false)
     }
@@ -301,8 +308,14 @@ export function CampaignDetailPanel({ campaignId, eventId, onRefresh }: Campaign
   if (!campaign) {
     return (
       <div className="flex items-center justify-center py-32">
-        <div className="bg-white border border-red-200 rounded-lg p-6 text-center">
-          <div className="text-red-700 text-sm font-medium">Campaign not found</div>
+        <div className="bg-white border border-red-200 rounded-lg p-6 text-center space-y-3">
+          <div className="text-red-700 text-sm font-medium">{fetchError || 'Campaign not found'}</div>
+          <button
+            onClick={fetchData}
+            className="px-4 py-2 text-sm font-semibold text-brand-terracotta border border-brand-terracotta rounded-full hover:bg-brand-terracotta/5 transition-colors"
+          >
+            Retry
+          </button>
         </div>
       </div>
     )

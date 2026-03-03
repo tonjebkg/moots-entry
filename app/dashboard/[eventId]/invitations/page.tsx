@@ -116,7 +116,7 @@ export default function InvitationsPage() {
       <div className="w-[280px] shrink-0 space-y-2">
         <button
           onClick={() => setShowCreateForm(true)}
-          className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-brand-terracotta hover:bg-brand-terracotta/90 active:bg-brand-terracotta/90 text-white text-sm font-semibold rounded-pill shadow-cta transition-all"
+          className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-brand-terracotta hover:bg-brand-terracotta/90 text-white text-sm font-semibold rounded-full transition-colors"
         >
           <Plus size={16} />
           New Invitation Campaign
@@ -169,12 +169,11 @@ export default function InvitationsPage() {
                     <div className="text-emerald-700 font-bold">{campaign.total_accepted}</div>
                   </div>
                   <div>
-                    <div className="text-ui-tertiary mb-0.5 uppercase tracking-wide" style={{ fontSize: '10px' }}>Response</div>
+                    <div className="text-ui-tertiary mb-0.5 uppercase tracking-wide" style={{ fontSize: '10px' }}>Accept Rate</div>
                     <div className="text-brand-terracotta font-bold">
                       {(() => {
                         const total = campaign.total_invited + campaign.total_considering
-                        const responded = campaign.total_accepted + campaign.total_declined
-                        return total > 0 ? `${Math.round((responded / total) * 100)}%` : '—'
+                        return total > 0 ? `${Math.round((campaign.total_accepted / total) * 100)}%` : '—'
                       })()}
                     </div>
                   </div>

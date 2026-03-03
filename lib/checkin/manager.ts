@@ -239,6 +239,12 @@ export async function getCheckinMetrics(
 ): Promise<CheckinMetrics> {
   const db = getDb();
 
+  // Event capacity from events table
+  const eventRow = await db`
+    SELECT total_capacity FROM events WHERE id = ${eventId} LIMIT 1
+  `;
+  const totalCapacity = Number(eventRow[0]?.total_capacity) || 0;
+
   // Total expected (approved invitations)
   const expectedResult = await db`
     SELECT COUNT(*)::int AS count
@@ -297,6 +303,7 @@ export async function getCheckinMetrics(
     walk_ins: walkIns,
     not_arrived: notArrived,
     check_in_rate: totalExpected > 0 ? Math.round((totalCheckedIn / totalExpected) * 100) : 0,
+    total_capacity: totalCapacity,
     recent_checkins: recentCheckins as EventCheckin[],
     not_arrived_guests: notArrivedGuests,
   };

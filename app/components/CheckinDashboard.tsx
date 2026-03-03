@@ -61,7 +61,8 @@ interface WorkspaceMember {
 // ─── Constants ──────────────────────────────────────────────────────────
 
 const ROLE_LABELS: Record<string, string> = {
-  SPEAKER: 'Speaker', PARTNER: 'Partner', TEAM_MEMBER: 'Team', MEDIA: 'Media',
+  SPEAKER: 'Speaker', PARTNER: 'Partner',
+  TEAM_MEMBER: 'Team', MEDIA: 'Media',
 }
 
 const PRIORITY_LABELS: Record<string, string> = {
@@ -1025,12 +1026,20 @@ export const CheckinDashboard = forwardRef<CheckinDashboardHandle, CheckinDashbo
                               style={{ top: menuPos.top, left: menuPos.left }}
                             >
                               {row.status === 'NOT_ARRIVED' && (
-                                <button
-                                  onClick={() => handleMarkNoShow(row.id)}
-                                  className="w-full text-left px-3 py-2 text-[13px] text-red-600 hover:bg-red-50 transition-colors"
-                                >
-                                  Mark as No-Show
-                                </button>
+                                <>
+                                  <button
+                                    onClick={() => { setActionMenuId(null); setMenuPos(null); handleCheckInRow(row) }}
+                                    className="w-full text-left px-3 py-2 text-[13px] font-semibold text-brand-terracotta hover:bg-brand-terracotta/5 transition-colors"
+                                  >
+                                    Check In
+                                  </button>
+                                  <button
+                                    onClick={() => handleMarkNoShow(row.id)}
+                                    className="w-full text-left px-3 py-2 text-[13px] text-red-600 hover:bg-red-50 transition-colors"
+                                  >
+                                    Mark as No-Show
+                                  </button>
+                                </>
                               )}
 
                               {/* Assign to Team Member */}

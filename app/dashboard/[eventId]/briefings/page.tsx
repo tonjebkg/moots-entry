@@ -124,7 +124,7 @@ export default function BriefingsPage() {
           <button
             onClick={() => handleGenerate(typeFilter === 'ALL' ? 'PRE_EVENT' : typeFilter)}
             disabled={generating}
-            className="flex items-center gap-2 px-4 py-2 bg-[#2F4F3F] hover:bg-[#1a3a2a] text-white text-sm font-semibold rounded-lg transition-colors disabled:opacity-50"
+            className="flex items-center gap-2 px-4 py-2 bg-brand-terracotta hover:bg-brand-terracotta/90 text-white text-sm font-semibold rounded-full transition-colors disabled:opacity-50"
           >
             {generating ? null : (
               <>

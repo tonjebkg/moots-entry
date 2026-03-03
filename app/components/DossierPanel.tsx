@@ -182,27 +182,29 @@ export function DossierPanel({ eventId, contactId, onClose }: DossierPanelProps)
                 <h4 className="text-sm font-semibold text-brand-charcoal">Event Journey</h4>
               </div>
               <div className="grid grid-cols-2 gap-3">
-                {/* Source */}
+                {/* Source — show Campaign if guest has invitation, otherwise use stored source */}
                 <div>
                   <span className="text-[11px] font-semibold text-ui-tertiary uppercase tracking-wider">Source</span>
                   <div className="mt-1">
                     <span className="inline-flex px-2 py-0.5 text-xs font-medium rounded border bg-gray-100 text-gray-700 border-gray-200">
-                      {dossier.source ? (SOURCE_LABELS[dossier.source] || dossier.source) : 'Unknown'}
+                      {dossier.invitation_id
+                        ? 'Campaign'
+                        : dossier.source ? (SOURCE_LABELS[dossier.source] || dossier.source) : 'Unknown'}
                     </span>
                   </div>
                 </div>
 
-                {/* Enrichment */}
+                {/* Enrichment — show Completed if AI content (summary, talking points, score) exists */}
                 <div>
                   <span className="text-[11px] font-semibold text-ui-tertiary uppercase tracking-wider">Enrichment</span>
                   <div className="mt-1">
-                    {dossier.enrichment_status === 'COMPLETED' ? (
+                    {dossier.enrichment_status === 'COMPLETED' || dossier.ai_summary || dossier.talking_points.length > 0 || dossier.relevance_score !== null ? (
                       <span className="inline-flex px-2 py-0.5 text-xs font-medium rounded border bg-emerald-50 text-emerald-700 border-emerald-200">
-                        Completed ✓
+                        Enriched
                       </span>
                     ) : dossier.enrichment_status === 'PENDING' ? (
                       <span className="inline-flex px-2 py-0.5 text-xs font-medium rounded border bg-amber-50 text-amber-700 border-amber-200">
-                        Pending ⋯
+                        Pending
                       </span>
                     ) : dossier.enrichment_status === 'FAILED' ? (
                       <span className="inline-flex px-2 py-0.5 text-xs font-medium rounded border bg-red-50 text-red-700 border-red-200">

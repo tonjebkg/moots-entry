@@ -17,11 +17,28 @@ interface ChatPanelProps {
   eventId: string;
 }
 
-const SUGGESTED_QUESTIONS = [
-  'Who are my top 5 guests?',
-  'Summarize the seating arrangement',
-  'Who hasn\'t responded yet?',
-];
+const TAB_QUESTIONS: Record<string, string[]> = {
+  context: [
+    'What\'s the strategic context for this event?',
+    'Summarize the event goals',
+    'Who are the key stakeholders?',
+  ],
+  'guest-intelligence': [
+    'Who are my highest-priority guests?',
+    'Which guests need attention?',
+    'Summarize the guest mix',
+  ],
+  'day-of': [
+    'Who hasn\'t arrived yet?',
+    'How\'s check-in going?',
+    'Any walk-ins to note?',
+  ],
+  default: [
+    'Who are my top 5 guests?',
+    'Summarize the event status',
+    'Who hasn\'t responded yet?',
+  ],
+};
 
 /**
  * Persistent chat bar at the bottom of every event page.
@@ -34,6 +51,14 @@ export function ChatPanel({ eventId }: ChatPanelProps) {
   // Hide floating chat on Context tab — that tab has its own Moots Intelligence panel
   const isContextTab = pathname?.includes('/context');
   if (isContextTab) return null;
+
+  // Determine tab-specific suggested questions
+  const currentTab = pathname?.includes('/guest-intelligence') ? 'guest-intelligence'
+    : pathname?.includes('/day-of') ? 'day-of'
+    : pathname?.includes('/context') ? 'context'
+    : 'default';
+  const suggestedQuestions = TAB_QUESTIONS[currentTab] || TAB_QUESTIONS.default;
+
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [streaming, setStreaming] = useState(false);
@@ -214,16 +239,19 @@ export function ChatPanel({ eventId }: ChatPanelProps) {
         <div className={`mx-4 mb-4 bg-[#FFFEFA] border-[1.5px] border-[#C8B8A8] ${hasMessages ? 'rounded-b-xl' : 'rounded-xl'} px-4 py-3`} style={{ boxShadow: '0 2px 12px rgba(0,0,0,0.08), 0 0 0 1px rgba(184,117,94,0.08)' }}>
           {/* Suggested questions when no messages */}
           {!hasMessages && (
-            <div className="flex items-center gap-2 mb-2 overflow-x-auto pb-1">
-              {SUGGESTED_QUESTIONS.map(q => (
-                <button
-                  key={q}
-                  onClick={() => handleSend(q)}
-                  className="shrink-0 text-[14px] px-3 py-1.5 rounded-full bg-brand-cream text-brand-charcoal/70 hover:text-brand-terracotta hover:bg-brand-terracotta/5 transition-colors border border-[#D5CEC6] hover:border-brand-terracotta/30"
-                >
-                  {q}
-                </button>
-              ))}
+            <div className="mb-2">
+              <span className="text-[11px] font-semibold text-ui-tertiary uppercase tracking-wider mb-1.5 block">Try asking</span>
+              <div className="flex items-center gap-2 overflow-x-auto pb-1">
+                {suggestedQuestions.map(q => (
+                  <button
+                    key={q}
+                    onClick={() => handleSend(q)}
+                    className="shrink-0 text-[14px] px-3.5 py-2 rounded-full bg-brand-cream/80 text-brand-charcoal hover:text-brand-terracotta hover:bg-brand-terracotta/5 transition-all border border-[#C8B8A8] hover:border-brand-terracotta/40 hover:shadow-sm font-medium"
+                  >
+                    {q}
+                  </button>
+                ))}
+              </div>
             </div>
           )}
           <div className="flex items-end gap-2">

@@ -95,7 +95,7 @@ export default function ObjectivesPage() {
         </div>
         <button
           onClick={() => addCriteriaRef.current?.()}
-          className="flex items-center gap-1.5 px-5 py-2.5 bg-brand-terracotta hover:bg-brand-terracotta/90 text-white rounded-pill text-[15px] font-semibold shadow-cta transition-colors"
+          className="flex items-center gap-1.5 px-4 py-2 bg-brand-terracotta hover:bg-brand-terracotta/90 text-white rounded-full text-sm font-semibold transition-colors"
         >
           <Plus size={16} />
           Add Criteria

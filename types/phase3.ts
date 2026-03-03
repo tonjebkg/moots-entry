@@ -58,6 +58,7 @@ export interface CheckinMetrics {
   walk_ins: number;
   not_arrived: number;
   check_in_rate: number;
+  total_capacity: number;
   recent_checkins: EventCheckin[];
   not_arrived_guests: NotArrivedGuest[];
 }

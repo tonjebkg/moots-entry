@@ -922,7 +922,7 @@ export default function GuestIntelligencePage() {
           <div className="relative">
             <button
               onClick={() => setShowAddMenu(!showAddMenu)}
-              className="flex items-center gap-1.5 px-3 py-2 border border-ui-border rounded-lg text-sm font-medium text-ui-secondary hover:bg-brand-cream transition-colors"
+              className="flex items-center gap-1.5 px-4 py-2 bg-brand-terracotta hover:bg-brand-terracotta/90 text-white rounded-full text-sm font-semibold transition-colors"
             >
               <UserPlus size={14} />
               Add Guests
@@ -966,7 +966,7 @@ export default function GuestIntelligencePage() {
           </div>
           <Link
             href={`/dashboard/${eventId}/targeting`}
-            className="flex items-center gap-1.5 px-3 py-2 border border-ui-border rounded-lg text-sm font-medium text-ui-secondary hover:bg-brand-cream transition-colors"
+            className="flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-brand-terracotta border-2 border-brand-terracotta rounded-full hover:bg-brand-terracotta/5 transition-colors"
           >
             <Settings size={14} />
             Targeting
@@ -974,7 +974,7 @@ export default function GuestIntelligencePage() {
           <button
             onClick={triggerScoring}
             disabled={triggering || !!activeJobId}
-            className="flex items-center gap-1.5 px-3 py-2 border border-ui-border rounded-lg text-sm font-medium text-ui-secondary hover:bg-brand-cream transition-colors disabled:opacity-50"
+            className="flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-brand-terracotta border-2 border-brand-terracotta rounded-full hover:bg-brand-terracotta/5 transition-colors disabled:opacity-50"
           >
             <Sparkles size={14} />
             {triggering ? 'Starting...' : 'Re-score All'}
