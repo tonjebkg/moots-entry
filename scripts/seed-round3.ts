@@ -46,13 +46,13 @@ const FOUNDING_GUESTS: GuestSeed[] = [
   { name: 'Walter Edmonds', email: 'wedmonds@temasek.com.sg', status: 'ACCEPTED', tier: 'TIER_1', priority: 'VIP', rsvp_sent: '2026-03-20T14:00:00Z', rsvp_responded: '2026-03-22T08:45:00Z' },
   { name: 'Andrew Sterling', email: 'a.sterling@thomabravo.com', status: 'ACCEPTED', tier: 'TIER_1', priority: 'HIGH', rsvp_sent: '2026-03-20T14:00:00Z', rsvp_responded: '2026-03-21T16:20:00Z' },
   { name: 'James Harrington', email: 'jharrington@blackstone.com', status: 'ACCEPTED', tier: 'TIER_1', priority: 'VIP', rsvp_sent: '2026-03-20T14:00:00Z', rsvp_responded: '2026-03-20T18:30:00Z' },
-  { name: 'Charles Montgomery', email: 'c.montgomery@kkr.com', status: 'ACCEPTED', tier: 'TIER_1', priority: 'HIGH', rsvp_sent: '2026-03-20T14:00:00Z', rsvp_responded: '2026-03-23T10:00:00Z' },
   { name: 'Elizabeth Waverly', email: 'ewaverly@waverly-advisory.com', status: 'ACCEPTED', tier: 'TIER_1', priority: 'HIGH', rsvp_sent: '2026-03-20T14:00:00Z', rsvp_responded: '2026-03-22T14:15:00Z' },
   { name: 'Diana Okonkwo', email: 'd.okonkwo@vistaequity.com', status: 'ACCEPTED', tier: 'TIER_1', priority: 'HIGH', rsvp_sent: '2026-03-20T14:00:00Z', rsvp_responded: '2026-03-21T13:45:00Z' },
   { name: 'Lisa Chang', email: 'lchang@snowflake.com', status: 'ACCEPTED', tier: 'TIER_1', priority: 'NORMAL', rsvp_sent: '2026-03-20T14:00:00Z', rsvp_responded: '2026-03-23T09:30:00Z' },
   { name: 'Louise Hensley', email: 'l.hensley@mckinsey.com', status: 'ACCEPTED', tier: 'TIER_1', priority: 'NORMAL', rsvp_sent: '2026-03-20T14:00:00Z', rsvp_responded: '2026-03-22T17:00:00Z' },
   { name: 'Oliver Pennington', email: 'opennington@evercore.com', status: 'ACCEPTED', tier: 'TIER_1', priority: 'NORMAL', rsvp_sent: '2026-03-20T14:00:00Z', rsvp_responded: '2026-03-24T08:20:00Z' },
   { name: 'David Nakamura', email: 'd.nakamura@nakamura-partners.jp', status: 'DECLINED', tier: 'TIER_1', priority: 'HIGH', rsvp_sent: '2026-03-20T14:00:00Z', rsvp_responded: '2026-03-24T09:15:00Z' },
+  { name: 'Robert Kensington', email: 'r.kensington@kensington-capital.com', status: 'INVITED', tier: 'TIER_1', priority: 'HIGH', rsvp_sent: '2026-03-20T14:00:00Z', rsvp_responded: null },
 ];
 
 const EXTENDED_GUESTS: GuestSeed[] = [
@@ -70,6 +70,21 @@ const EXTENDED_GUESTS: GuestSeed[] = [
 
 async function main() {
   console.log('=== Round 3 seed data ===\n');
+
+  // ─── 0. Add address column to people_contacts if missing ────────────
+  console.log('0. Ensuring address column on people_contacts...');
+  await sql`
+    DO $$
+    BEGIN
+      IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'people_contacts' AND column_name = 'address'
+      ) THEN
+        ALTER TABLE people_contacts ADD COLUMN address TEXT;
+      END IF;
+    END $$
+  `;
+  console.log('   address column ready');
 
   // ─── 1. Create event_notes table ─────────────────────────────────────
   console.log('1. Creating event_notes table...');

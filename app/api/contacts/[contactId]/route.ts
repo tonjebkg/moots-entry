@@ -132,6 +132,7 @@ export const PATCH = withErrorHandling(async (request: NextRequest, { params }: 
   if (data.industry !== undefined) updates.industry = data.industry;
   if (data.linkedin_url !== undefined) updates.linkedin_url = data.linkedin_url;
   if (data.twitter_url !== undefined) updates.twitter_url = data.twitter_url;
+  if (data.address !== undefined) updates.address = data.address;
   if (data.net_worth_range !== undefined) updates.net_worth_range = data.net_worth_range;
   if (data.internal_notes !== undefined) updates.internal_notes = data.internal_notes;
   if (data.guest_role !== undefined) updates.guest_role = data.guest_role;
@@ -156,6 +157,7 @@ export const PATCH = withErrorHandling(async (request: NextRequest, { params }: 
       industry = ${data.industry !== undefined ? data.industry : null},
       linkedin_url = ${data.linkedin_url !== undefined ? data.linkedin_url : null},
       twitter_url = ${data.twitter_url !== undefined ? data.twitter_url : null},
+      address = ${data.address !== undefined ? data.address : null},
       net_worth_range = ${data.net_worth_range !== undefined ? data.net_worth_range : null},
       board_affiliations = ${data.board_affiliations ? JSON.stringify(data.board_affiliations) : null}::jsonb,
       tags = ${data.tags ?? null},

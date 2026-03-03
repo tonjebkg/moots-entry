@@ -1,8 +1,8 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { useParams } from 'next/navigation'
-import { Target, CheckCircle2, Sparkles } from 'lucide-react'
+import { Target, CheckCircle2, Sparkles, Plus } from 'lucide-react'
 import { ObjectivesEditor } from '@/app/components/ObjectivesEditor'
 
 interface Objective {
@@ -45,6 +45,8 @@ export default function ObjectivesPage() {
   const [savedCallout, setSavedCallout] = useState(false)
 
   const [scoringTriggered, setScoringTriggered] = useState(false)
+  const addCriteriaRef = useRef<(() => void) | null>(null)
+  const handleAddRef = useCallback((fn: () => void) => { addCriteriaRef.current = fn }, [])
 
   async function handleSave(updatedObjectives: Objective[]) {
     const res = await fetch(`/api/events/${eventId}/objectives`, {
@@ -79,16 +81,25 @@ export default function ObjectivesPage() {
 
   return (
     <div>
-      <div className="flex items-center gap-3 mb-6">
-        <div className="w-10 h-10 rounded-lg bg-brand-forest/10 flex items-center justify-center">
-          <Target size={20} className="text-brand-forest" />
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-lg bg-brand-forest/10 flex items-center justify-center">
+            <Target size={20} className="text-brand-forest" />
+          </div>
+          <div>
+            <h1 className="font-display text-xl font-bold text-brand-charcoal">Target Audience</h1>
+            <p className="text-[15px] text-ui-tertiary">
+              Define your ideal guest profile. The AI scores every contact against these criteria.
+            </p>
+          </div>
         </div>
-        <div>
-          <h1 className="font-display text-xl font-bold text-brand-charcoal">Target Audience</h1>
-          <p className="text-[15px] text-ui-tertiary">
-            Define your ideal guest profile. The AI scores every contact against these criteria.
-          </p>
-        </div>
+        <button
+          onClick={() => addCriteriaRef.current?.()}
+          className="flex items-center gap-1.5 px-5 py-2.5 bg-brand-terracotta hover:bg-brand-terracotta/90 text-white rounded-pill text-[15px] font-semibold shadow-cta transition-colors"
+        >
+          <Plus size={16} />
+          Add Criteria
+        </button>
       </div>
 
       {savedCallout && (
@@ -122,6 +133,7 @@ export default function ObjectivesPage() {
           objectives={objectives}
           onSave={handleSave}
           hasScoredContacts={objectives.some(o => o.qualifying_count !== undefined)}
+          onAddRef={handleAddRef}
         />
       )}
     </div>

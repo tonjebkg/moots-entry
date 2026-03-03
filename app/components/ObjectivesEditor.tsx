@@ -20,6 +20,7 @@ interface ObjectivesEditorProps {
   objectives: Objective[]
   onSave: (objectives: Objective[]) => Promise<void>
   hasScoredContacts?: boolean
+  onAddRef?: (addFn: () => void) => void
 }
 
 const PLACEHOLDER_EXAMPLES = [
@@ -31,7 +32,7 @@ const PLACEHOLDER_EXAMPLES = [
   'Creative agency leads with Cannes credentials',
 ]
 
-export function ObjectivesEditor({ eventId, objectives: initial, onSave, hasScoredContacts }: ObjectivesEditorProps) {
+export function ObjectivesEditor({ eventId, objectives: initial, onSave, hasScoredContacts, onAddRef }: ObjectivesEditorProps) {
   const [objectives, setObjectives] = useState<Objective[]>(initial)
   const [savedIndex, setSavedIndex] = useState<number | null>(null)
   const [appliedSuggestions, setAppliedSuggestions] = useState<Map<number, Set<number>>>(new Map())
@@ -125,6 +126,12 @@ export function ObjectivesEditor({ eventId, objectives: initial, onSave, hasScor
     ])
   }
 
+  // Expose addObjective to parent so button can be rendered in the page heading
+  useEffect(() => {
+    onAddRef?.(addObjective)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [onAddRef])
+
   function updateObjective(index: number, updates: Partial<Objective>) {
     const next = [...objectives]
     next[index] = { ...next[index], ...updates }
@@ -169,16 +176,8 @@ export function ObjectivesEditor({ eventId, objectives: initial, onSave, hasScor
 
   return (
     <div className="space-y-4">
-      {/* Add Criteria — at the top */}
-      <div className="flex items-center gap-3">
-        <button
-          onClick={addObjective}
-          className="flex items-center gap-1.5 px-5 py-2.5 bg-brand-terracotta hover:bg-brand-terracotta/90 text-white rounded-pill text-[15px] font-semibold shadow-cta transition-colors"
-        >
-          <Plus size={16} />
-          Add Criteria
-        </button>
-        {savedIndex !== null && (
+      {savedIndex !== null && (
+        <div className="flex items-center gap-3">
           <span className="flex items-center gap-1.5 text-sm text-emerald-600 font-medium animate-fade-in">
             <CheckCircle size={14} />
             Saved
@@ -189,8 +188,8 @@ export function ObjectivesEditor({ eventId, objectives: initial, onSave, hasScor
               Score Contacts Now →
             </Link>
           </span>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Objectives List — newest first */}
       <div className="space-y-3">

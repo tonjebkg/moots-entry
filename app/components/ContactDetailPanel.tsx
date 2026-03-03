@@ -21,6 +21,7 @@ interface ContactDetail {
   industry: string | null
   linkedin_url: string | null
   twitter_url: string | null
+  address: string | null
   enrichment_status: string
   enrichment_data: Record<string, unknown>
   ai_summary: string | null
@@ -74,6 +75,7 @@ export function ContactDetailPanel({ contactId, onClose, onUpdate, onEnrich }: C
   const [editTitle, setEditTitle] = useState('')
   const [editIndustry, setEditIndustry] = useState('')
   const [editLinkedin, setEditLinkedin] = useState('')
+  const [editAddress, setEditAddress] = useState('')
   const [editTags, setEditTags] = useState<string[]>([])
   const [editNotes, setEditNotes] = useState('')
 
@@ -107,6 +109,7 @@ export function ContactDetailPanel({ contactId, onClose, onUpdate, onEnrich }: C
     setEditTitle(c.title || '')
     setEditIndustry(c.industry || '')
     setEditLinkedin(c.linkedin_url || '')
+    setEditAddress(c.address || '')
     setEditTags(c.tags || [])
     setEditNotes(c.internal_notes || '')
   }
@@ -124,6 +127,7 @@ export function ContactDetailPanel({ contactId, onClose, onUpdate, onEnrich }: C
         company: editCompany || null,
         title: editTitle || null,
         industry: editIndustry || null,
+        address: editAddress || null,
         tags: editTags,
         internal_notes: editNotes || null,
       }
@@ -308,6 +312,19 @@ export function ContactDetailPanel({ contactId, onClose, onUpdate, onEnrich }: C
                       />
                     </div>
                   </div>
+                  <div>
+                    <label className="text-xs text-ui-tertiary mb-1 block">Address</label>
+                    <div className="flex items-center gap-2">
+                      <MapPin size={14} className="text-ui-tertiary shrink-0" />
+                      <input
+                        type="text"
+                        value={editAddress}
+                        onChange={(e) => setEditAddress(e.target.value)}
+                        placeholder="City, State/Country"
+                        className="w-full px-3 py-2 text-sm border border-ui-border rounded-lg focus:outline-none focus:border-brand-terracotta"
+                      />
+                    </div>
+                  </div>
                 </div>
 
                 {/* Professional Info */}
@@ -414,7 +431,13 @@ export function ContactDetailPanel({ contactId, onClose, onUpdate, onEnrich }: C
                       </a>
                     </div>
                   )}
-                  {!contact.emails?.length && !contact.phones?.length && !contact.linkedin_url && (
+                  {contact.address && (
+                    <div className="flex items-center gap-2 text-sm text-ui-secondary">
+                      <MapPin size={14} className="text-ui-tertiary" />
+                      <span>{contact.address}</span>
+                    </div>
+                  )}
+                  {!contact.emails?.length && !contact.phones?.length && !contact.linkedin_url && !contact.address && (
                     <p className="text-sm text-ui-tertiary">No contact info — click Edit to add</p>
                   )}
                 </div>

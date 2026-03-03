@@ -154,24 +154,29 @@ export default function InvitationsPage() {
                   </span>
                 </div>
 
-                {campaign.description && (
-                  <p className="text-xs text-ui-tertiary mb-2 line-clamp-2 leading-relaxed">
-                    {campaign.description}
-                  </p>
-                )}
+                {/* Sent date */}
+                <p className="text-xs text-ui-tertiary mb-2">
+                  Sent {new Date(campaign.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                </p>
 
                 <div className="grid grid-cols-3 gap-2 text-xs">
                   <div>
-                    <div className="text-ui-tertiary mb-0.5 uppercase tracking-wide" style={{ fontSize: '10px' }}>Considering</div>
-                    <div className="text-brand-charcoal font-bold">{campaign.total_considering}</div>
-                  </div>
-                  <div>
-                    <div className="text-ui-tertiary mb-0.5 uppercase tracking-wide" style={{ fontSize: '10px' }}>Invited</div>
-                    <div className="text-brand-terracotta font-bold">{campaign.total_invited}</div>
+                    <div className="text-ui-tertiary mb-0.5 uppercase tracking-wide" style={{ fontSize: '10px' }}>Recipients</div>
+                    <div className="text-brand-charcoal font-bold">{campaign.total_invited + campaign.total_considering}</div>
                   </div>
                   <div>
                     <div className="text-ui-tertiary mb-0.5 uppercase tracking-wide" style={{ fontSize: '10px' }}>Accepted</div>
                     <div className="text-emerald-700 font-bold">{campaign.total_accepted}</div>
+                  </div>
+                  <div>
+                    <div className="text-ui-tertiary mb-0.5 uppercase tracking-wide" style={{ fontSize: '10px' }}>Response</div>
+                    <div className="text-brand-terracotta font-bold">
+                      {(() => {
+                        const total = campaign.total_invited + campaign.total_considering
+                        const responded = campaign.total_accepted + campaign.total_declined
+                        return total > 0 ? `${Math.round((responded / total) * 100)}%` : '—'
+                      })()}
+                    </div>
                   </div>
                 </div>
               </button>
