@@ -4,7 +4,7 @@
  * Creates a realistic TikTok-themed demo dataset:
  * - 1 event: "TikTok Global Creator Summit 2026"
  * - 35 contacts (creators, brand execs, platform execs, media/VC)
- * - 3 event objectives
+ * - 3 targeting criteria
  * - Guest scores for all 35 contacts
  * - 2 invitation campaigns (VIP Table + Industry Leaders)
  * - 8 check-ins
@@ -1042,7 +1042,7 @@ async function main() {
   const agentActivities = [
     {
       type: 'scoring',
-      headline: 'Scored 35 contacts against 3 event objectives',
+      headline: 'Scored 35 contacts against 3 targeting criteria',
       detail: '22 qualify with a score of 70+. Top match: Charli D\'Amelio (98). Strong creator-brand balance across the guest list.',
       metadata: { total_scored: 35, qualified: 22, top_score: 98 },
       daysAgo: 3,
@@ -1172,7 +1172,7 @@ async function main() {
         { label: 'Event Details', done: true, source: 'manual' },
         { label: 'Partners', done: true, source: 'manual' },
         { label: 'Guest List', done: true, source: 'scoring' },
-        { label: 'Objectives', done: true, source: 'manual' },
+        { label: 'Targeting Criteria', done: true, source: 'manual' },
         { label: 'Market Research', done: true, source: 'ai' },
         { label: 'Strategic Analysis', done: true, source: 'ai' },
         { label: 'Team Assignments', done: true, source: 'manual' },
@@ -1197,8 +1197,8 @@ async function main() {
     },
     {
       type: 'extracted',
-      text: 'Identified 2 event partners: TikTok (Presenting Partner) and Moots (Event Partner). Extracted 3 event objectives focused on creator economy leaders, brand decision-makers, and platform executives.',
-      details: ['TikTok — Presenting Partner', 'Moots — Event Partner', '3 objectives configured'],
+      text: 'Identified 2 event partners: TikTok (Presenting Partner) and Moots (Event Partner). Extracted 3 targeting criteria focused on creator economy leaders, brand decision-makers, and platform executives.',
+      details: ['TikTok — Presenting Partner', 'Moots — Event Partner', '3 targeting criteria configured'],
       daysAgo: 2, minutesOffset: 1,
     },
     {

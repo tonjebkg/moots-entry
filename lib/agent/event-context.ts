@@ -240,7 +240,7 @@ export function formatContextForPrompt(ctx: FullEventContext): string {
 
   // Objectives
   if (ctx.objectives.length > 0) {
-    const lines = ['## Event Objectives'];
+    const lines = ['## Targeting Criteria'];
     for (const obj of ctx.objectives) {
       lines.push(`- [Weight ${obj.weight}] ${obj.objective_text}`);
     }
