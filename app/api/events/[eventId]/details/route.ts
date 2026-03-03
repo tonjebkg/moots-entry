@@ -43,8 +43,12 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       name: 'title',
       title: 'title',
       description: 'description',
-      dressCode: 'additional_context', // Stored in additional_context for now
-      dress_code: 'additional_context',
+      dressCode: 'dress_code',
+      dress_code: 'dress_code',
+      hostingCompany: 'hosting_company',
+      hosting_company: 'hosting_company',
+      eventGoal: 'event_goal',
+      event_goal: 'event_goal',
       event_theme: 'event_theme',
       success_criteria: 'success_criteria',
       budget_range: 'budget_range',
@@ -71,6 +75,12 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       await db`UPDATE events SET budget_range = ${value}, updated_at = NOW() WHERE id = ${eventIdNum}`
     } else if (dbField === 'additional_context') {
       await db`UPDATE events SET additional_context = ${value}, updated_at = NOW() WHERE id = ${eventIdNum}`
+    } else if (dbField === 'hosting_company') {
+      await db`UPDATE events SET hosting_company = ${value}, updated_at = NOW() WHERE id = ${eventIdNum}`
+    } else if (dbField === 'dress_code') {
+      await db`UPDATE events SET dress_code = ${value}, updated_at = NOW() WHERE id = ${eventIdNum}`
+    } else if (dbField === 'event_goal') {
+      await db`UPDATE events SET event_goal = ${value}, updated_at = NOW() WHERE id = ${eventIdNum}`
     }
 
     logAction({

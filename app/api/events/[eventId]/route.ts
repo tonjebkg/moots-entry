@@ -1,5 +1,10 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
+import { withErrorHandling } from '@/lib/with-error-handling';
+import { requireAuth, requireRole } from '@/lib/auth';
+import { logAction } from '@/lib/audit-log';
+import { getClientIdentifier } from '@/lib/rate-limit';
+import { NotFoundError } from '@/lib/errors';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -48,6 +53,10 @@ export async function GET(_req: Request, { params }: RouteParams) {
         event_theme,
         budget_range,
         additional_context,
+        hosting_company,
+        dress_code,
+        description,
+        event_goal,
         created_at,
         updated_at
       FROM events
@@ -103,6 +112,10 @@ export async function GET(_req: Request, { params }: RouteParams) {
       event_theme: event.event_theme || null,
       budget_range: event.budget_range || null,
       additional_context: event.additional_context || null,
+      hosting_company: event.hosting_company || null,
+      dress_code: event.dress_code || null,
+      description: event.description || null,
+      event_goal: event.event_goal || null,
       created_at: event.created_at,
       updated_at: event.updated_at,
       // Legacy fields for backward compatibility
@@ -125,3 +138,37 @@ export async function GET(_req: Request, { params }: RouteParams) {
     );
   }
 }
+
+/**
+ * DELETE /api/events/[eventId] — Delete an event (cascades to child tables)
+ */
+export const DELETE = withErrorHandling(async (request: NextRequest, { params }: RouteParams) => {
+  const auth = await requireAuth();
+  requireRole(auth, 'OWNER', 'ADMIN');
+
+  const { eventId } = await params;
+  const db = getDb();
+
+  const deleted = await db`
+    DELETE FROM events
+    WHERE id = ${Number(eventId)} AND workspace_id = ${auth.workspace.id}
+    RETURNING id, title
+  `;
+
+  if (deleted.length === 0) {
+    throw new NotFoundError('Event');
+  }
+
+  logAction({
+    workspaceId: auth.workspace.id,
+    actorId: auth.user.id,
+    actorEmail: auth.user.email,
+    action: 'event.deleted',
+    entityType: 'event',
+    entityId: String(deleted[0].id),
+    previousValue: { title: deleted[0].title },
+    ipAddress: getClientIdentifier(request),
+  });
+
+  return NextResponse.json({ success: true, deleted: deleted[0] });
+});
