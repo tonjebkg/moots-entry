@@ -1,13 +1,144 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Settings, Edit2 } from 'lucide-react'
+import { Settings, Edit2, ChevronDown, Check, Loader2 } from 'lucide-react'
 import { CollaboratorAvatarStack } from '@/app/components/CollaboratorAvatarStack'
 import { AvatarInitials } from '@/app/components/ui/AvatarInitials'
 import { useEventScroll } from '@/app/components/EventScrollContext'
 import { EditEventModal } from '@/app/components/EditEventModal'
+
+interface Workspace {
+  id: string
+  name: string
+  slug: string
+  role: string
+}
+
+function WorkspaceSwitcher() {
+  const [currentWorkspace, setCurrentWorkspace] = useState<Workspace | null>(null)
+  const [workspaces, setWorkspaces] = useState<Workspace[]>([])
+  const [open, setOpen] = useState(false)
+  const [switching, setSwitching] = useState(false)
+  const dropdownRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    async function load() {
+      try {
+        const [sessionRes, wsRes] = await Promise.all([
+          fetch('/api/auth/session'),
+          fetch('/api/workspaces'),
+        ])
+        if (sessionRes.ok) {
+          const sessionData = await sessionRes.json()
+          setCurrentWorkspace({
+            id: sessionData.workspace.id,
+            name: sessionData.workspace.name,
+            slug: sessionData.workspace.slug,
+            role: sessionData.role,
+          })
+        }
+        if (wsRes.ok) {
+          const wsData = await wsRes.json()
+          setWorkspaces(wsData.workspaces)
+        }
+      } catch {
+        // silently fail — header still works without switcher
+      }
+    }
+    load()
+  }, [])
+
+  // Close on outside click
+  useEffect(() => {
+    if (!open) return
+    function handleMouseDown(e: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleMouseDown)
+    return () => document.removeEventListener('mousedown', handleMouseDown)
+  }, [open])
+
+  async function handleSwitch(workspaceId: string) {
+    if (switching || workspaceId === currentWorkspace?.id) {
+      setOpen(false)
+      return
+    }
+    setSwitching(true)
+    try {
+      const res = await fetch('/api/workspaces/switch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ workspace_id: workspaceId }),
+      })
+      if (res.ok) {
+        window.location.href = '/dashboard'
+      } else {
+        setSwitching(false)
+      }
+    } catch {
+      setSwitching(false)
+    }
+  }
+
+  if (!currentWorkspace) return null
+
+  const roleBadgeColor: Record<string, string> = {
+    owner: 'bg-brand-terracotta/10 text-brand-terracotta',
+    admin: 'bg-brand-forest/10 text-brand-forest',
+    team_member: 'bg-blue-50 text-blue-700',
+    viewer: 'bg-gray-100 text-gray-600',
+  }
+
+  return (
+    <div ref={dropdownRef} className="relative">
+      <button
+        onClick={() => !switching && setOpen(!open)}
+        disabled={switching}
+        className="flex items-center gap-1.5 px-2.5 py-1.5 text-sm font-medium text-brand-charcoal rounded-lg border border-transparent hover:border-ui-border transition-colors max-w-[180px]"
+      >
+        <span className="truncate">{currentWorkspace.name}</span>
+        {switching ? (
+          <Loader2 size={14} className="shrink-0 animate-spin text-ui-tertiary" />
+        ) : (
+          <ChevronDown size={14} className="shrink-0 text-ui-tertiary" />
+        )}
+      </button>
+
+      {open && (
+        <div className="absolute top-full right-0 mt-2 w-64 bg-white rounded-xl shadow-lg border border-ui-border z-50 py-1 overflow-hidden">
+          <div className="px-3 py-2 border-b border-ui-border">
+            <p className="text-xs font-medium text-ui-tertiary uppercase tracking-wide">Workspaces</p>
+          </div>
+          {workspaces.map((ws) => {
+            const isCurrent = ws.id === currentWorkspace.id
+            return (
+              <button
+                key={ws.id}
+                onClick={() => handleSwitch(ws.id)}
+                disabled={switching}
+                className="w-full flex items-center gap-3 px-3 py-2.5 text-left hover:bg-brand-cream/60 transition-colors disabled:opacity-50"
+              >
+                <div className="flex-1 min-w-0">
+                  <p className={`text-sm truncate ${isCurrent ? 'font-semibold text-brand-charcoal' : 'font-medium text-brand-charcoal'}`}>
+                    {ws.name}
+                  </p>
+                  <span className={`inline-block mt-0.5 text-[11px] font-medium px-1.5 py-0.5 rounded-full ${roleBadgeColor[ws.role] ?? 'bg-gray-100 text-gray-600'}`}>
+                    {ws.role.replace('_', ' ')}
+                  </span>
+                </div>
+                {isCurrent && <Check size={16} className="shrink-0 text-brand-terracotta" />}
+              </button>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
+}
 
 interface TeamMember {
   id: string
@@ -96,6 +227,7 @@ export function DashboardHeader({ activeNav, rightSlot, userName, teamMembers = 
             </button>
           )}
           {rightSlot}
+          <WorkspaceSwitcher />
           <Link
             href="/dashboard/settings"
             className="p-2 text-ui-tertiary hover:text-brand-terracotta transition-colors rounded-lg hover:bg-brand-cream"
