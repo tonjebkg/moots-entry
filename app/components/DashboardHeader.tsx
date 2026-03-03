@@ -1,11 +1,13 @@
 'use client'
 
+import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { Settings, Edit2 } from 'lucide-react'
 import { CollaboratorAvatarStack } from '@/app/components/CollaboratorAvatarStack'
 import { AvatarInitials } from '@/app/components/ui/AvatarInitials'
 import { useEventScroll } from '@/app/components/EventScrollContext'
+import { EditEventModal } from '@/app/components/EditEventModal'
 
 interface TeamMember {
   id: string
@@ -32,6 +34,7 @@ interface DashboardHeaderProps {
 export function DashboardHeader({ activeNav, rightSlot, userName, teamMembers = [], eventInfo }: DashboardHeaderProps) {
   const pathname = usePathname()
   const { isStuck } = useEventScroll()
+  const [showEditModal, setShowEditModal] = useState(false)
 
   // Auto-detect active nav from pathname if not explicitly set
   const active = activeNav ?? (pathname?.startsWith('/dashboard/people') ? 'people' : 'events')
@@ -85,10 +88,7 @@ export function DashboardHeader({ activeNav, rightSlot, userName, teamMembers = 
         <div className="flex items-center gap-3 shrink-0">
           {showCondensed && (
             <button
-              onClick={() => {
-                // TODO: Open edit event modal
-                alert('Edit Event modal - to be implemented')
-              }}
+              onClick={() => setShowEditModal(true)}
               className="flex items-center gap-2 px-3 py-1.5 bg-white border border-ui-border hover:border-brand-terracotta text-brand-charcoal text-sm font-semibold rounded-lg transition-colors"
             >
               <Edit2 size={14} />
@@ -108,6 +108,17 @@ export function DashboardHeader({ activeNav, rightSlot, userName, teamMembers = 
           ) : null}
         </div>
       </div>
+
+      {showEditModal && eventInfo && (
+        <EditEventModal
+          eventId={eventInfo.eventId}
+          onClose={() => setShowEditModal(false)}
+          onSuccess={() => {
+            setShowEditModal(false)
+            window.location.reload()
+          }}
+        />
+      )}
     </header>
   )
 }

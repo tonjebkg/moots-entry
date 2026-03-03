@@ -44,6 +44,10 @@ type EventRow = {
   status?: EventStatus
   created_at?: string
   updated_at?: string
+  total_capacity?: number | null
+  invited_count?: number
+  confirmed_count?: number
+  pending_count?: number
   // Legacy fields
   name?: string
   city?: string | null
@@ -380,7 +384,7 @@ export default function DashboardPage() {
                               <div className="text-xs font-semibold text-ui-tertiary uppercase mb-0.5">
                                 Invited
                               </div>
-                              <div className="text-lg font-bold text-brand-terracotta">—</div>
+                              <div className="text-lg font-bold text-brand-terracotta">{event.invited_count ?? 0}</div>
                             </div>
                           </div>
                           <div className="flex items-start gap-2">
@@ -391,7 +395,7 @@ export default function DashboardPage() {
                               <div className="text-xs font-semibold text-ui-tertiary uppercase mb-0.5">
                                 Confirmed
                               </div>
-                              <div className="text-lg font-bold text-emerald-700">—</div>
+                              <div className="text-lg font-bold text-emerald-700">{event.confirmed_count ?? 0}</div>
                             </div>
                           </div>
                           <div className="flex items-start gap-2">
@@ -402,7 +406,7 @@ export default function DashboardPage() {
                               <div className="text-xs font-semibold text-ui-tertiary uppercase mb-0.5">
                                 Pending
                               </div>
-                              <div className="text-lg font-bold text-amber-700">—</div>
+                              <div className="text-lg font-bold text-amber-700">{event.pending_count ?? 0}</div>
                             </div>
                           </div>
                           <div className="flex items-start gap-2">
@@ -413,7 +417,7 @@ export default function DashboardPage() {
                               <div className="text-xs font-semibold text-ui-tertiary uppercase mb-0.5">
                                 Capacity
                               </div>
-                              <div className="text-lg font-bold text-ui-secondary">—</div>
+                              <div className="text-lg font-bold text-ui-secondary">{event.total_capacity ?? '—'}</div>
                             </div>
                           </div>
                         </div>

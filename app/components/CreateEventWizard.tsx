@@ -2,9 +2,9 @@
 
 import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { X, ChevronRight, ChevronLeft, Check, Upload, Database, History, Users as UsersIcon, Plus, Trash2, GripVertical, Sparkles, Loader2 } from 'lucide-react'
+import { X, ChevronRight, ChevronLeft, Check, Plus, Trash2, GripVertical, Sparkles, Loader2 } from 'lucide-react'
 
-type WizardStep = 'basics' | 'objectives' | 'guest-pool' | 'collaboration'
+type WizardStep = 'basics' | 'objectives'
 type EventFormat = 'curated-dinner' | 'branded-house' | 'annual-retreat' | 'custom'
 type ApproveMode = 'MANUAL' | 'AUTO'
 type EventStatus = 'DRAFT' | 'PUBLISHED'
@@ -24,8 +24,6 @@ interface Objective {
 const STEPS: { key: WizardStep; label: string; optional?: boolean }[] = [
   { key: 'basics', label: 'Event Basics' },
   { key: 'objectives', label: 'Objectives' },
-  { key: 'guest-pool', label: 'Guest Pool', optional: true },
-  { key: 'collaboration', label: 'Team', optional: true },
 ]
 
 const FORMAT_TEMPLATES: Record<EventFormat, { label: string; description: string; objectives: string[] }> = {
@@ -138,12 +136,6 @@ export function CreateEventWizard({ onClose, onSuccess }: CreateEventWizardProps
   // Step 2: Objectives
   const [objectives, setObjectives] = useState<Objective[]>([])
   const [objectivesSaved, setObjectivesSaved] = useState(false)
-
-  // Step 3: Guest Pool
-  const [guestPoolSource, setGuestPoolSource] = useState<string | null>(null)
-
-  // Step 4: Collaboration
-  const [inviteEmails, setInviteEmails] = useState<string[]>([''])
 
   const currentStepIndex = STEPS.findIndex(s => s.key === currentStep)
   const isLastStep = currentStepIndex === STEPS.length - 1
@@ -259,7 +251,7 @@ export function CreateEventWizard({ onClose, onSuccess }: CreateEventWizardProps
       return
     }
 
-    // Step 2: Save objectives (optional)
+    // Step 2: Save objectives then finish
     if (currentStep === 'objectives' && eventId) {
       const validObjectives = objectives.filter(o => o.objective_text.trim())
       if (validObjectives.length > 0 && !objectivesSaved) {
@@ -285,20 +277,8 @@ export function CreateEventWizard({ onClose, onSuccess }: CreateEventWizardProps
           setSaving(false)
         }
       }
-      setCurrentStep('guest-pool')
+      handleFinish()
       return
-    }
-
-    // Step 3: Guest pool (skip forward)
-    if (currentStep === 'guest-pool') {
-      setCurrentStep('collaboration')
-      return
-    }
-
-    // Step 4: Finish
-    if (currentStep === 'collaboration' && eventId) {
-      onSuccess(eventId)
-      router.push(`/dashboard/${eventId}/overview`)
     }
   }
 
@@ -620,98 +600,6 @@ export function CreateEventWizard({ onClose, onSuccess }: CreateEventWizardProps
             </div>
           )}
 
-          {/* Step 3: Guest Pool */}
-          {currentStep === 'guest-pool' && (
-            <div className="space-y-5">
-              <div>
-                <h3 className="font-display text-lg font-semibold text-brand-charcoal mb-1">Guest Pool Source</h3>
-                <p className="text-sm text-ui-tertiary">
-                  Where should we pull contacts from? You can skip this and add guests later.
-                </p>
-              </div>
-
-              <div className="grid grid-cols-1 gap-3">
-                {[
-                  { key: 'csv', icon: Upload, label: 'Upload CSV', description: 'Import contacts from a spreadsheet' },
-                  { key: 'crm', icon: Database, label: 'Import from CRM', description: 'Connect to Airtable, Notion, or HubSpot' },
-                  { key: 'past-event', icon: History, label: 'Import from Past Event', description: 'Copy contacts from a previous event' },
-                  { key: 'network', icon: UsersIcon, label: 'Start from Moots Network', description: 'Use your existing People Database' },
-                ].map(option => {
-                  const Icon = option.icon
-                  return (
-                    <button
-                      key={option.key}
-                      onClick={() => setGuestPoolSource(option.key)}
-                      className={`flex items-center gap-4 p-4 rounded-lg border text-left transition-colors ${
-                        guestPoolSource === option.key
-                          ? 'border-brand-terracotta bg-brand-terracotta/5'
-                          : 'border-ui-border bg-white hover:border-brand-terracotta/30'
-                      }`}
-                    >
-                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${
-                        guestPoolSource === option.key ? 'bg-brand-terracotta/10' : 'bg-brand-cream'
-                      }`}>
-                        <Icon size={18} className={guestPoolSource === option.key ? 'text-brand-terracotta' : 'text-ui-tertiary'} />
-                      </div>
-                      <div>
-                        <div className="text-sm font-semibold text-brand-charcoal">{option.label}</div>
-                        <div className="text-xs text-ui-tertiary mt-0.5">{option.description}</div>
-                      </div>
-                    </button>
-                  )
-                })}
-              </div>
-
-              <p className="text-xs text-ui-tertiary text-center">
-                You can always add more contacts after creating the event.
-              </p>
-            </div>
-          )}
-
-          {/* Step 4: Collaboration */}
-          {currentStep === 'collaboration' && (
-            <div className="space-y-5">
-              <div>
-                <h3 className="font-display text-lg font-semibold text-brand-charcoal mb-1">Invite Team Members</h3>
-                <p className="text-sm text-ui-tertiary">
-                  Add collaborators who can help curate the guest list. You can skip this step.
-                </p>
-              </div>
-
-              <div className="space-y-3">
-                {inviteEmails.map((email, idx) => (
-                  <div key={idx} className="flex items-center gap-2">
-                    <input
-                      type="email"
-                      value={email}
-                      onChange={(e) => {
-                        const next = [...inviteEmails]
-                        next[idx] = e.target.value
-                        setInviteEmails(next)
-                      }}
-                      placeholder="team@company.com"
-                      className="flex-1 px-3 py-2.5 bg-white border border-ui-border rounded-lg text-sm text-brand-charcoal placeholder-ui-tertiary focus:outline-none focus:border-brand-terracotta focus:ring-1 focus:ring-brand-terracotta"
-                    />
-                    {inviteEmails.length > 1 && (
-                      <button
-                        onClick={() => setInviteEmails(inviteEmails.filter((_, i) => i !== idx))}
-                        className="p-2 text-ui-tertiary hover:text-red-600 transition-colors"
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    )}
-                  </div>
-                ))}
-                <button
-                  onClick={() => setInviteEmails([...inviteEmails, ''])}
-                  className="flex items-center gap-1.5 text-sm font-medium text-brand-terracotta hover:text-brand-terracotta/70 transition-colors"
-                >
-                  <Plus size={14} />
-                  Add another
-                </button>
-              </div>
-            </div>
-          )}
         </div>
 
         {/* Footer */}

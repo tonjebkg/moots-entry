@@ -17,20 +17,40 @@ export async function GET(_req: Request) {
     const events = workspaceId
       ? await db`
           SELECT
-            id, title, location::text as location_raw, start_date, end_date, timezone,
-            image_url, event_url, hosts::text as hosts_raw, sponsors::text as sponsors_raw,
-            is_private, approve_mode, status, created_at, updated_at
-          FROM events
-          WHERE workspace_id = ${workspaceId} OR workspace_id IS NULL
-          ORDER BY start_date DESC
+            e.id, e.title, e.location::text as location_raw, e.start_date, e.end_date, e.timezone,
+            e.image_url, e.event_url, e.hosts::text as hosts_raw, e.sponsors::text as sponsors_raw,
+            e.is_private, e.approve_mode, e.status, e.total_capacity, e.created_at, e.updated_at,
+            COALESCE(ci.total_count, 0) AS invited_count,
+            COALESCE(ci.accepted_count, 0) AS confirmed_count,
+            COALESCE(ci.pending_count, 0) AS pending_count
+          FROM events e
+          LEFT JOIN LATERAL (
+            SELECT
+              COUNT(*)::int AS total_count,
+              COUNT(*) FILTER (WHERE status = 'ACCEPTED')::int AS accepted_count,
+              COUNT(*) FILTER (WHERE status IN ('CONSIDERING','INVITED'))::int AS pending_count
+            FROM campaign_invitations WHERE event_id = e.id
+          ) ci ON true
+          WHERE e.workspace_id = ${workspaceId} OR e.workspace_id IS NULL
+          ORDER BY e.start_date DESC
         `
       : await db`
           SELECT
-            id, title, location::text as location_raw, start_date, end_date, timezone,
-            image_url, event_url, hosts::text as hosts_raw, sponsors::text as sponsors_raw,
-            is_private, approve_mode, status, created_at, updated_at
-          FROM events
-          ORDER BY start_date DESC
+            e.id, e.title, e.location::text as location_raw, e.start_date, e.end_date, e.timezone,
+            e.image_url, e.event_url, e.hosts::text as hosts_raw, e.sponsors::text as sponsors_raw,
+            e.is_private, e.approve_mode, e.status, e.total_capacity, e.created_at, e.updated_at,
+            COALESCE(ci.total_count, 0) AS invited_count,
+            COALESCE(ci.accepted_count, 0) AS confirmed_count,
+            COALESCE(ci.pending_count, 0) AS pending_count
+          FROM events e
+          LEFT JOIN LATERAL (
+            SELECT
+              COUNT(*)::int AS total_count,
+              COUNT(*) FILTER (WHERE status = 'ACCEPTED')::int AS accepted_count,
+              COUNT(*) FILTER (WHERE status IN ('CONSIDERING','INVITED'))::int AS pending_count
+            FROM campaign_invitations WHERE event_id = e.id
+          ) ci ON true
+          ORDER BY e.start_date DESC
         `;
 
     const mappedEvents = events.map(event => {
@@ -55,6 +75,10 @@ export async function GET(_req: Request) {
         status: event.status,
         created_at: event.created_at,
         updated_at: event.updated_at,
+        total_capacity: event.total_capacity ?? null,
+        invited_count: event.invited_count ?? 0,
+        confirmed_count: event.confirmed_count ?? 0,
+        pending_count: event.pending_count ?? 0,
 
         // legacy
         name: event.title,
