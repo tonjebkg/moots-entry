@@ -21,13 +21,12 @@ export const POST = withErrorHandling(async (request: NextRequest, context: any)
 
   const { eventId } = await context.params;
   const eventIdNum = parseInt(eventId, 10);
-  const { strategy, max_per_table } = validation.data;
+  const { instructions, max_per_table } = validation.data;
 
   const result = await generateSeatingPlan(
     eventIdNum,
     auth.workspace.id,
-    strategy,
-    max_per_table
+    { instructions, maxPerTable: max_per_table }
   );
 
   logAction({
@@ -37,7 +36,7 @@ export const POST = withErrorHandling(async (request: NextRequest, context: any)
     action: 'seating.generate_suggestions',
     entityType: 'seating_suggestion',
     entityId: result.batchId,
-    newValue: { event_id: eventIdNum, strategy, assignment_count: result.assignments.length },
+    newValue: { event_id: eventIdNum, instructions: instructions || null, assignment_count: result.assignments.length },
   });
 
   const tableCount = new Set(result.assignments.map(a => a.table_number)).size;
@@ -46,8 +45,10 @@ export const POST = withErrorHandling(async (request: NextRequest, context: any)
     workspaceId: auth.workspace.id,
     type: 'seating',
     headline: `Proposed seating for ${result.assignments.length} guests across ${tableCount} tables`,
-    detail: `Used "${strategy.replace(/_/g, ' ').toLowerCase()}" strategy. Each placement includes a confidence score and rationale.`,
-    metadata: { batch_id: result.batchId, assignment_count: result.assignments.length, strategy, table_count: tableCount },
+    detail: instructions
+      ? `Auto-seated with host instructions. Each placement includes a confidence score and rationale.`
+      : `Auto-seated using event context, table labels, and guest profiles. Each placement includes a confidence score and rationale.`,
+    metadata: { batch_id: result.batchId, assignment_count: result.assignments.length, has_instructions: !!instructions, table_count: tableCount },
   });
 
   return NextResponse.json({

@@ -19,7 +19,7 @@ export const bulkAssignSchema = z.object({
 export type BulkAssignInput = z.infer<typeof bulkAssignSchema>;
 
 export const generateSeatingSchema = z.object({
-  strategy: z.enum(['MIXED_INTERESTS', 'SIMILAR_INTERESTS', 'SCORE_BALANCED']).default('MIXED_INTERESTS'),
+  instructions: z.string().max(1000).optional(),
   max_per_table: z.number().int().min(2).max(20).optional(),
 });
 

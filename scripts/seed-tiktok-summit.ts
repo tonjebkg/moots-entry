@@ -280,10 +280,11 @@ async function main() {
       40,
       'SEATED',
       ${JSON.stringify({ tables: [
-        { number: 1, seats: 10 },
-        { number: 2, seats: 10 },
-        { number: 3, seats: 10 },
-        { number: 4, seats: 10 },
+        { number: 1, seats: 8, name: 'VIP Creators' },
+        { number: 2, seats: 8, name: 'Brand & Agency Leaders' },
+        { number: 3, seats: 8, name: 'Platform Executives' },
+        { number: 4, seats: 8, name: 'Media & Investors' },
+        { number: 5, seats: 8, name: 'Emerging Talent' },
       ]})}::jsonb,
       ${JSON.stringify([
         { name: 'TikTok', url: 'https://tiktok.com' },
@@ -776,9 +777,10 @@ async function main() {
   `;
 
   const teamInvitationIds: string[] = [];
-  // Table assignments: Sarah Kim→T1, Jake→T2, Priya→T3, Marcus Li→T4, Tonje→T1 (host table)
-  const teamTableAssignments = [1, 2, 3, 4, 1];
-  const teamSeatAssignments = [1, 1, 1, 1, 2]; // Tonje sits at Table 1 seat 2 (next to Sarah)
+  // One team member per table — they network with guests, not each other
+  // Sarah Kim→T1 (VIP Creators), Jake→T2 (Brand & Agency), Priya→T3 (Platform Execs), Marcus→T4 (Media & Investors), Tonje→T5 (Emerging Talent)
+  const teamTableAssignments = [1, 2, 3, 4, 5];
+  const teamSeatAssignments = [1, 1, 1, 1, 1];
 
   for (let ti = 0; ti < teamContactData.length; ti++) {
     const tc = teamContactData[ti];
@@ -804,7 +806,7 @@ async function main() {
         ${'ACCEPTED'}::invitation_status,
         ${'TIER_1'}::invitation_tier,
         ${'HIGH'}::invitation_priority,
-        ${ti === teamContactData.length - 1 ? 'Primary host — overseeing all tables, seated at Table 1' : 'Host team — facilitating at Table ' + tableNum},
+        ${ti === teamContactData.length - 1 ? 'Primary host — networking with emerging talent at Table ' + tableNum : 'Host team — facilitating relationships at Table ' + tableNum},
         ${0},
         ${tableNum}, ${seatNum},
         ${createdTime}::timestamptz,

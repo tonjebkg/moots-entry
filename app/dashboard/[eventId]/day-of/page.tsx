@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { useParams } from 'next/navigation'
-import { Sparkles, RotateCw, UserCheck, Grid3X3, ArrowLeftRight, Info, Settings, Plus, Trash2, Save, RefreshCw, UserPlus, ExternalLink } from 'lucide-react'
+import { Sparkles, RotateCw, UserCheck, Grid3X3, ArrowLeftRight, Info, Settings, Plus, Trash2, Save, RefreshCw, UserPlus, ExternalLink, MessageSquarePlus } from 'lucide-react'
 import { CheckinDashboard } from '@/app/components/CheckinDashboard'
 import type { CheckinDashboardHandle } from '@/app/components/CheckinDashboard'
 import { SeatingChart } from '@/app/components/SeatingChart'
@@ -14,11 +14,11 @@ import { MoveAnalysisToast } from '@/app/components/ui/MoveAnalysisToast'
 
 type SubTab = 'checkin' | 'seating' | 'introductions'
 type SeatingFormat = 'STANDING' | 'SEATED' | 'MIXED'
-type Strategy = 'MIXED_INTERESTS' | 'SIMILAR_INTERESTS' | 'SCORE_BALANCED'
 
 interface TableConfig {
   number: number
   seats: number
+  name?: string
 }
 
 interface Assignment {
@@ -68,7 +68,8 @@ export default function DayOfPage() {
   const [seatingLoading, setSeatingLoading] = useState(true)
   const [generating, setGenerating] = useState(false)
   const [generatingIntros, setGeneratingIntros] = useState(false)
-  const [strategy, setStrategy] = useState<Strategy>('MIXED_INTERESTS')
+  const [seatingInstructions, setSeatingInstructions] = useState('')
+  const [showInstructionsInput, setShowInstructionsInput] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   // Dossier panel
@@ -140,6 +141,7 @@ export default function DayOfPage() {
   const tableData = tables.map(t => ({
     table_number: t.number,
     seats: t.seats,
+    name: t.name,
     assignments: assignments
       .filter(a => a.table_assignment === t.number)
       .map(a => ({
@@ -218,6 +220,27 @@ export default function DayOfPage() {
       .catch(() => { /* non-critical */ })
   }
 
+  async function handleRenameTable(tableNumber: number, newName: string) {
+    const updatedTables = tables.map(t =>
+      t.number === tableNumber ? { ...t, name: newName || undefined } : t
+    )
+    setTables(updatedTables)
+    try {
+      const res = await fetch(`/api/events/${eventId}/capacity`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tables_config: { tables: updatedTables } }),
+      })
+      if (!res.ok) {
+        const data = await res.json()
+        throw new Error(data.error || 'Failed to rename table')
+      }
+    } catch (err: any) {
+      setError(err.message)
+      await fetchSeatingData()
+    }
+  }
+
   async function handleGenerateSuggestions() {
     try {
       setGenerating(true)
@@ -225,7 +248,7 @@ export default function DayOfPage() {
       const res = await fetch(`/api/events/${eventId}/seating/suggest`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ strategy }),
+        body: JSON.stringify({ instructions: seatingInstructions || undefined }),
       })
       if (!res.ok) {
         const data = await res.json()
@@ -398,21 +421,26 @@ export default function DayOfPage() {
               <Settings size={14} />
               Manage Tables
             </button>
-            <select
-              value={strategy}
-              onChange={(e) => setStrategy(e.target.value as Strategy)}
-              className="px-3 py-2 text-sm border border-ui-border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-terracotta"
+            <button
+              onClick={() => setShowInstructionsInput(!showInstructionsInput)}
+              className={`relative flex items-center gap-2 px-3 py-2 text-sm font-medium border rounded-lg transition-colors ${
+                showInstructionsInput
+                  ? 'text-brand-terracotta border-brand-terracotta bg-brand-terracotta/5'
+                  : 'text-ui-tertiary hover:text-brand-charcoal border-ui-border'
+              }`}
             >
-              <option value="MIXED_INTERESTS">Mixed Interests</option>
-              <option value="SIMILAR_INTERESTS">Similar Interests</option>
-              <option value="SCORE_BALANCED">Score Balanced</option>
-            </select>
+              <MessageSquarePlus size={14} />
+              Preferences
+              {seatingInstructions.trim() && !showInstructionsInput && (
+                <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-brand-terracotta rounded-full" />
+              )}
+            </button>
             <button
               onClick={handleGenerateSuggestions}
               disabled={generating}
-              className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-brand-terracotta rounded-lg hover:bg-brand-terracotta/90 transition-colors disabled:opacity-50"
+              className="flex items-center gap-2 px-5 py-2 text-sm font-semibold text-white bg-brand-terracotta rounded-full hover:bg-brand-terracotta/90 transition-colors disabled:opacity-50"
             >
-              {generating ? null : <><Sparkles size={14} /> AI Suggest</>}
+              {generating ? null : <><Sparkles size={14} /> Auto-seat Guests</>}
             </button>
             {generating && (
               <AgentThinking steps={THINKING_STEPS.seating} intervalMs={3000} />
@@ -457,6 +485,34 @@ export default function DayOfPage() {
             </div>
           )}
 
+          {/* Seating Preferences Input */}
+          {showInstructionsInput && (
+            <div className="bg-white border border-ui-border rounded-lg p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <label className="text-sm font-semibold text-brand-charcoal">Any seating preferences?</label>
+                <button
+                  onClick={() => { setSeatingInstructions(''); setShowInstructionsInput(false) }}
+                  className="text-xs text-ui-tertiary hover:text-brand-charcoal transition-colors"
+                >
+                  Clear &amp; close
+                </button>
+              </div>
+              <textarea
+                value={seatingInstructions}
+                onChange={(e) => setSeatingInstructions(e.target.value.slice(0, 1000))}
+                placeholder={'e.g. "Keep Nike and Adidas at separate tables"\n"Seat all VIPs at Table 1"\n"Put the TikTok team together"'}
+                rows={3}
+                className="w-full px-3 py-2 text-sm border border-ui-border rounded-lg focus:outline-none focus:border-brand-terracotta placeholder:text-ui-tertiary/50 resize-none"
+              />
+              <div className="flex items-center justify-between">
+                <p className="text-xs text-ui-tertiary">
+                  The AI will also use table labels, team assignments, and event objectives automatically.
+                </p>
+                <span className="text-xs text-ui-tertiary tabular-nums">{seatingInstructions.length}/1000</span>
+              </div>
+            </div>
+          )}
+
           {/* Move Analysis Toast */}
           {moveAnalysis && (
             <MoveAnalysisToast
@@ -490,6 +546,13 @@ export default function DayOfPage() {
                       className="w-20 px-2 py-1.5 text-sm border border-ui-border rounded-lg focus:outline-none focus:border-brand-terracotta"
                     />
                     <span className="text-xs text-ui-tertiary">seats</span>
+                    <input
+                      type="text"
+                      value={t.name || ''}
+                      onChange={(e) => setEditTables(editTables.map((et, i) => i === idx ? { ...et, name: e.target.value || undefined } : et))}
+                      placeholder="Label (optional)"
+                      className="flex-1 min-w-0 px-2 py-1.5 text-sm border border-ui-border rounded-lg focus:outline-none focus:border-brand-terracotta placeholder:text-ui-tertiary/50"
+                    />
                     <button
                       onClick={() => removeTable(idx)}
                       className="p-1 text-red-500 hover:bg-red-50 rounded transition-colors"
@@ -545,6 +608,7 @@ export default function DayOfPage() {
                   onRemoveGuest={handleRemoveGuest}
                   onGuestClick={setDossierContactId}
                   onMoveGuest={handleMoveGuest}
+                  onRenameTable={handleRenameTable}
                 />
               </div>
               <div>

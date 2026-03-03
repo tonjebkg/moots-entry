@@ -19,6 +19,7 @@ interface GuestForSeating {
 interface TableConfig {
   number: number;
   seats: number;
+  name?: string;
 }
 
 interface SeatingAssignment {
@@ -43,11 +44,11 @@ interface IntroductionPairingResult {
 export async function generateSeatingPlan(
   eventId: number,
   workspaceId: string,
-  strategy: 'MIXED_INTERESTS' | 'SIMILAR_INTERESTS' | 'SCORE_BALANCED',
-  maxPerTable?: number
+  options?: { instructions?: string; maxPerTable?: number }
 ): Promise<{ batchId: string; assignments: SeatingAssignment[] }> {
   const db = getDb();
   const batchId = crypto.randomUUID();
+  const { instructions, maxPerTable } = options || {};
 
   // Fetch event details with table config
   const events = await db`
@@ -58,7 +59,11 @@ export async function generateSeatingPlan(
   const event = events[0];
 
   // Get tables config
-  let tables: TableConfig[] = event.tables_config?.tables || [];
+  let tables: TableConfig[] = (event.tables_config?.tables || []).map((t: any) => ({
+    number: t.number,
+    seats: t.seats,
+    name: t.name,
+  }));
   if (tables.length === 0) {
     // Auto-generate tables from capacity
     const capacity = event.total_capacity || 50;
@@ -94,10 +99,23 @@ export async function generateSeatingPlan(
     return { batchId, assignments: [] };
   }
 
-  // Fetch rich context for smarter seating
+  // Fetch team assignments for context
+  let teamAssignments: { contact_id: string; team_member_name: string }[] = [];
+  try {
+    const rows = await db`
+      SELECT gta.contact_id, u.full_name AS team_member_name
+      FROM guest_team_assignments gta JOIN users u ON u.id = gta.assigned_to
+      WHERE gta.event_id = ${eventId} AND gta.workspace_id = ${workspaceId}
+    `;
+    teamAssignments = rows as { contact_id: string; team_member_name: string }[];
+  } catch {
+    // Table may not exist yet
+  }
+
+  // Fetch rich context for smarter seating (with learned preferences)
   let contextBlock: string | undefined;
   try {
-    const fullContext = await getFullEventContext(eventId, workspaceId);
+    const fullContext = await getFullEventContext(eventId, workspaceId, { includePreferences: true });
     contextBlock = formatContextForPrompt(fullContext);
   } catch {
     // Continue without context
@@ -109,8 +127,9 @@ export async function generateSeatingPlan(
     guests as GuestForSeating[],
     tables,
     event.title,
-    strategy,
-    contextBlock
+    contextBlock,
+    instructions,
+    teamAssignments
   );
 
   const response = await client.messages.create({
@@ -328,15 +347,10 @@ function buildSeatingPrompt(
   guests: GuestForSeating[],
   tables: TableConfig[],
   eventTitle: string,
-  strategy: string,
-  contextBlock?: string
+  contextBlock?: string,
+  instructions?: string,
+  teamAssignments?: { contact_id: string; team_member_name: string }[]
 ): string {
-  const strategyDesc = {
-    MIXED_INTERESTS: 'Mix guests from different industries and backgrounds at each table for diverse conversation.',
-    SIMILAR_INTERESTS: 'Group guests with similar industries or roles together for deep-dive discussions.',
-    SCORE_BALANCED: 'Distribute high-scoring guests evenly across tables, ensuring each table has at least one high-value connection.',
-  }[strategy];
-
   const guestList = guests.map((g, i) => {
     const parts = [`${i}: ${g.full_name}`];
     if (g.company) parts.push(`(${g.company})`);
@@ -347,15 +361,48 @@ function buildSeatingPrompt(
     return parts.join(' ');
   }).join('\n');
 
-  const tableList = tables.map(t => `Table ${t.number}: ${t.seats} seats`).join('\n');
+  const tableList = tables.map(t => {
+    const label = t.name ? ` — "${t.name}"` : '';
+    return `Table ${t.number}: ${t.seats} seats${label}`;
+  }).join('\n');
 
   const contextSection = contextBlock ? `\n${contextBlock}\n` : '';
 
+  // Build team assignments section
+  let teamSection = '';
+  if (teamAssignments && teamAssignments.length > 0) {
+    const byMember: Record<string, string[]> = {};
+    for (const ta of teamAssignments) {
+      const guest = guests.find(g => g.contact_id === ta.contact_id);
+      if (guest) {
+        if (!byMember[ta.team_member_name]) byMember[ta.team_member_name] = [];
+        byMember[ta.team_member_name].push(guest.full_name);
+      }
+    }
+    if (Object.keys(byMember).length > 0) {
+      teamSection = '\n## Team Member Assignments\n' +
+        Object.entries(byMember).map(([member, guestNames]) =>
+          `- ${member}: ${guestNames.join(', ')}`
+        ).join('\n') + '\n';
+    }
+  }
+
+  // Build host instructions section
+  const instructionsSection = instructions?.trim()
+    ? `\n## Host Instructions\n${instructions.trim()}\n`
+    : '';
+
   return `Assign guests to tables for the event "${eventTitle}".
 
-## Strategy
-${strategyDesc}
-${contextSection}
+## Your Goal
+Create the best possible seating arrangement by synthesizing all available context:
+- Use table labels to guide placement (e.g. a table labeled "VIP Creators" should seat top creators)
+- Keep competitors at separate tables (e.g. rival brands should not sit together)
+- Consider team member assignments — try to seat a team member's assigned guests at the same or adjacent tables when practical
+- Balance tables for engaging conversation dynamics: mix seniority levels, create business development opportunities, and avoid isolating anyone
+- Use relevance scores, tags, sponsor commitments, and event objectives to inform placement
+- Higher-scoring guests should be distributed to ensure each table has strong anchors
+${contextSection}${teamSection}${instructionsSection}
 ## Tables
 ${tableList}
 

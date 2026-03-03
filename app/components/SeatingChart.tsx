@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { Users, Info, GripVertical } from 'lucide-react';
+import { useState, useRef, useEffect } from 'react';
+import { Users, Info, GripVertical, Pencil } from 'lucide-react';
 import {
   DndContext,
   DragOverlay,
@@ -31,6 +31,7 @@ interface TableAssignment {
 interface TableData {
   table_number: number;
   seats: number;
+  name?: string;
   assignments: TableAssignment[];
 }
 
@@ -39,6 +40,7 @@ interface SeatingChartProps {
   onRemoveGuest?: (contactId: string, tableNumber: number) => void;
   onGuestClick?: (contactId: string) => void;
   onMoveGuest?: (contactId: string, newTable: number) => void;
+  onRenameTable?: (tableNumber: number, name: string) => void;
 }
 
 /** Draggable guest card inside a table */
@@ -131,13 +133,73 @@ function DraggableGuest({
   );
 }
 
+/** Inline-editable table label */
+function TableLabel({
+  tableNumber,
+  name,
+  onRename,
+}: {
+  tableNumber: number;
+  name?: string;
+  onRename?: (tableNumber: number, name: string) => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(name || '');
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (editing) inputRef.current?.focus();
+  }, [editing]);
+
+  function commit() {
+    setEditing(false);
+    const trimmed = draft.trim();
+    if (trimmed !== (name || '') && onRename) {
+      onRename(tableNumber, trimmed);
+    }
+  }
+
+  if (editing) {
+    return (
+      <input
+        ref={inputRef}
+        value={draft}
+        onChange={e => setDraft(e.target.value)}
+        onBlur={commit}
+        onKeyDown={e => {
+          if (e.key === 'Enter') commit();
+          if (e.key === 'Escape') { setDraft(name || ''); setEditing(false); }
+        }}
+        placeholder="Add label..."
+        className="text-xs text-ui-secondary bg-transparent border-b border-brand-terracotta/40 focus:border-brand-terracotta outline-none w-full py-0.5"
+      />
+    );
+  }
+
+  if (!onRename) {
+    return name ? <p className="text-xs text-ui-tertiary">{name}</p> : null;
+  }
+
+  return (
+    <button
+      onClick={() => { setDraft(name || ''); setEditing(true); }}
+      className="flex items-center gap-1 text-xs text-ui-tertiary hover:text-brand-terracotta transition-colors group/label"
+    >
+      {name || <span className="italic opacity-60">Add label...</span>}
+      <Pencil size={10} className="opacity-0 group-hover/label:opacity-100 transition-opacity" />
+    </button>
+  );
+}
+
 /** Droppable table zone */
 function DroppableTable({
   table,
   children,
+  onRenameTable,
 }: {
   table: TableData;
   children: React.ReactNode;
+  onRenameTable?: (tableNumber: number, name: string) => void;
 }) {
   const { isOver, setNodeRef } = useDroppable({
     id: `table-${table.table_number}`,
@@ -158,11 +220,14 @@ function DroppableTable({
           : 'border-ui-border'
       }`}
     >
-      <div className="flex items-center justify-between mb-3">
+      <div className="flex items-center justify-between mb-1">
         <h3 className="font-semibold text-brand-charcoal">Table {table.table_number}</h3>
         <span className={`text-xs font-semibold ${fillColor}`}>
           {table.assignments.length}/{table.seats} seats
         </span>
+      </div>
+      <div className="mb-3">
+        <TableLabel tableNumber={table.table_number} name={table.name} onRename={onRenameTable} />
       </div>
       <div className="space-y-2 min-h-[40px]">
         {children}
@@ -208,7 +273,7 @@ function DragGhost({ guest }: { guest: TableAssignment }) {
   );
 }
 
-export function SeatingChart({ tables, onRemoveGuest, onGuestClick, onMoveGuest }: SeatingChartProps) {
+export function SeatingChart({ tables, onRemoveGuest, onGuestClick, onMoveGuest, onRenameTable }: SeatingChartProps) {
   const [activeGuest, setActiveGuest] = useState<TableAssignment | null>(null);
 
   const sensors = useSensors(
@@ -256,7 +321,7 @@ export function SeatingChart({ tables, onRemoveGuest, onGuestClick, onMoveGuest 
       <div className="space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {tables.map(table => (
-            <DroppableTable key={table.table_number} table={table}>
+            <DroppableTable key={table.table_number} table={table} onRenameTable={onRenameTable}>
               {table.assignments.length === 0 ? (
                 <p className="text-xs text-ui-tertiary italic py-2">No guests assigned</p>
               ) : (

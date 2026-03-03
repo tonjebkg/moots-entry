@@ -50,10 +50,10 @@ export const THINKING_STEPS = {
     'Calculating relevance scores...',
   ],
   seating: [
-    'Analyzing guest profiles and objectives...',
-    'Checking for industry and competitor overlaps...',
-    'Balancing tables for conversation dynamics...',
-    'Optimizing seat assignments...',
+    'Reading event objectives and table labels...',
+    'Analyzing guest profiles and team assignments...',
+    'Checking for competitor and sponsor constraints...',
+    'Optimizing table composition...',
     'Generating placement rationale...',
   ],
   briefing: [

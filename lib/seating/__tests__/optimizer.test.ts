@@ -28,7 +28,7 @@ describe('seating optimizer', () => {
     it('throws when event not found', async () => {
       mockDb.mockResolvedValueOnce([]); // event query
       const { generateSeatingPlan } = await import('../optimizer');
-      await expect(generateSeatingPlan(999, 'ws-1', 'MIXED_INTERESTS'))
+      await expect(generateSeatingPlan(999, 'ws-1'))
         .rejects.toThrow('Event not found');
     });
 
@@ -37,7 +37,7 @@ describe('seating optimizer', () => {
         .mockResolvedValueOnce([{ title: 'Test Event', total_capacity: 50, seating_format: null, tables_config: null }])
         .mockResolvedValueOnce([]); // no guests
       const { generateSeatingPlan } = await import('../optimizer');
-      const result = await generateSeatingPlan(1, 'ws-1', 'MIXED_INTERESTS');
+      const result = await generateSeatingPlan(1, 'ws-1');
       expect(result.assignments).toEqual([]);
       expect(result.batchId).toBeDefined();
     });
@@ -56,17 +56,46 @@ describe('seating optimizer', () => {
         { contact_id: 'c2', full_name: 'Bob', company: 'Beta', title: 'CTO', industry: 'Finance', tags: [], relevance_score: 80, score_rationale: 'Good fit', talking_points: [] },
         { contact_id: 'c3', full_name: 'Carol', company: 'Gamma', title: 'VP', industry: 'Health', tags: [], relevance_score: 70, score_rationale: 'Decent', talking_points: [] },
       ]);
+      // Team assignments query
+      mockDb.mockResolvedValueOnce([]);
       // DB inserts for each seating suggestion (3 inserts)
       mockDb.mockResolvedValue([]);
 
       const { generateSeatingPlan } = await import('../optimizer');
-      const result = await generateSeatingPlan(1, 'ws-1', 'MIXED_INTERESTS');
+      const result = await generateSeatingPlan(1, 'ws-1');
 
       expect(result.batchId).toBeDefined();
       expect(result.assignments).toHaveLength(3);
       expect(result.assignments[0].contact_id).toBe('c1');
       expect(result.assignments[0].table_number).toBe(1);
       expect(result.assignments[0].confidence).toBe(0.9);
+    });
+
+    it('passes instructions through to AI generation', async () => {
+      // Event
+      mockDb.mockResolvedValueOnce([{
+        title: 'Test Event',
+        total_capacity: 20,
+        seating_format: 'ROUND_TABLES',
+        tables_config: { tables: [{ number: 1, seats: 10 }, { number: 2, seats: 10 }] },
+      }]);
+      // Guests
+      mockDb.mockResolvedValueOnce([
+        { contact_id: 'c1', full_name: 'Alice', company: 'Acme', title: 'CEO', industry: 'Tech', tags: [], relevance_score: 90, score_rationale: 'Great fit', talking_points: [] },
+      ]);
+      // Team assignments query
+      mockDb.mockResolvedValueOnce([]);
+      // DB inserts
+      mockDb.mockResolvedValue([]);
+
+      const { generateSeatingPlan } = await import('../optimizer');
+      const result = await generateSeatingPlan(1, 'ws-1', {
+        instructions: 'Keep Nike and Adidas at separate tables',
+      });
+
+      expect(result.batchId).toBeDefined();
+      expect(result.assignments).toHaveLength(1);
+      expect(result.assignments[0].contact_id).toBe('c1');
     });
   });
 
