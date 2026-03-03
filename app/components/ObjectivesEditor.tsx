@@ -173,7 +173,7 @@ export function ObjectivesEditor({ eventId, objectives: initial, onSave, hasScor
       <div className="flex items-center gap-3">
         <button
           onClick={addObjective}
-          className="flex items-center gap-1.5 px-4 py-2.5 border border-brand-forest text-brand-forest rounded-pill text-[15px] font-semibold hover:bg-brand-forest hover:text-white transition-colors"
+          className="flex items-center gap-1.5 px-5 py-2.5 bg-brand-terracotta hover:bg-brand-terracotta/90 text-white rounded-pill text-[15px] font-semibold shadow-cta transition-colors"
         >
           <Plus size={16} />
           Add Criteria
@@ -229,16 +229,16 @@ export function ObjectivesEditor({ eventId, objectives: initial, onSave, hasScor
                               href={`/dashboard/${eventId}/guest-intelligence?objective=${obj.id}`}
                               className="text-brand-terracotta hover:underline cursor-pointer"
                             >
-                              {obj.qualifying_count} contacts currently qualify based on this objective
+                              {obj.qualifying_count} contacts currently qualify based on this criterion
                             </Link>
                           ) : (
                             <span className="text-brand-terracotta">
-                              {obj.qualifying_count} contacts currently qualify based on this objective
+                              {obj.qualifying_count} contacts currently qualify based on this criterion
                             </span>
                           )
                         ) : hasScoredContacts ? (
                           <span className="text-ui-tertiary">
-                            No contacts matched this objective
+                            No contacts matched this criterion
                           </span>
                         ) : (
                           <span className="text-ui-tertiary">

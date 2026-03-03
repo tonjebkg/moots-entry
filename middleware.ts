@@ -64,6 +64,7 @@ export function middleware(request: NextRequest) {
     /^\/api\/events\/\d+\/overview-stats$/.test(pathname) ||
     /^\/api\/events\/\d+\/scoring$/.test(pathname) ||
     /^\/api\/events\/\d+\/objectives$/.test(pathname) ||
+    /^\/api\/events\/\d+\/campaigns/.test(pathname) ||
     /^\/api\/events\/\d+\/briefings$/.test(pathname) ||
     /^\/api\/events\/\d+\/follow-up$/.test(pathname) ||
     /^\/api\/events\/\d+\/analytics$/.test(pathname) ||
@@ -72,11 +73,13 @@ export function middleware(request: NextRequest) {
     /^\/api\/events\/\d+\/seating/.test(pathname) ||
     /^\/api\/events\/\d+\/team-members/.test(pathname) || // Team members (event-level, uses fallback auth)
     /^\/api\/events\/\d+\/team-assignments/.test(pathname) || // Team assignments (read uses fallback auth)
+    /^\/api\/events\/\d+\/contacts\/[^/]+\/notes/.test(pathname) || // Event notes (fallback auth)
     /^\/api\/events\/\d+\/context/.test(pathname) || // Context tab (activities, generate, chat)
     /^\/api\/events\/\d+\/documents/.test(pathname) || // Context tab documents
     /^\/api\/events\/\d+\/links$/.test(pathname) || // Context tab links
     /^\/api\/events\/\d+\/generated-context$/.test(pathname) || // Context tab generated context
     /^\/api\/events\/\d+\/details$/.test(pathname) || // Context tab inline edit
+    /^\/api\/campaigns(\/|$)/.test(pathname) || // Campaign detail + invitations
     /^\/api\/contacts(\/|$)/.test(pathname) ||
     /^\/api\/events$/.test(pathname) || // Events list (for People page import modal)
     /^\/api\/rsvp\//.test(pathname) ||
@@ -147,8 +150,8 @@ export function middleware(request: NextRequest) {
       return addSecurityHeaders(response);
     }
 
-    // Event-scoped API endpoints (scoring, objectives, briefings, etc.) — read-only
-    if (method === 'GET' && /^\/api\/events\/\d+\//.test(pathname)) {
+    // Event-scoped API endpoints (scoring, objectives, briefings, etc.)
+    if (/^\/api\/events\/\d+\//.test(pathname)) {
       const response = NextResponse.next();
       return addSecurityHeaders(response);
     }

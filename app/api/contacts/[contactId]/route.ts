@@ -40,9 +40,57 @@ export const GET = withErrorHandling(async (request: NextRequest, { params }: Ro
     ORDER BY gs.scored_at DESC
   `;
 
+  // Build full event history with check-in, assignments, and notes
+  const eventHistory = await db`
+    SELECT
+      e.id AS event_id,
+      e.title AS event_title,
+      e.start_date AS event_date,
+      gs.relevance_score,
+      gs.score_rationale,
+      gs.scored_at,
+      ec.source AS checkin_status,
+      ec.created_at AS checked_in_at,
+      (SELECT u.full_name FROM guest_team_assignments gta
+       JOIN users u ON u.id = gta.assigned_to
+       WHERE gta.contact_id = ${contactId} AND gta.event_id = e.id
+       LIMIT 1
+      ) AS assigned_to_name
+    FROM events e
+    LEFT JOIN guest_scores gs ON gs.event_id = e.id AND gs.contact_id = ${contactId}
+    LEFT JOIN event_checkins ec ON ec.event_id = e.id AND ec.contact_id = ${contactId}
+    WHERE (gs.contact_id IS NOT NULL OR ec.contact_id IS NOT NULL)
+      AND e.id IN (
+        SELECT event_id FROM guest_scores WHERE contact_id = ${contactId}
+        UNION
+        SELECT event_id FROM event_checkins WHERE contact_id = ${contactId}
+      )
+    ORDER BY e.start_date DESC NULLS LAST
+  `;
+
+  // Fetch event notes for each event
+  let eventNotes: any[] = [];
+  try {
+    eventNotes = await db`
+      SELECT id, event_id, note_text, author_name, created_at
+      FROM event_notes
+      WHERE contact_id = ${contactId} AND workspace_id = ${workspaceId}
+      ORDER BY created_at DESC
+    `;
+  } catch {
+    // event_notes table may not exist yet
+  }
+
+  // Merge notes into event history
+  const historyWithNotes = eventHistory.map((ev: any) => ({
+    ...ev,
+    event_notes: eventNotes.filter((n: any) => n.event_id === ev.event_id),
+  }));
+
   return NextResponse.json({
     ...contact[0],
     scores,
+    event_history: historyWithNotes,
   });
 });
 

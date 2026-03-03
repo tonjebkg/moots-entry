@@ -29,7 +29,7 @@ const ITEM_CONFIG: Record<string, { icon: React.ElementType; href: (eventId: str
   awaiting_rsvp: {
     icon: Mail,
     href: (id) => `/dashboard/${id}/invitations`,
-    defaultAction: 'View in Invitations',
+    defaultAction: 'View Invitations',
   },
   pending_review: {
     icon: Users,

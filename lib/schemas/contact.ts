@@ -34,7 +34,8 @@ export const createContactSchema = z.object({
 });
 
 export const GUEST_ROLE_VALUES = [
-  'TEAM_MEMBER', 'PARTNER', 'CO_HOST', 'SPEAKER', 'TALENT',
+  'LP', 'GP', 'ADVISOR', 'SERVICE_PROVIDER', 'SPEAKER', 'PARTNER',
+  'TEAM_MEMBER', 'OPERATING_PARTNER', 'MEDIA',
 ] as const;
 
 export const GUEST_PRIORITY_VALUES = [

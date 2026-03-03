@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Image from 'next/image'
-import { X, Linkedin, Mail, Building2, Target, MessageSquare, Users, Star, ArrowRight } from 'lucide-react'
+import { X, Linkedin, Mail, Building2, Target, MessageSquare, Users, Star, ArrowRight, StickyNote, Send } from 'lucide-react'
 import type { DossierData } from '@/types/phase3'
 
 interface DossierPanelProps {
@@ -30,9 +30,19 @@ const INVITATION_STATUS_LABELS: Record<string, { label: string; color: string }>
   BOUNCED: { label: 'Bounced', color: 'text-red-700 bg-red-50 border-red-200' },
 }
 
+interface EventNote {
+  id: string
+  note_text: string
+  author_name: string | null
+  created_at: string
+}
+
 export function DossierPanel({ eventId, contactId, onClose }: DossierPanelProps) {
   const [dossier, setDossier] = useState<DossierData | null>(null)
   const [loading, setLoading] = useState(true)
+  const [eventNotes, setEventNotes] = useState<EventNote[]>([])
+  const [newNote, setNewNote] = useState('')
+  const [savingNote, setSavingNote] = useState(false)
 
   useEffect(() => {
     async function fetchDossier() {
@@ -47,8 +57,41 @@ export function DossierPanel({ eventId, contactId, onClose }: DossierPanelProps)
         setLoading(false)
       }
     }
+    async function fetchNotes() {
+      try {
+        const res = await fetch(`/api/events/${eventId}/contacts/${contactId}/notes`)
+        if (res.ok) {
+          const data = await res.json()
+          setEventNotes(data.notes || [])
+        }
+      } catch {
+        // event_notes table may not exist yet
+      }
+    }
     fetchDossier()
+    fetchNotes()
   }, [eventId, contactId])
+
+  async function handleAddNote() {
+    if (!newNote.trim()) return
+    setSavingNote(true)
+    try {
+      const res = await fetch(`/api/events/${eventId}/contacts/${contactId}/notes`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ note_text: newNote.trim() }),
+      })
+      if (res.ok) {
+        const data = await res.json()
+        setEventNotes(prev => [data.note, ...prev])
+        setNewNote('')
+      }
+    } catch (err) {
+      console.error('Failed to save note:', err)
+    } finally {
+      setSavingNote(false)
+    }
+  }
 
   async function handleChangeStatus(newStatus: string) {
     if (!dossier?.invitation_id) return
@@ -245,6 +288,49 @@ export function DossierPanel({ eventId, contactId, onClose }: DossierPanelProps)
                 </div>
               </div>
             )}
+
+            {/* Event Notes */}
+            <div className="bg-white rounded-card shadow-card p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <StickyNote className="w-4 h-4 text-brand-terracotta" />
+                <h4 className="text-sm font-semibold text-brand-charcoal">Event Notes</h4>
+              </div>
+
+              {/* Add note input */}
+              <div className="flex gap-2 mb-3">
+                <input
+                  type="text"
+                  value={newNote}
+                  onChange={(e) => setNewNote(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleAddNote()}
+                  placeholder="Add a note about this guest..."
+                  className="flex-1 px-3 py-2 text-sm border border-ui-border rounded-lg focus:outline-none focus:border-brand-terracotta"
+                />
+                <button
+                  onClick={handleAddNote}
+                  disabled={!newNote.trim() || savingNote}
+                  className="px-3 py-2 bg-brand-terracotta hover:bg-brand-terracotta/90 text-white rounded-lg transition-colors disabled:opacity-50"
+                >
+                  <Send size={14} />
+                </button>
+              </div>
+
+              {/* Existing notes */}
+              {eventNotes.length > 0 ? (
+                <div className="space-y-2">
+                  {eventNotes.map(note => (
+                    <div key={note.id} className="p-2.5 bg-brand-cream rounded-lg">
+                      <p className="text-sm text-ui-secondary leading-relaxed">{note.note_text}</p>
+                      <p className="text-[11px] text-ui-tertiary mt-1">
+                        {note.author_name || 'Unknown'} &middot; {new Date(note.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-xs text-ui-tertiary">No notes yet for this event</p>
+              )}
+            </div>
 
             {/* Tags */}
             {dossier.tags.length > 0 && (

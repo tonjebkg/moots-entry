@@ -24,7 +24,7 @@ export function EventTabNavigation({ eventId }: EventTabNavigationProps) {
     { key: 'context', label: 'Context', href: `/dashboard/${eventId}/context`, phase: 'PRE-EVENT' },
     { key: 'targeting', label: 'Targeting', href: `/dashboard/${eventId}/targeting`, phase: 'PRE-EVENT' },
     { key: 'guest-intelligence', label: 'Guest Intelligence', href: `/dashboard/${eventId}/guest-intelligence`, phase: 'PRE-EVENT' },
-    { key: 'campaigns', label: 'Invitations', href: `/dashboard/${eventId}/campaigns`, phase: 'PRE-EVENT' },
+    { key: 'invitations', label: 'Invitations', href: `/dashboard/${eventId}/invitations`, phase: 'PRE-EVENT' },
     { key: 'briefings', label: 'Briefings', href: `/dashboard/${eventId}/briefings`, phase: 'PRE-EVENT' },
     { key: 'day-of', label: 'Check-in & Seating', href: `/dashboard/${eventId}/day-of`, phase: 'EVENT DAY' },
     { key: 'follow-up', label: 'Follow-Up', href: `/dashboard/${eventId}/follow-up`, phase: 'POST-EVENT' },

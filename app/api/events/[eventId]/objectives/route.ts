@@ -25,6 +25,25 @@ export const GET = withErrorHandling(async (request: NextRequest, { params }: Ro
     ORDER BY sort_order ASC, created_at ASC
   `;
 
+  // Recompute qualifying counts dynamically from guest_scores
+  for (const obj of objectives) {
+    try {
+      const countResult = await db`
+        SELECT COUNT(DISTINCT gs.contact_id)::int AS count
+        FROM guest_scores gs
+        WHERE gs.event_id = ${eventIdNum}
+          AND EXISTS (
+            SELECT 1 FROM jsonb_array_elements(gs.matched_objectives) elem
+            WHERE (elem->>'objective_id')::uuid = ${obj.id}::uuid
+              AND (elem->>'match_score')::int >= 50
+          )
+      `;
+      obj.qualifying_count = countResult[0]?.count || 0;
+    } catch {
+      // Non-critical — keep stored value
+    }
+  }
+
   return NextResponse.json({ objectives });
 });
 
