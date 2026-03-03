@@ -16,8 +16,40 @@ interface Workspace {
   role: string
 }
 
-function WorkspaceSwitcher() {
+interface SessionData {
+  userName: string | null
+  currentWorkspace: Workspace | null
+}
+
+function useHeaderSession(): SessionData {
+  const [userName, setUserName] = useState<string | null>(null)
   const [currentWorkspace, setCurrentWorkspace] = useState<Workspace | null>(null)
+
+  useEffect(() => {
+    async function load() {
+      try {
+        const res = await fetch('/api/auth/session')
+        if (res.ok) {
+          const data = await res.json()
+          setUserName(data.user?.full_name ?? null)
+          setCurrentWorkspace({
+            id: data.workspace.id,
+            name: data.workspace.name,
+            slug: data.workspace.slug,
+            role: data.role,
+          })
+        }
+      } catch {
+        // silently fail
+      }
+    }
+    load()
+  }, [])
+
+  return { userName, currentWorkspace }
+}
+
+function WorkspaceSwitcher({ currentWorkspace }: { currentWorkspace: Workspace | null }) {
   const [workspaces, setWorkspaces] = useState<Workspace[]>([])
   const [open, setOpen] = useState(false)
   const [switching, setSwitching] = useState(false)
@@ -26,25 +58,13 @@ function WorkspaceSwitcher() {
   useEffect(() => {
     async function load() {
       try {
-        const [sessionRes, wsRes] = await Promise.all([
-          fetch('/api/auth/session'),
-          fetch('/api/workspaces'),
-        ])
-        if (sessionRes.ok) {
-          const sessionData = await sessionRes.json()
-          setCurrentWorkspace({
-            id: sessionData.workspace.id,
-            name: sessionData.workspace.name,
-            slug: sessionData.workspace.slug,
-            role: sessionData.role,
-          })
-        }
-        if (wsRes.ok) {
-          const wsData = await wsRes.json()
-          setWorkspaces(wsData.workspaces)
+        const res = await fetch('/api/workspaces')
+        if (res.ok) {
+          const data = await res.json()
+          setWorkspaces(data.workspaces)
         }
       } catch {
-        // silently fail — header still works without switcher
+        // silently fail
       }
     }
     load()
@@ -162,10 +182,14 @@ interface DashboardHeaderProps {
   eventInfo?: EventInfo
 }
 
-export function DashboardHeader({ activeNav, rightSlot, userName, teamMembers = [], eventInfo }: DashboardHeaderProps) {
+export function DashboardHeader({ activeNav, rightSlot, userName: userNameProp, teamMembers = [], eventInfo }: DashboardHeaderProps) {
   const pathname = usePathname()
   const { isStuck } = useEventScroll()
   const [showEditModal, setShowEditModal] = useState(false)
+  const session = useHeaderSession()
+
+  // Server-provided prop wins; fall back to client-fetched session
+  const userName = userNameProp ?? session.userName
 
   // Auto-detect active nav from pathname if not explicitly set
   const active = activeNav ?? (pathname?.startsWith('/dashboard/people') ? 'people' : 'events')
@@ -227,7 +251,7 @@ export function DashboardHeader({ activeNav, rightSlot, userName, teamMembers = 
             </button>
           )}
           {rightSlot}
-          <WorkspaceSwitcher />
+          <WorkspaceSwitcher currentWorkspace={session.currentWorkspace} />
           <Link
             href="/dashboard/settings"
             className="p-2 text-ui-tertiary hover:text-brand-terracotta transition-colors rounded-lg hover:bg-brand-cream"
