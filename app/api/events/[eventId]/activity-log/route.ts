@@ -131,9 +131,7 @@ export const GET = withErrorHandling(async (request: NextRequest, { params }: Ro
     ) combined
   `;
 
-  // Neon driver supports parameterized queries at runtime; type assertion needed
-  const dbQuery = db as unknown as (sql: string, params: unknown[]) => Promise<Record<string, unknown>[]>;
-  const countResult = await dbQuery(countQuery, countFilters.params);
+  const countResult = await db.query(countQuery, countFilters.params);
   const total = parseInt(String(countResult[0]?.total ?? '0'), 10);
   const totalPages = Math.ceil(total / limit);
 
@@ -182,7 +180,7 @@ export const GET = withErrorHandling(async (request: NextRequest, { params }: Ro
     OFFSET $${offsetIdx}
   `;
 
-  const entries = await dbQuery(entriesQuery, entryParams);
+  const entries = await db.query(entriesQuery, entryParams);
 
   // ── Actors for filter dropdown (simple tagged template query) ──
   const eventIdStr = String(eventIdNum);

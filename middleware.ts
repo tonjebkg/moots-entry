@@ -68,6 +68,7 @@ export function middleware(request: NextRequest) {
     /^\/api\/events\/\d+\/briefings$/.test(pathname) ||
     /^\/api\/events\/\d+\/follow-up$/.test(pathname) ||
     /^\/api\/events\/\d+\/analytics$/.test(pathname) ||
+    /^\/api\/events\/\d+\/activity-log$/.test(pathname) ||
     /^\/api\/events\/\d+\/checkin/.test(pathname) ||
     /^\/api\/events\/\d+\/dossiers/.test(pathname) ||
     /^\/api\/events\/\d+\/seating/.test(pathname) ||
