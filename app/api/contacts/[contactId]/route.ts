@@ -120,54 +120,57 @@ export const PATCH = withErrorHandling(async (request: NextRequest, { params }: 
     throw new NotFoundError('Contact');
   }
 
-  // Build update fields dynamically
-  const updates: Record<string, unknown> = {};
-  if (data.full_name !== undefined) updates.full_name = data.full_name;
-  if (data.first_name !== undefined) updates.first_name = data.first_name;
-  if (data.last_name !== undefined) updates.last_name = data.last_name;
-  if (data.photo_url !== undefined) updates.photo_url = data.photo_url;
-  if (data.company !== undefined) updates.company = data.company;
-  if (data.title !== undefined) updates.title = data.title;
-  if (data.role_seniority !== undefined) updates.role_seniority = data.role_seniority;
-  if (data.industry !== undefined) updates.industry = data.industry;
-  if (data.linkedin_url !== undefined) updates.linkedin_url = data.linkedin_url;
-  if (data.twitter_url !== undefined) updates.twitter_url = data.twitter_url;
-  if (data.address !== undefined) updates.address = data.address;
-  if (data.net_worth_range !== undefined) updates.net_worth_range = data.net_worth_range;
-  if (data.internal_notes !== undefined) updates.internal_notes = data.internal_notes;
-  if (data.guest_role !== undefined) updates.guest_role = data.guest_role;
-  if (data.guest_priority !== undefined) updates.guest_priority = data.guest_priority;
+  // Build SET clauses dynamically — only touch fields present in the request
+  // so that omitted fields keep their existing DB values.
+  const setClauses: string[] = [];
+  const values: unknown[] = [];
+
+  const textFields = [
+    'full_name', 'first_name', 'last_name', 'photo_url', 'company', 'title',
+    'role_seniority', 'industry', 'linkedin_url', 'twitter_url', 'address',
+    'net_worth_range', 'internal_notes', 'guest_role', 'guest_priority',
+  ] as const;
+
+  for (const field of textFields) {
+    if ((data as Record<string, unknown>)[field] !== undefined) {
+      setClauses.push(`${field} = $${values.length + 1}`);
+      values.push((data as Record<string, unknown>)[field]);
+    }
+  }
+
+  if (data.emails !== undefined) {
+    setClauses.push(`emails = $${values.length + 1}::jsonb`);
+    values.push(JSON.stringify(data.emails));
+  }
+  if (data.phones !== undefined) {
+    setClauses.push(`phones = $${values.length + 1}::jsonb`);
+    values.push(JSON.stringify(data.phones));
+  }
+  if (data.board_affiliations !== undefined) {
+    setClauses.push(`board_affiliations = $${values.length + 1}::jsonb`);
+    values.push(JSON.stringify(data.board_affiliations));
+  }
+  if (data.tags !== undefined) {
+    setClauses.push(`tags = $${values.length + 1}`);
+    values.push(data.tags);
+  }
 
   // Recompute dedup key if name or emails changed
   const newName = data.full_name ?? existing[0].full_name;
   const newEmails = data.emails ?? existing[0].emails;
   const dedupKey = computeDedupKey(newName, Array.isArray(newEmails) ? newEmails : []);
+  setClauses.push(`dedup_key = $${values.length + 1}`);
+  values.push(dedupKey);
 
-  const updated = await db`
-    UPDATE people_contacts SET
-      full_name = COALESCE(${data.full_name ?? null}, full_name),
-      first_name = ${data.first_name !== undefined ? data.first_name : null},
-      last_name = ${data.last_name !== undefined ? data.last_name : null},
-      photo_url = ${data.photo_url !== undefined ? data.photo_url : null},
-      emails = ${data.emails ? JSON.stringify(data.emails) : null}::jsonb,
-      phones = ${data.phones ? JSON.stringify(data.phones) : null}::jsonb,
-      company = ${data.company !== undefined ? data.company : null},
-      title = ${data.title !== undefined ? data.title : null},
-      role_seniority = ${data.role_seniority !== undefined ? data.role_seniority : null},
-      industry = ${data.industry !== undefined ? data.industry : null},
-      linkedin_url = ${data.linkedin_url !== undefined ? data.linkedin_url : null},
-      twitter_url = ${data.twitter_url !== undefined ? data.twitter_url : null},
-      address = ${data.address !== undefined ? data.address : null},
-      net_worth_range = ${data.net_worth_range !== undefined ? data.net_worth_range : null},
-      board_affiliations = ${data.board_affiliations ? JSON.stringify(data.board_affiliations) : null}::jsonb,
-      tags = ${data.tags ?? null},
-      internal_notes = ${data.internal_notes !== undefined ? data.internal_notes : null},
-      guest_role = ${data.guest_role !== undefined ? data.guest_role : null},
-      guest_priority = ${data.guest_priority !== undefined ? data.guest_priority : null},
-      dedup_key = ${dedupKey}
-    WHERE id = ${contactId} AND workspace_id = ${auth.workspace.id}
-    RETURNING *
-  `;
+  // Always bump updated_at
+  setClauses.push('updated_at = NOW()');
+
+  const updated = await db.query(
+    `UPDATE people_contacts SET ${setClauses.join(', ')}
+     WHERE id = $${values.length + 1} AND workspace_id = $${values.length + 2}
+     RETURNING *`,
+    [...values, contactId, auth.workspace.id],
+  );
 
   logAction({
     workspaceId: auth.workspace.id,
