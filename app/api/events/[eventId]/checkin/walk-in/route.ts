@@ -44,6 +44,7 @@ export const POST = withErrorHandling(async (request: NextRequest, context: any)
     entityType: 'event_checkin',
     entityId: checkin.id,
     newValue: { event_id: eventIdNum, full_name: `${validation.data.first_name} ${validation.data.last_name}` },
+    metadata: { event_id: String(eventIdNum) },
   });
 
   // Send welcome email

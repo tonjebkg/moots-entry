@@ -4,13 +4,9 @@ import { ChevronLeft } from 'lucide-react'
 import { EventTabNavigation } from '@/app/components/EventTabNavigation'
 import { EventHeaderActions } from '@/app/components/EventHeaderActions'
 import { DashboardHeader } from '@/app/components/DashboardHeader'
-import { EventScrollProvider } from '@/app/components/EventScrollContext'
-import { EventHeaderObserver } from '@/app/components/StickyEventHeader'
 import { AgentContextProvider } from '@/app/components/agent/AgentContextProvider'
 import { ChatPanel } from '@/app/components/agent/ChatPanel'
 import { getDb } from '@/lib/db'
-import { getSession } from '@/lib/auth'
-import { formatUSDate, formatUSTime } from '@/lib/datetime'
 
 type LayoutProps = {
   children: React.ReactNode
@@ -37,14 +33,6 @@ type EventData = {
   is_private?: boolean
   approve_mode?: string
   status?: string
-  workspace_id?: string | null
-}
-
-type MemberData = {
-  id: string
-  name: string
-  email: string
-  role: string
 }
 
 type CapacityData = {
@@ -70,8 +58,7 @@ async function fetchEvent(eventId: string): Promise<EventData | null> {
         event_url,
         is_private,
         approve_mode,
-        status,
-        workspace_id
+        status
       FROM events
       WHERE id = ${Number(eventId)}
       LIMIT 1
@@ -96,7 +83,6 @@ async function fetchEvent(eventId: string): Promise<EventData | null> {
       is_private: event.is_private,
       approve_mode: event.approve_mode,
       status: event.status,
-      workspace_id: event.workspace_id,
     }
   } catch (error) {
     console.error('Failed to fetch event:', error)
@@ -153,43 +139,15 @@ async function fetchCapacity(eventId: string): Promise<CapacityData> {
   }
 }
 
-async function fetchMembers(workspaceId: string | null | undefined): Promise<MemberData[]> {
-  if (!workspaceId) return []
-  try {
-    const db = getDb()
-    const result = await db`
-      SELECT
-        wm.id,
-        u.full_name,
-        u.email,
-        wm.role
-      FROM workspace_members wm
-      JOIN users u ON u.id = wm.user_id
-      WHERE wm.workspace_id = ${workspaceId}
-      ORDER BY
-        CASE wm.role
-          WHEN 'OWNER' THEN 0
-          WHEN 'ADMIN' THEN 1
-          WHEN 'TEAM_MEMBER' THEN 2
-          WHEN 'EXTERNAL_PARTNER' THEN 3
-          WHEN 'VIEWER' THEN 4
-        END
-      LIMIT 20
-    `
-    return result.map((r: any) => ({
-      id: r.id,
-      name: r.full_name || r.email,
-      email: r.email,
-      role: r.role,
-    }))
-  } catch {
-    return []
-  }
-}
-
 function formatDate(isoDate: string): string {
   const date = new Date(isoDate)
-  return `${formatUSDate(date)} ${formatUSTime(date)}`
+  return date.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  })
 }
 
 function formatLocation(location?: Location | null): string {
@@ -205,13 +163,10 @@ function formatLocation(location?: Location | null): string {
 export default async function EventLayout({ children, params }: LayoutProps) {
   const { eventId } = await params
 
-  const [event, capacity, session] = await Promise.all([
+  const [event, capacity] = await Promise.all([
     fetchEvent(eventId),
     fetchCapacity(eventId),
-    getSession(),
   ])
-
-  const members = await fetchMembers(event?.workspace_id)
 
   if (!event) {
     return (
@@ -234,93 +189,79 @@ export default async function EventLayout({ children, params }: LayoutProps) {
   }
 
   return (
-    <EventScrollProvider>
-      <div className="min-h-screen bg-brand-cream">
-        <DashboardHeader
-          activeNav="events"
-          userName={session?.user?.full_name || undefined}
-          teamMembers={members}
-          eventInfo={{
-            title: event.title,
-            location: formatLocation(event.location),
-            date: formatDate(event.start_date),
-            eventId,
-          }}
-        />
+    <div className="min-h-screen bg-brand-cream">
+      <DashboardHeader activeNav="events" />
 
-        {/* Content with top padding for fixed header */}
-        <div className="pt-[67px]">
-          {/* Event Header — scrolls away, observed by EventHeaderObserver */}
-          <EventHeaderObserver>
-            <div className="border-b border-ui-border bg-white">
-              <div className="px-8 py-6">
-                <div className="flex items-start justify-between gap-8">
-                  <div className="flex items-start gap-6 flex-1 min-w-0">
-                    {/* Event Image */}
-                    {event.image_url ? (
-                      <div className="shrink-0">
-                        <Image
-                          src={event.image_url}
-                          alt={event.title}
-                          width={80}
-                          height={80}
-                          className="w-20 h-20 rounded-card object-cover border border-ui-border"
-                          unoptimized
-                        />
-                      </div>
-                    ) : (
-                      <div className="w-20 h-20 shrink-0 rounded-card bg-gradient-to-br from-brand-terracotta/80 to-brand-forest flex items-center justify-center">
-                        <span className="font-display text-white/60 text-2xl font-bold">
-                          {event.title.charAt(0)}
-                        </span>
-                      </div>
-                    )}
-
-                    {/* Event Info */}
-                    <div className="flex-1 min-w-0">
-                      <Link
-                        href="/dashboard"
-                        className="inline-flex items-center gap-1.5 text-sm text-ui-tertiary hover:text-brand-terracotta transition-colors mb-3 font-medium"
-                      >
-                        <ChevronLeft size={16} />
-                        <span>Events</span>
-                      </Link>
-                      <h1 className="font-display text-2xl font-bold text-brand-charcoal mb-2 tracking-tight">
-                        {event.title}
-                      </h1>
-                      <p className="text-sm text-ui-secondary">
-                        {formatLocation(event.location)} · {formatDate(event.start_date)}
-                      </p>
-                    </div>
+      {/* Content with top padding for fixed header */}
+      <div className="pt-[73px]">
+        {/* Event Header */}
+        <div className="border-b border-ui-border bg-white">
+          <div className="px-8 py-6">
+            <div className="flex items-start justify-between gap-8">
+              <div className="flex items-start gap-6 flex-1 min-w-0">
+                {/* Event Image */}
+                {event.image_url ? (
+                  <div className="shrink-0">
+                    <Image
+                      src={event.image_url}
+                      alt={event.title}
+                      width={80}
+                      height={80}
+                      className="w-20 h-20 rounded-card object-cover border border-ui-border"
+                      unoptimized
+                    />
                   </div>
+                ) : (
+                  <div className="w-20 h-20 shrink-0 rounded-card bg-gradient-to-br from-brand-terracotta/80 to-brand-forest flex items-center justify-center">
+                    <span className="font-display text-white/60 text-2xl font-bold">
+                      {event.title.charAt(0)}
+                    </span>
+                  </div>
+                )}
 
-                  {/* Right Side: Capacity + Edit Button */}
-                  <EventHeaderActions
-                    eventId={eventId}
-                    capacityFilled={capacity.seats_filled}
-                    totalCapacity={capacity.total_capacity}
-                  />
+                {/* Event Info */}
+                <div className="flex-1 min-w-0">
+                  <Link
+                    href="/dashboard"
+                    className="inline-flex items-center gap-1.5 text-sm text-ui-tertiary hover:text-brand-terracotta transition-colors mb-3 font-medium"
+                  >
+                    <ChevronLeft size={16} />
+                    <span>Events</span>
+                  </Link>
+                  <h1 className="font-display text-2xl font-bold text-brand-charcoal mb-2 tracking-tight">
+                    {event.title}
+                  </h1>
+                  <p className="text-sm text-ui-secondary">
+                    {formatLocation(event.location)} · {formatDate(event.start_date)}
+                  </p>
                 </div>
               </div>
-            </div>
-          </EventHeaderObserver>
 
-          {/* Tab Navigation — sticky below the fixed nav */}
-          <div className="sticky top-[67px] z-40 bg-white border-b border-ui-border">
-            <div className="px-8">
-              <EventTabNavigation eventId={eventId} />
+              {/* Right Side: Capacity + Edit Button */}
+              <EventHeaderActions
+                eventId={eventId}
+                capacityFilled={capacity.seats_filled}
+                totalCapacity={capacity.total_capacity}
+              />
             </div>
           </div>
-
-          {/* Tab Content - Full Width */}
-          <AgentContextProvider>
-            <div className="px-8 py-8 pb-36">
-              {children}
-            </div>
-            <ChatPanel eventId={eventId} />
-          </AgentContextProvider>
         </div>
+
+        {/* Tab Navigation */}
+        <div className="border-b border-ui-border bg-white">
+          <div className="px-8">
+            <EventTabNavigation eventId={eventId} />
+          </div>
+        </div>
+
+        {/* Tab Content - Full Width */}
+        <AgentContextProvider>
+          <div className="px-8 py-8 pb-36">
+            {children}
+          </div>
+          <ChatPanel eventId={eventId} />
+        </AgentContextProvider>
       </div>
-    </EventScrollProvider>
+    </div>
   )
 }

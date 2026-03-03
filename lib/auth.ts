@@ -188,7 +188,6 @@ export async function tryAuthOrWorkspaceFallback(): Promise<{ workspaceId: strin
   }
 
   const db = getDb();
-  // Prefer the workspace that actually has contacts (important for demo/seed data)
   const result = await db`
     SELECT w.id FROM workspaces w
     LEFT JOIN people_contacts pc ON pc.workspace_id = w.id

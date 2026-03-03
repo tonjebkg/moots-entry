@@ -97,9 +97,10 @@ export const POST = withErrorHandling(
       actorId: auth.user.id,
       actorEmail: auth.user.email,
       action: 'campaign.created',
-      entityType: 'campaign',
-      entityId: result[0].id,
-      newValue: { name: body.name, event_id: eventIdNum },
+      entityType: 'invitation_campaign',
+      entityId: String(result[0].id),
+      newValue: { name: body.name, recipient_count: 0 },
+      metadata: { event_id: String(eventIdNum) },
       ipAddress: getClientIdentifier(req),
     });
 

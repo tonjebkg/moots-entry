@@ -1,9 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { usePathname } from 'next/navigation';
 import { Send, Sparkles, ChevronDown, ChevronUp } from 'lucide-react';
-import { useAgentContext } from './AgentContextProvider';
 import { AgentAvatar } from '@/app/components/ui/AgentAvatar';
 import { SuggestedPrompts } from './SuggestedPrompts';
 import { ActionConfirmation } from './ActionConfirmation';
@@ -23,12 +21,14 @@ interface ParsedAction {
   description: string;
 }
 
-interface ChatPanelProps {
-  eventId: string;
+interface GlobalChatPanelProps {
+  page: string;
+  contactId?: string;
 }
 
 /**
  * Parse [CONTEXT_SOURCE: ...] tags from AI response.
+ * Returns { contextSource, cleanedContent }.
  */
 function parseContextSource(text: string): { contextSource: string | null; cleanedContent: string } {
   const match = text.match(/\[CONTEXT_SOURCE:\s*(.+?)\]/);
@@ -67,50 +67,11 @@ function parseActions(text: string): { actions: ParsedAction[]; cleanedContent: 
 }
 
 /**
- * Persistent chat bar at the bottom of every event page.
- * Always visible — input is always ready. Expands to show conversation history.
- * Uses SuggestedPrompts for contextual, branded prompt pills.
+ * Global Moots Intelligence chat panel for non-event pages.
+ * Persistent floating bottom bar, same UX as the event ChatPanel.
  */
-export function ChatPanel({ eventId }: ChatPanelProps) {
-  const pathname = usePathname();
-  const { chatOpen, setChatOpen } = useAgentContext();
-
-  // Hide floating chat on Context tab — that tab has its own Moots Intelligence panel
-  const isContextTab = pathname?.includes('/context');
-  if (isContextTab) return null;
-
-  // Determine current tab for suggested prompts
-  const currentTab = pathname?.includes('/guest-intelligence') ? 'guest-intelligence'
-    : pathname?.includes('/day-of') ? 'day-of'
-    : pathname?.includes('/context') ? 'context'
-    : pathname?.includes('/seating') ? 'seating'
-    : pathname?.includes('/overview') ? 'overview'
-    : 'default';
-
-  return (
-    <ChatPanelInner
-      eventId={eventId}
-      currentTab={currentTab}
-      chatOpen={chatOpen}
-      setChatOpen={setChatOpen}
-    />
-  );
-}
-
-/**
- * Inner component that holds all the hooks (avoids conditional hook calls).
- */
-function ChatPanelInner({
-  eventId,
-  currentTab,
-  chatOpen,
-  setChatOpen,
-}: {
-  eventId: string;
-  currentTab: string;
-  chatOpen: boolean;
-  setChatOpen: (open: boolean) => void;
-}) {
+export function GlobalChatPanel({ page, contactId }: GlobalChatPanelProps) {
+  const [chatOpen, setChatOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [streaming, setStreaming] = useState(false);
@@ -142,12 +103,13 @@ function ChatPanelInner({
     if (!chatOpen) setChatOpen(true);
 
     try {
-      const res = await fetch(`/api/events/${eventId}/agent/chat`, {
+      const res = await fetch('/api/agent/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           message: text,
           history: messages.slice(-10).map(m => ({ role: m.role, content: m.content })),
+          context: { page, contactId },
         }),
       });
 
@@ -210,7 +172,7 @@ function ChatPanelInner({
       setStreaming(false);
       setStreamingText('');
     }
-  }, [input, streaming, eventId, messages, chatOpen, setChatOpen]);
+  }, [input, streaming, messages, chatOpen, page, contactId]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -232,7 +194,7 @@ function ChatPanelInner({
             <div className="flex items-center justify-between px-4 py-2 border-b border-ui-border">
               <div className="flex items-center gap-2">
                 <AgentAvatar size="sm" />
-                <span className="text-sm font-semibold text-brand-charcoal">Moots Agent</span>
+                <span className="text-sm font-semibold text-brand-charcoal">Moots Intelligence</span>
               </div>
               <button
                 onClick={() => setChatOpen(false)}
@@ -246,7 +208,7 @@ function ChatPanelInner({
                 <div key={msg.id} className={`flex gap-2.5 ${msg.role === 'user' ? 'justify-end' : ''}`}>
                   {msg.role === 'assistant' && <AgentAvatar size="sm" />}
                   <div className="max-w-[80%]">
-                    {/* Context source indicator (A8) */}
+                    {/* Context source indicator */}
                     {msg.role === 'assistant' && msg.contextSource && (
                       <div className="text-xs text-gray-500 mb-1 flex items-center gap-1">
                         <span className="w-3 h-3 rounded-full bg-purple-100 flex items-center justify-center text-[8px] text-purple-600">i</span>
@@ -262,14 +224,13 @@ function ChatPanelInner({
                     >
                       <div className="whitespace-pre-wrap">{msg.content}</div>
                     </div>
-                    {/* Action proposals (A4) */}
+                    {/* Action proposals */}
                     {msg.role === 'assistant' && msg.actions && msg.actions.map((action, idx) => (
                       <ActionConfirmation
                         key={`${msg.id}-action-${idx}`}
                         action={action}
-                        eventId={eventId}
                         onConfirm={() => {
-                          // Could trigger data refresh
+                          // Could refresh data or show success
                         }}
                         onCancel={() => {
                           // Just dismiss
@@ -318,12 +279,10 @@ function ChatPanelInner({
 
         {/* Persistent input bar — always visible */}
         <div className={`mx-4 mb-4 bg-[#FFFEFA] border-[1.5px] border-[#C8B8A8] ${hasMessages ? 'rounded-b-xl' : 'rounded-xl'} px-4 py-3`} style={{ boxShadow: '0 2px 12px rgba(0,0,0,0.08), 0 0 0 1px rgba(184,117,94,0.08)' }}>
-          {/* Suggested questions when no messages — uses branded SuggestedPrompts (A6) */}
+          {/* Suggested questions when no messages */}
           {!hasMessages && (
             <SuggestedPrompts
-              page="event"
-              eventId={eventId}
-              tab={currentTab}
+              page={page}
               onSelect={(prompt) => handleSend(prompt)}
             />
           )}
@@ -335,7 +294,7 @@ function ChatPanelInner({
               onChange={e => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
               onFocus={() => { if (hasMessages && !chatOpen) setChatOpen(true); }}
-              placeholder="Ask Moots about your event..."
+              placeholder="Ask Moots Intelligence..."
               rows={1}
               className="flex-1 resize-none rounded-lg border border-ui-border px-3 py-2.5 text-base text-brand-charcoal placeholder:text-ui-tertiary focus:outline-none focus:ring-2 focus:ring-brand-terracotta/30 focus:border-brand-terracotta max-h-24"
               style={{ minHeight: '36px' }}

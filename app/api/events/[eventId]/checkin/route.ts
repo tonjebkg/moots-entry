@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { withErrorHandling } from '@/lib/with-error-handling';
-import { requireAuth, requireRole, tryAuthOrEventFallback } from '@/lib/auth';
+import { requireAuth, requireRole } from '@/lib/auth';
 import { validateRequest } from '@/lib/validate-request';
 import { logAction } from '@/lib/audit-log';
-import { checkInGuest, undoCheckIn, getCheckinMetrics } from '@/lib/checkin/manager';
+import { checkInGuest, getCheckinMetrics } from '@/lib/checkin/manager';
 import { checkInGuestSchema } from '@/lib/schemas/checkin';
 import { getDb } from '@/lib/db';
 
@@ -13,11 +13,11 @@ export const runtime = 'nodejs';
  * GET /api/events/[eventId]/checkin — Get check-in metrics and list
  */
 export const GET = withErrorHandling(async (request: NextRequest, context: any) => {
+  const auth = await requireAuth();
   const { eventId } = await context.params;
   const eventIdNum = parseInt(eventId, 10);
-  const { workspaceId } = await tryAuthOrEventFallback(eventIdNum);
 
-  const metrics = await getCheckinMetrics(eventIdNum, workspaceId);
+  const metrics = await getCheckinMetrics(eventIdNum, auth.workspace.id);
 
   return NextResponse.json(metrics);
 });
@@ -65,51 +65,12 @@ export const POST = withErrorHandling(async (request: NextRequest, context: any)
     workspaceId: auth.workspace.id,
     actorId: auth.user.id,
     actorEmail: auth.user.email,
-    action: 'checkin.guest_checked_in',
+    action: 'checkin.guest',
     entityType: 'event_checkin',
     entityId: checkin.id,
-    newValue: { event_id: eventIdNum, source, contact_id, invitation_id },
+    newValue: { guest_name: checkin.full_name || 'Guest', status: 'checked_in', source, contact_id, invitation_id },
+    metadata: { event_id: String(eventIdNum) },
   });
 
   return NextResponse.json(checkin, { status: 201 });
-});
-
-/**
- * DELETE /api/events/[eventId]/checkin — Undo a check-in
- * Body: { checkin_id: string }
- */
-export const DELETE = withErrorHandling(async (request: NextRequest, context: any) => {
-  const auth = await requireAuth();
-  requireRole(auth, 'OWNER', 'ADMIN', 'TEAM_MEMBER');
-
-  const { eventId } = await context.params;
-  const eventIdNum = parseInt(eventId, 10);
-  const body = await request.json();
-  const checkinId = body.checkin_id;
-
-  if (!checkinId) {
-    return NextResponse.json({ error: 'checkin_id is required' }, { status: 400 });
-  }
-
-  const result = await undoCheckIn({
-    eventId: eventIdNum,
-    workspaceId: auth.workspace.id,
-    checkinId,
-  });
-
-  if (!result.deleted) {
-    return NextResponse.json({ error: 'Check-in not found' }, { status: 404 });
-  }
-
-  logAction({
-    workspaceId: auth.workspace.id,
-    actorId: auth.user.id,
-    actorEmail: auth.user.email,
-    action: 'checkin.undo',
-    entityType: 'event_checkin',
-    entityId: checkinId,
-    newValue: { event_id: eventIdNum, full_name: result.fullName },
-  });
-
-  return NextResponse.json({ success: true, full_name: result.fullName });
 });

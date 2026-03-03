@@ -3,6 +3,8 @@ import { getDb } from '@/lib/db';
 import { z } from 'zod';
 import { validateRequest } from '@/lib/validate-request';
 import { withErrorHandling } from '@/lib/with-error-handling';
+import { logAction } from '@/lib/audit-log';
+import { getSession } from '@/lib/auth';
 
 export const runtime = 'nodejs';
 
@@ -143,42 +145,25 @@ export const PATCH = withErrorHandling(
       );
     }
 
-    // Post-update cleanup: unassign guests from removed tables or over-limit
-    if (body.tables_config) {
-      const newTableNumbers = body.tables_config.tables.map((t: any) => t.number);
-      const newTableSeats: Record<number, number> = {};
-      body.tables_config.tables.forEach((t: any) => { newTableSeats[t.number] = t.seats; });
-
-      // Unassign guests from removed tables
-      if (newTableNumbers.length > 0) {
-        await db`
-          UPDATE campaign_invitations
-          SET table_assignment = NULL, seat_assignment = NULL
-          WHERE event_id = ${eventIdNum}
-            AND table_assignment IS NOT NULL
-            AND table_assignment != ALL(${newTableNumbers}::int[])
-        `;
-      }
-
-      // Unassign excess guests from tables that shrunk
-      for (const [tableNum, maxSeats] of Object.entries(newTableSeats)) {
-        const currentAssignments = await db`
-          SELECT id FROM campaign_invitations
-          WHERE event_id = ${eventIdNum} AND table_assignment = ${Number(tableNum)}
-          ORDER BY id
-        `;
-        if (currentAssignments.length > maxSeats) {
-          const idsToRemove = currentAssignments.slice(maxSeats).map((r: any) => r.id);
-          if (idsToRemove.length > 0) {
-            await db`
-              UPDATE campaign_invitations
-              SET table_assignment = NULL, seat_assignment = NULL
-              WHERE id = ANY(${idsToRemove}::uuid[])
-            `;
-          }
-        }
-      }
-    }
+    // Log the capacity update
+    const session = await getSession();
+    logAction({
+      workspaceId: session?.workspace.id || null,
+      actorId: session?.user.id || null,
+      actorEmail: session?.user.email || null,
+      action: 'event.capacity_updated',
+      entityType: 'event',
+      entityId: String(eventIdNum),
+      previousValue: {
+        total_capacity: event[0].total_capacity,
+        seating_format: event[0].seating_format,
+      },
+      newValue: {
+        total_capacity: result[0].total_capacity,
+        seating_format: result[0].seating_format,
+      },
+      metadata: { event_id: String(eventIdNum) },
+    });
 
     return NextResponse.json({
       event: result[0],

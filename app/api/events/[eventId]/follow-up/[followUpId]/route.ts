@@ -115,11 +115,12 @@ export const PATCH = withErrorHandling(async (request: NextRequest, context: any
     workspaceId: auth.workspace.id,
     actorId: auth.user.id,
     actorEmail: auth.user.email,
-    action: 'follow_up.status_updated',
+    action: 'followup.updated',
     entityType: 'follow_up_sequence',
     entityId: followUpId,
     previousValue: { status: followUp.status },
     newValue: { status },
+    metadata: { event_id: String(followUp.event_id) },
   });
 
   return NextResponse.json(result[0]);

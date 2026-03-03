@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { withErrorHandling } from '@/lib/with-error-handling';
-import { requireAuth, requireRole, tryAuthOrEventFallback } from '@/lib/auth';
+import { requireAuth, requireRole } from '@/lib/auth';
 import { validateRequest } from '@/lib/validate-request';
 import { logAction } from '@/lib/audit-log';
 import { getDb } from '@/lib/db';
@@ -12,22 +12,21 @@ export const runtime = 'nodejs';
  * GET /api/events/[eventId]/team-assignments — List team assignments
  */
 export const GET = withErrorHandling(async (request: NextRequest, context: any) => {
+  const auth = await requireAuth();
   const { eventId } = await context.params;
   const eventIdNum = parseInt(eventId, 10);
-  const { workspaceId } = await tryAuthOrEventFallback(eventIdNum);
   const db = getDb();
 
   const assignments = await db`
     SELECT gta.*,
       u.full_name AS assigned_to_name,
       u.email AS assigned_to_email,
-      pc.full_name AS contact_name,
-      pc.company AS contact_company
+      pc.full_name AS contact_name
     FROM guest_team_assignments gta
     JOIN users u ON u.id = gta.assigned_to
     JOIN people_contacts pc ON pc.id = gta.contact_id
     WHERE gta.event_id = ${eventIdNum}
-      AND gta.workspace_id = ${workspaceId}
+      AND gta.workspace_id = ${auth.workspace.id}
     ORDER BY pc.full_name
   `;
 
@@ -69,9 +68,10 @@ export const POST = withErrorHandling(async (request: NextRequest, context: any)
       workspaceId: auth.workspace.id,
       actorId: auth.user.id,
       actorEmail: auth.user.email,
-      action: 'team_assignment.bulk_created',
+      action: 'team.assigned',
       entityType: 'guest_team_assignment',
-      metadata: { event_id: eventIdNum, count: results.length },
+      newValue: { count: results.length },
+      metadata: { event_id: String(eventIdNum), count: results.length },
     });
 
     return NextResponse.json({ assignments: results }, { status: 201 });
@@ -95,10 +95,11 @@ export const POST = withErrorHandling(async (request: NextRequest, context: any)
     workspaceId: auth.workspace.id,
     actorId: auth.user.id,
     actorEmail: auth.user.email,
-    action: 'team_assignment.created',
+    action: 'team.assigned',
     entityType: 'guest_team_assignment',
     entityId: result[0].id,
     newValue: { contact_id, assigned_to, role },
+    metadata: { event_id: String(eventIdNum) },
   });
 
   return NextResponse.json(result[0], { status: 201 });
@@ -127,9 +128,9 @@ export const DELETE = withErrorHandling(async (request: NextRequest, context: an
     workspaceId: auth.workspace.id,
     actorId: auth.user.id,
     actorEmail: auth.user.email,
-    action: 'team_assignment.deleted',
+    action: 'team.deleted',
     entityType: 'guest_team_assignment',
-    metadata: { event_id: eventIdNum, contact_id },
+    metadata: { event_id: String(eventIdNum), contact_id },
   });
 
   return new Response(null, { status: 204 });

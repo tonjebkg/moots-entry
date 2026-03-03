@@ -3,11 +3,12 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Search, Plus, Download, Tag, Trash2, X, Users, FileDown } from 'lucide-react'
+import { Search, Plus, Upload, Tag, Trash2, X, Users } from 'lucide-react'
 import { ContactsTable } from '@/app/components/ContactsTable'
 import { ContactImportModal } from '@/app/components/ContactImportModal'
 import { ContactDetailPanel } from '@/app/components/ContactDetailPanel'
 import { DashboardHeader } from '@/app/components/DashboardHeader'
+import { GlobalChatPanel } from '@/app/components/agent/GlobalChatPanel'
 
 interface ContactRow {
   id: string
@@ -102,31 +103,6 @@ export default function PeoplePage() {
     fetchContacts(pagination.page)
   }
 
-  function handleExportSelected() {
-    const selected = contacts.filter(c => selectedIds.has(c.id))
-    if (selected.length === 0) return
-    const headers = ['Name', 'Company', 'Title', 'Email', 'Tags', 'Source', 'Added']
-    const rows = selected.map(c => [
-      c.full_name,
-      c.company || '',
-      c.title || '',
-      c.emails?.[0]?.email || '',
-      (c.tags || []).join('; '),
-      c.source || '',
-      c.created_at ? new Date(c.created_at).toLocaleDateString() : '',
-    ])
-    const csvContent = [headers, ...rows]
-      .map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
-      .join('\n')
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.href = url
-    link.download = `contacts-export-${new Date().toISOString().slice(0, 10)}.csv`
-    link.click()
-    URL.revokeObjectURL(url)
-  }
-
   async function handleBulkEnrich() {
     if (selectedIds.size === 0) return
     try {
@@ -150,7 +126,7 @@ export default function PeoplePage() {
       <DashboardHeader activeNav="people" />
 
       <div className="pt-[73px]">
-        <div className="px-8 py-8 space-y-6">
+        <div className="max-w-7xl mx-auto p-8 pb-32 space-y-6">
           {/* Page Title */}
           <div className="flex items-center justify-between">
             <div>
@@ -164,7 +140,7 @@ export default function PeoplePage() {
                 onClick={() => setShowImport(true)}
                 className="flex items-center gap-2 px-4 py-2 border border-ui-border rounded-lg text-sm font-medium text-ui-secondary hover:bg-brand-cream"
               >
-                <Download size={16} />
+                <Upload size={16} />
                 Import
               </button>
               <button
@@ -212,7 +188,7 @@ export default function PeoplePage() {
 
           {/* Bulk Actions Bar */}
           {selectedIds.size > 0 && (
-            <div className="flex items-center gap-3 p-3 bg-white border border-ui-border shadow-sm rounded-lg">
+            <div className="flex items-center gap-3 p-3 bg-brand-terracotta/5 border border-brand-terracotta/20 rounded-lg">
               <span className="text-sm font-medium text-brand-terracotta">
                 {selectedIds.size} selected
               </span>
@@ -223,19 +199,6 @@ export default function PeoplePage() {
               >
                 <Tag size={14} />
                 Enrich
-              </button>
-              <button
-                onClick={handleExportSelected}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-brand-charcoal hover:bg-brand-cream rounded-lg"
-              >
-                <FileDown size={14} />
-                Export
-              </button>
-              <button
-                onClick={() => setSelectedIds(new Set())}
-                className="px-3 py-1.5 text-sm font-medium text-ui-tertiary hover:text-brand-charcoal transition-colors"
-              >
-                Clear
               </button>
               <button
                 onClick={handleBulkDelete}
@@ -321,6 +284,9 @@ export default function PeoplePage() {
           }}
         />
       )}
+
+      {/* Global Moots Intelligence Chat */}
+      <GlobalChatPanel page="people" />
     </main>
   )
 }

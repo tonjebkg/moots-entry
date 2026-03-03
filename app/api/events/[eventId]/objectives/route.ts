@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { withErrorHandling } from '@/lib/with-error-handling';
-import { requireAuth, requireRole, tryAuthOrEventFallback } from '@/lib/auth';
+import { requireAuth, requireRole } from '@/lib/auth';
 import { validateRequest } from '@/lib/validate-request';
 import { getDb } from '@/lib/db';
 import { logAction } from '@/lib/audit-log';
@@ -13,36 +13,16 @@ type RouteParams = { params: Promise<{ eventId: string }> };
  * GET /api/events/[eventId]/objectives — List objectives for an event
  */
 export const GET = withErrorHandling(async (request: NextRequest, { params }: RouteParams) => {
+  const auth = await requireAuth();
   const { eventId } = await params;
-  const eventIdNum = parseInt(eventId);
-  const { workspaceId } = await tryAuthOrEventFallback(eventIdNum);
   const db = getDb();
 
   const objectives = await db`
     SELECT * FROM event_objectives
-    WHERE event_id = ${eventIdNum}
-      AND workspace_id = ${workspaceId}
+    WHERE event_id = ${parseInt(eventId)}
+      AND workspace_id = ${auth.workspace.id}
     ORDER BY sort_order ASC, created_at ASC
   `;
-
-  // Recompute qualifying counts dynamically from guest_scores
-  for (const obj of objectives) {
-    try {
-      const countResult = await db`
-        SELECT COUNT(DISTINCT gs.contact_id)::int AS count
-        FROM guest_scores gs
-        WHERE gs.event_id = ${eventIdNum}
-          AND EXISTS (
-            SELECT 1 FROM jsonb_array_elements(gs.matched_objectives) elem
-            WHERE (elem->>'objective_id')::uuid = ${obj.id}::uuid
-              AND (elem->>'match_score')::int >= 50
-          )
-      `;
-      obj.qualifying_count = countResult[0]?.count || 0;
-    } catch {
-      // Non-critical — keep stored value
-    }
-  }
 
   return NextResponse.json({ objectives });
 });
@@ -80,10 +60,11 @@ export const POST = withErrorHandling(async (request: NextRequest, { params }: R
     workspaceId: auth.workspace.id,
     actorId: auth.user.id,
     actorEmail: auth.user.email,
-    action: 'objective.created',
+    action: 'targeting.created',
     entityType: 'event_objective',
     entityId: objective[0].id,
-    newValue: { objective_text: data.objective_text, weight: data.weight },
+    newValue: { criterion_name: data.objective_text, weight: data.weight },
+    metadata: { event_id: String(parseInt(eventId)) },
     ipAddress: getClientIdentifier(request),
   });
 
@@ -139,32 +120,6 @@ export const PUT = withErrorHandling(async (request: NextRequest, { params }: Ro
     }
   }
 
-  // Compute qualifying_count for each objective
-  for (const obj of upserted) {
-    try {
-      const countResult = await db`
-        SELECT COUNT(DISTINCT gs.contact_id)::int AS count
-        FROM guest_scores gs
-        WHERE gs.event_id = ${eventIdNum}
-          AND EXISTS (
-            SELECT 1 FROM jsonb_array_elements(gs.matched_objectives) elem
-            WHERE (elem->>'objective_id')::uuid = ${obj.id}::uuid
-              AND (elem->>'match_score')::int >= 50
-          )
-      `;
-      const qualCount = countResult[0]?.count || 0;
-      if (qualCount !== obj.qualifying_count) {
-        await db`
-          UPDATE event_objectives SET qualifying_count = ${qualCount}
-          WHERE id = ${obj.id}
-        `;
-        obj.qualifying_count = qualCount;
-      }
-    } catch {
-      // Non-critical — skip if matched_objectives structure differs
-    }
-  }
-
   // Delete objectives that are not in the new list
   const existingIds = upserted.map(o => o.id);
   if (existingIds.length > 0) {
@@ -180,10 +135,10 @@ export const PUT = withErrorHandling(async (request: NextRequest, { params }: Ro
     workspaceId: auth.workspace.id,
     actorId: auth.user.id,
     actorEmail: auth.user.email,
-    action: 'objective.bulk_upserted',
+    action: 'targeting.bulk_upserted',
     entityType: 'event_objective',
     entityId: eventId,
-    metadata: { count: upserted.length },
+    metadata: { event_id: String(eventIdNum), count: upserted.length },
     ipAddress: getClientIdentifier(request),
   });
 
