@@ -323,8 +323,13 @@ export function GuestPipelineTable({
                       className="rounded border-ui-border text-brand-terracotta focus:ring-brand-terracotta"
                     />
                   </td>
-                  <td className="px-3 py-3 font-medium text-brand-charcoal">
-                    {inv.full_name}
+                  <td className="px-3 py-3">
+                    <button
+                      onClick={(e) => { e.stopPropagation(); onEditGuest?.(inv.id) }}
+                      className="font-medium text-brand-charcoal hover:text-brand-terracotta hover:underline transition-colors text-left"
+                    >
+                      {inv.full_name}
+                    </button>
                   </td>
                   <td className="px-3 py-3 text-ui-secondary">{inv.email}</td>
                   <td className="px-3 py-3" onClick={(e) => e.stopPropagation()}>

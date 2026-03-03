@@ -693,29 +693,6 @@ export default function GuestIntelligencePage() {
     }
   }
 
-  // Per-contact scoring
-  const [scoringContactId, setScoringContactId] = useState<string | null>(null)
-
-  async function scoreContact(contactId: string) {
-    setScoringContactId(contactId)
-    try {
-      const res = await fetch(`/api/events/${eventId}/scoring`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ contact_ids: [contactId] }),
-      })
-      if (res.ok) {
-        const data = await res.json()
-        if (data.job_id) setActiveJobId(data.job_id)
-        else fetchData()
-      }
-    } catch (err) {
-      console.error('Failed to score contact:', err)
-    } finally {
-      setScoringContactId(null)
-    }
-  }
-
   async function updateRole(contactId: string, role: string | null) {
     try {
       await fetch(`/api/contacts/${contactId}`, {
@@ -971,14 +948,6 @@ export default function GuestIntelligencePage() {
             <Settings size={14} />
             Targeting
           </Link>
-          <button
-            onClick={triggerScoring}
-            disabled={triggering || !!activeJobId}
-            className="flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-brand-terracotta border-2 border-brand-terracotta rounded-full hover:bg-brand-terracotta/5 transition-colors disabled:opacity-50"
-          >
-            <Sparkles size={14} />
-            {triggering ? 'Starting...' : 'Re-score All'}
-          </button>
         </div>
       </div>
 
@@ -1400,7 +1369,12 @@ export default function GuestIntelligencePage() {
                             <td className="px-4 py-3">
                               <div className="flex items-center gap-2.5">
                                 <AvatarInitials name={c.full_name || '?'} size={28} />
-                                <span className="font-medium text-brand-charcoal">{c.full_name}</span>
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); setDossierContactId(c.contact_id) }}
+                                  className="font-medium text-brand-charcoal hover:text-brand-terracotta hover:underline transition-colors text-left"
+                                >
+                                  {c.full_name}
+                                </button>
                                 {c.referred_by_name && (
                                   <span className="text-ui-tertiary" title={`Referred by ${c.referred_by_name}`}>
                                     <Link2 size={13} />
@@ -1710,9 +1684,11 @@ export default function GuestIntelligencePage() {
                                                     </div>
                                                   </button>
                                                 ))}
-                                              {workspaceMembers.filter(m => !(teamAssignments[c.contact_id] || []).some(a => a.assigned_to === m.user_id)).length === 0 && (
+                                              {workspaceMembers.length === 0 ? (
+                                                <div className="px-3 py-2 text-[13px] text-ui-tertiary">No team members found</div>
+                                              ) : workspaceMembers.filter(m => !(teamAssignments[c.contact_id] || []).some(a => a.assigned_to === m.user_id)).length === 0 ? (
                                                 <div className="px-3 py-2 text-[13px] text-ui-tertiary">All members assigned</div>
-                                              )}
+                                              ) : null}
                                             </div>
                                           </>
                                         )}
@@ -1812,25 +1788,6 @@ export default function GuestIntelligencePage() {
                                       >
                                         <XCircle size={12} />
                                         Decline
-                                      </button>
-                                    )}
-                                    {!cHasScore ? (
-                                      <button
-                                        onClick={(e) => { e.stopPropagation(); scoreContact(c.contact_id) }}
-                                        disabled={scoringContactId === c.contact_id}
-                                        className="flex items-center gap-1.5 px-3 py-1.5 border border-brand-terracotta/30 text-brand-terracotta text-[13px] font-semibold rounded-md hover:bg-brand-terracotta/5 transition-colors disabled:opacity-50"
-                                      >
-                                        <Sparkles size={12} />
-                                        {scoringContactId === c.contact_id ? 'Scoring...' : 'Score Now'}
-                                      </button>
-                                    ) : (
-                                      <button
-                                        onClick={(e) => { e.stopPropagation(); scoreContact(c.contact_id) }}
-                                        disabled={scoringContactId === c.contact_id}
-                                        className="flex items-center gap-1.5 px-3 py-1.5 text-[13px] font-medium text-ui-tertiary hover:text-brand-charcoal transition-colors disabled:opacity-50"
-                                      >
-                                        <Sparkles size={12} />
-                                        {scoringContactId === c.contact_id ? 'Scoring...' : 'Re-score'}
                                       </button>
                                     )}
                                     {c.scored_at && (

@@ -125,7 +125,7 @@ export default function PeoplePage() {
       <DashboardHeader activeNav="people" />
 
       <div className="pt-[73px]">
-        <div className="max-w-7xl mx-auto p-8 space-y-6">
+        <div className="px-8 py-8 space-y-6">
           {/* Page Title */}
           <div className="flex items-center justify-between">
             <div>

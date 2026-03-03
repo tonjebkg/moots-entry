@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation'
 import { Download, AlertCircle } from 'lucide-react'
 import { FollowUpConfigPanel } from '@/app/components/FollowUpConfigPanel'
 import { FollowUpStatusTable } from '@/app/components/FollowUpStatusTable'
+import { DossierPanel } from '@/app/components/DossierPanel'
 import type { FollowUpSequence } from '@/types/phase3'
 
 export default function FollowUpPage() {
@@ -14,6 +15,7 @@ export default function FollowUpPage() {
   const [stats, setStats] = useState<Record<string, number>>({})
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [dossierContactId, setDossierContactId] = useState<string | null>(null)
 
   async function fetchFollowUps() {
     try {
@@ -127,7 +129,16 @@ export default function FollowUpPage() {
         followUps={followUps}
         onSend={handleSend}
         onUpdateStatus={handleUpdateStatus}
+        onGuestClick={(contactId) => setDossierContactId(contactId)}
       />
+
+      {dossierContactId && (
+        <DossierPanel
+          eventId={eventId}
+          contactId={dossierContactId}
+          onClose={() => setDossierContactId(null)}
+        />
+      )}
     </div>
   )
 }

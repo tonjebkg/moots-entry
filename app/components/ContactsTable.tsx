@@ -139,7 +139,12 @@ export function ContactsTable({
                     </div>
                   )}
                   <div>
-                    <div className="font-medium text-brand-charcoal">{contact.full_name}</div>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); onContactClick(contact.id) }}
+                      className="font-medium text-brand-charcoal hover:text-brand-terracotta hover:underline transition-colors text-left"
+                    >
+                      {contact.full_name}
+                    </button>
                     {contact.title && (
                       <div className="text-xs text-ui-tertiary">{contact.title}</div>
                     )}

@@ -18,9 +18,10 @@ interface FollowUpStatusTableProps {
   followUps: FollowUpSequence[]
   onSend: (id: string) => void
   onUpdateStatus: (id: string, status: string) => void
+  onGuestClick?: (contactId: string) => void
 }
 
-export function FollowUpStatusTable({ followUps, onSend, onUpdateStatus }: FollowUpStatusTableProps) {
+export function FollowUpStatusTable({ followUps, onSend, onUpdateStatus, onGuestClick }: FollowUpStatusTableProps) {
   if (followUps.length === 0) {
     return (
       <div className="bg-white border border-ui-border rounded-lg p-8 text-center">
@@ -52,7 +53,16 @@ export function FollowUpStatusTable({ followUps, onSend, onUpdateStatus }: Follo
             return (
               <tr key={fu.id} className="hover:bg-brand-cream">
                 <td className="px-4 py-3">
-                  <div className="font-medium text-brand-charcoal">{fu.contact_name}</div>
+                  {onGuestClick ? (
+                    <button
+                      onClick={() => onGuestClick(fu.contact_id)}
+                      className="font-medium text-brand-charcoal hover:text-brand-terracotta hover:underline transition-colors text-left"
+                    >
+                      {fu.contact_name}
+                    </button>
+                  ) : (
+                    <div className="font-medium text-brand-charcoal">{fu.contact_name}</div>
+                  )}
                   <div className="text-xs text-ui-tertiary">
                     {fu.contact_title && fu.contact_company
                       ? `${fu.contact_title} · ${fu.contact_company}`
