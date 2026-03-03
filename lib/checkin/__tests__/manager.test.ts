@@ -122,9 +122,11 @@ describe('getCheckinMetrics', () => {
     let callCount = 0;
     mockDb.mockImplementation((..._args: any[]) => {
       callCount++;
-      if (callCount === 1) return [{ count: 20 }]; // expected
-      if (callCount === 2) return [{ total_checked_in: 15, walk_ins: 3 }]; // checkin stats
-      if (callCount === 3) return []; // recent
+      if (callCount === 1) return [{ total_capacity: 100 }]; // event capacity
+      if (callCount === 2) return [{ count: 20 }]; // expected (accepted invitations)
+      if (callCount === 3) return [{ total_checked_in: 15, walk_ins: 3 }]; // checkin stats
+      if (callCount === 4) return []; // recent checkins
+      if (callCount === 5) return []; // not arrived guests
       return [];
     });
 
