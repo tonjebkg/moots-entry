@@ -18,30 +18,10 @@ const WORKSPACE_ID = '557893ab-3b5f-4fed-8cc2-e095380e9c64';
 
 // ─── Role assignments per the review doc ──────────────────────────────
 const ROLE_MAP: Record<string, string> = {
-  // LP
-  'Patricia Donovan': 'LP',
-  'Philip Wainwright': 'LP',
-  'Walter Edmonds': 'LP',
-  'Eleanor Blackwood': 'LP',
-  "Fiona O'Malley": 'LP',
-  'Yuki Tanaka': 'LP',
-  // GP
-  'Andrew Sterling': 'GP',
-  'James Harrington': 'SPEAKER', // keynote — more distinctive for demo
-  'Diana Okonkwo': 'GP',
-  'Sofia Chen-Ramirez': 'GP',
-  'Ian MacGregor': 'GP',
+  // Speaker
+  'James Harrington': 'SPEAKER',
   // Partner
   'Martin Cross': 'PARTNER',
-  // Advisor
-  'Oliver Pennington': 'ADVISOR',
-  'Louise Hensley': 'ADVISOR',
-  'Gregory Mansfield': 'ADVISOR', // walk-in "Placement Agent" → Advisor
-  // Operating Partner
-  'Lisa Chang': 'OPERATING_PARTNER',
-  'Brian Callahan': 'OPERATING_PARTNER',
-  'Jason Mitchell': 'OPERATING_PARTNER',
-  'Evelyn Marshall': 'OPERATING_PARTNER',
   // Team
   'Sarah Chen': 'TEAM_MEMBER',
   'Marcus Rivera': 'TEAM_MEMBER',

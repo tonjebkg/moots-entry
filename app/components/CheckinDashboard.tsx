@@ -61,9 +61,7 @@ interface WorkspaceMember {
 // ─── Constants ──────────────────────────────────────────────────────────
 
 const ROLE_LABELS: Record<string, string> = {
-  LP: 'LP', GP: 'GP', ADVISOR: 'Advisor', SERVICE_PROVIDER: 'Service Provider',
-  SPEAKER: 'Speaker', PARTNER: 'Partner', TEAM_MEMBER: 'Team',
-  OPERATING_PARTNER: 'Operating Partner', MEDIA: 'Media',
+  SPEAKER: 'Speaker', PARTNER: 'Partner', TEAM_MEMBER: 'Team', MEDIA: 'Media',
 }
 
 const PRIORITY_LABELS: Record<string, string> = {

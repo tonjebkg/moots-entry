@@ -99,14 +99,9 @@ const ALL_STATUS_OPTIONS = [
 // Role options — functional role at the event (what this person DOES)
 const ROLE_OPTIONS = [
   { value: '', label: '—', color: 'text-gray-400' },
-  { value: 'LP', label: 'LP', color: 'text-blue-700' },
-  { value: 'GP', label: 'GP', color: 'text-indigo-700' },
-  { value: 'ADVISOR', label: 'Advisor', color: 'text-violet-700' },
   { value: 'SPEAKER', label: 'Speaker', color: 'text-amber-700' },
   { value: 'PARTNER', label: 'Partner', color: 'text-emerald-700' },
   { value: 'TEAM_MEMBER', label: 'Team', color: 'text-sky-700' },
-  { value: 'OPERATING_PARTNER', label: 'Operating Partner', color: 'text-teal-700' },
-  { value: 'SERVICE_PROVIDER', label: 'Service Provider', color: 'text-gray-600' },
   { value: 'MEDIA', label: 'Media', color: 'text-pink-700' },
 ]
 
@@ -865,7 +860,7 @@ export default function GuestIntelligencePage() {
     : rankedFiltered
 
   // Sorting
-  const ROLE_SORT_ORDER: Record<string, number> = { LP: 1, GP: 2, ADVISOR: 3, SPEAKER: 4, PARTNER: 5, TEAM_MEMBER: 6, OPERATING_PARTNER: 7, SERVICE_PROVIDER: 8, MEDIA: 9 }
+  const ROLE_SORT_ORDER: Record<string, number> = { SPEAKER: 1, PARTNER: 2, TEAM_MEMBER: 3, MEDIA: 4 }
   const PRIORITY_SORT_ORDER: Record<string, number> = { VIP: 1, TIER_1: 2, TIER_2: 3, TIER_3: 4, WAITLIST: 5 }
   function getRoleOrder(role: string | null): number { return role ? (ROLE_SORT_ORDER[role] ?? 99) : 99 }
   function getPriorityOrder(priority: string | null): number { return priority ? (PRIORITY_SORT_ORDER[priority] ?? 99) : 99 }
