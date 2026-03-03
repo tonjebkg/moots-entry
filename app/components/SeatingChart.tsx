@@ -23,6 +23,7 @@ interface TableAssignment {
   relevance_score: number | null;
   seat_assignment: number | null;
   rationale?: string;
+  checked_in?: boolean;
   guest_role?: string | null;
   guest_priority?: string | null;
   assigned_team_member?: string | null;
@@ -101,6 +102,9 @@ function DraggableGuest({
           )}
           {hasSponsorTag && (
             <span className="px-1.5 py-0.5 text-[11px] font-bold bg-brand-forest/10 text-brand-forest border border-brand-forest/20 rounded">Sponsor</span>
+          )}
+          {guest.checked_in && (
+            <span className="px-1.5 py-0.5 text-[11px] font-bold bg-green-50 text-green-700 border border-green-200 rounded">Checked In</span>
           )}
         </div>
         <div className="text-[13px] text-ui-tertiary truncate">

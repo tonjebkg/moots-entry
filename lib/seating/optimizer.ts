@@ -305,6 +305,7 @@ export async function getSeatingAssignments(
       ci.table_assignment,
       ci.seat_assignment,
       ci.status,
+      ci.checked_in,
       gs.relevance_score,
       (SELECT u.full_name FROM guest_team_assignments gta
        JOIN users u ON u.id = gta.assigned_to

@@ -31,6 +31,7 @@ interface Assignment {
   table_assignment: number | null
   seat_assignment: number | null
   status: string
+  checked_in?: boolean
   relevance_score: number | null
   guest_role?: string | null
   guest_priority?: string | null
@@ -153,6 +154,7 @@ export default function DayOfPage() {
         relevance_score: a.relevance_score,
         seat_assignment: a.seat_assignment,
         rationale: rationaleMap[a.contact_id] || undefined,
+        checked_in: a.checked_in,
         guest_role: a.guest_role,
         guest_priority: a.guest_priority,
         assigned_team_member: a.assigned_team_member,
