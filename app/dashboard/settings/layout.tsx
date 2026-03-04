@@ -3,10 +3,18 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Building2, ScrollText, ChevronLeft, Plug, User } from 'lucide-react';
+import { Building2, ScrollText, ChevronLeft, Plug, User, Lock, MessageSquare, Link2 } from 'lucide-react';
 import { DashboardHeader } from '@/app/components/DashboardHeader';
 
 type WorkspaceRole = 'OWNER' | 'ADMIN' | 'TEAM_MEMBER' | 'EXTERNAL_PARTNER' | 'VIEWER';
+
+// My Profile — always visible
+const profileNav = [
+  { href: '/dashboard/settings/profile', label: 'Personal Info', icon: User },
+  { href: '/dashboard/settings/security', label: 'Password & Security', icon: Lock },
+  { href: '/dashboard/settings/messaging', label: 'Messaging', icon: MessageSquare },
+  { href: '/dashboard/settings/connected-accounts', label: 'Connected Accounts', icon: Link2 },
+];
 
 // Workspace settings — role-gated
 const workspaceNav = [
@@ -57,20 +65,30 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
           {/* Sidebar */}
           <nav className="w-56 shrink-0">
             <ul className="space-y-1">
-              {/* My Profile — always visible */}
-              <li>
-                <Link
-                  href="/dashboard/settings/profile"
-                  className={`flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
-                    pathname === '/dashboard/settings/profile'
-                      ? 'bg-brand-terracotta/10 text-brand-terracotta'
-                      : 'text-ui-tertiary hover:text-brand-charcoal hover:bg-brand-cream'
-                  }`}
-                >
-                  <User size={16} />
+              {/* My Profile section */}
+              <li className="pb-1 px-3">
+                <p className="text-[11px] font-semibold text-ui-tertiary uppercase tracking-wider">
                   My Profile
-                </Link>
+                </p>
               </li>
+              {profileNav.map(item => {
+                const isActive = pathname === item.href;
+                return (
+                  <li key={item.href}>
+                    <Link
+                      href={item.href}
+                      className={`flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
+                        isActive
+                          ? 'bg-brand-terracotta/10 text-brand-terracotta'
+                          : 'text-ui-tertiary hover:text-brand-charcoal hover:bg-brand-cream'
+                      }`}
+                    >
+                      <item.icon size={16} />
+                      {item.label}
+                    </Link>
+                  </li>
+                );
+              })}
 
               {/* Workspace items — role-gated */}
               {visibleWorkspaceItems.length > 0 && (

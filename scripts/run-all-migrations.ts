@@ -22,15 +22,18 @@ if (!DATABASE_URL) {
 
 const db = neon(DATABASE_URL);
 
-// Ordered list of migrations
-const MIGRATIONS = [
-  '001_create_invitation_system.sql',
-  '002_create_auth_workspace_audit.sql',
-  '003_create_people_database_scoring.sql',
-  '004_phase3_event_operations.sql',
-  '005_phase4_integrations_analytics.sql',
-  '006_reply_to_and_retention.sql',
-];
+// Auto-discover migrations from the migrations directory, sorted by filename
+function discoverMigrations(): string[] {
+  const migrationsDir = path.join(__dirname, '..', 'migrations');
+  if (!fs.existsSync(migrationsDir)) {
+    console.error('migrations/ directory not found');
+    return [];
+  }
+  return fs
+    .readdirSync(migrationsDir)
+    .filter(f => /^\d+.*\.sql$/.test(f))
+    .sort();
+}
 
 async function ensureMigrationsTable() {
   await db`
@@ -47,6 +50,53 @@ async function getAppliedMigrations(): Promise<Set<string>> {
   return new Set(rows.map((r: any) => r.name));
 }
 
+/**
+ * Split a SQL file into individual statements, respecting $$ blocks.
+ * Handles DO $$ ... $$ and function bodies correctly.
+ */
+function splitStatements(sql: string): string[] {
+  const statements: string[] = [];
+  let current = '';
+  let inDollarBlock = false;
+
+  const lines = sql.split('\n');
+  for (const line of lines) {
+    const trimmed = line.trim();
+
+    // Skip comment-only lines outside of dollar blocks
+    if (!inDollarBlock && (trimmed.startsWith('--') && !trimmed.includes('$$'))) {
+      continue;
+    }
+
+    current += line + '\n';
+
+    // Track $$ blocks
+    const dollarMatches = line.match(/\$\$/g);
+    if (dollarMatches) {
+      for (const _ of dollarMatches) {
+        inDollarBlock = !inDollarBlock;
+      }
+    }
+
+    // If we're not in a dollar block and the line ends with ;
+    if (!inDollarBlock && trimmed.endsWith(';')) {
+      const stmt = current.trim();
+      if (stmt.length > 0 && stmt !== ';') {
+        statements.push(stmt);
+      }
+      current = '';
+    }
+  }
+
+  // Handle trailing statement without semicolon
+  const remaining = current.trim();
+  if (remaining.length > 0 && remaining !== ';' && !remaining.startsWith('--')) {
+    statements.push(remaining);
+  }
+
+  return statements;
+}
+
 async function runMigration(name: string) {
   const filePath = path.join(__dirname, '..', 'migrations', name);
 
@@ -58,8 +108,12 @@ async function runMigration(name: string) {
   const sql = fs.readFileSync(filePath, 'utf-8');
 
   console.log(`  Applying ${name}...`);
-  // neon's http driver typed as tagged template; cast for raw SQL string execution
-  await (db as unknown as (sql: string) => Promise<unknown>)(sql);
+
+  const statements = splitStatements(sql);
+  for (const stmt of statements) {
+    await db.query(stmt, []);
+  }
+
   await db`INSERT INTO schema_migrations (name) VALUES (${name})`;
   console.log(`  ✓ ${name} applied`);
   return true;
@@ -71,6 +125,7 @@ async function main() {
   await ensureMigrationsTable();
   const applied = await getAppliedMigrations();
 
+  const MIGRATIONS = discoverMigrations();
   let appliedCount = 0;
   let skippedCount = 0;
 

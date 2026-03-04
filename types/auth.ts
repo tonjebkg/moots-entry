@@ -17,6 +17,12 @@ export interface User {
   email: string;
   password_hash: string | null;
   full_name: string;
+  first_name: string | null;
+  last_name: string | null;
+  company: string | null;
+  title: string | null;
+  phone: string | null;
+  linkedin_url: string | null;
   avatar_url: string | null;
   email_verified: boolean;
   mfa_enabled: boolean;
